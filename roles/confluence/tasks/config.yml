@@ -1,0 +1,35 @@
+---
+- name: download confluence packages
+  get_url:
+    url: "https://www.atlassian.com/software/confluence/downloads/binary/{{ item }}"
+    dest: "{{ mountpoint }}/{{ item }}"
+    mode: 0777
+  with_items:
+    - "{{ conf_package }}"
+    - "{{ old_conf_package }}"
+
+- name: install packages
+  yum: state=installed name={{ item }}
+  with_items:
+    - graphviz
+    - postfix
+
+- name: get public crt
+  shell: "openssl s_client -connect confluence.doubledowninteractive.com:443 < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/public.crt"
+
+- name: keytool
+  shell: "echo changeit | {{ mountpoint}}/confluence/jre/bin/keytool -import -alias doubledowninteractive.com -keystore {{ mountpoint }}/confluence/jre/lib/security/cacerts -file /tmp/public.crt"
+
+
+- name: write response file for installer
+  template: src=response.vars.j2 dest="{{ mountpoint }}/response.vars" mode=0666
+  register: vars
+
+- name: install confluence
+  shell: "./{{ old_conf_package }} -q -varfile response.vars"
+  args:
+    chdir: "{{ mountpoint }}"
+  register: conf_installed
+
+- name: start postfix
+  service: name=postfix state=started

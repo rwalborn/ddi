@@ -1,0 +1,29 @@
+[icingaweb_ldap]
+type = "ldap"
+hostname = "ldap00-tools.ddc.io"
+port = "389"
+encryption = "none"
+root_dn = "dc=doubledowncasino,dc=com"
+bind_dn = ""
+bind_pw = ""
+
+[director]
+type = "db"
+db = "mysql"
+host = "{{ director_db_host }}"
+port = "{{ director_db_port }}"
+dbname = "{{ director_db_db }}"
+username = "{{ director_db_user }}"
+password = "{{ director_db_pass }}"
+charset = "utf8"
+
+[icinga_ido]
+type = "db"
+db = "mysql"
+host = "{{ icinga_db_host }}"
+port = "{{ icinga_db_port }}"
+dbname = "{{ icinga_db_db }}"
+username = "{{ icinga_db_user }}"
+password = "{{ icinga_db_pass }}"
+charset = "utf8"
+persistent = "0"

@@ -1,0 +1,20 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    app_tag: DDI
+    rpm_tag: php-casino
+    env_tag: development
+    service_tag: PHP
+    sg: SG_LAN_DEV
+    resource_path: /ddchealthchk.html
+    nginx: true
+    instance_type: c3.xlarge
+    private_lb: false
+  roles:
+    - { role: lb, name_tag: 'LBPHP-DEV', az: az1, fqdn: lbphp01.use1.dev.ddc.io }

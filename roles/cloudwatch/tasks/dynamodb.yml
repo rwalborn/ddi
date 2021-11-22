@@ -1,0 +1,248 @@
+- name: pause for new dynamodb provision to take effect
+  pause:
+    seconds: 20
+  when: wait
+
+- name: get sec_index name, assuming there is only one
+  command: aws dynamodb describe-table --region "{{ region }}" --table-name "{{ dynamodb_table }}" --query 'Table.GlobalSecondaryIndexes[].IndexName' --output text
+  when: dynamodb_sec_index
+  register: sec_index
+
+- name: get current read
+  command: aws dynamodb describe-table --region "{{ region }}" --table-name "{{ dynamodb_table }}" --query 'Table.ProvisionedThroughput.ReadCapacityUnits' --output text
+  when: state != 'absent'
+  register: read
+
+- name: get current write 
+  command: aws dynamodb describe-table --region "{{ region }}" --table-name "{{ dynamodb_table }}" --query 'Table.ProvisionedThroughput.WriteCapacityUnits' --output text
+  when: state != 'absent'
+  register: write
+
+- name: get current read, sec_index
+  command: aws dynamodb describe-table --region "{{ region }}" --table-name "{{ dynamodb_table }}" --query 'Table.GlobalSecondaryIndexes[].ProvisionedThroughput.ReadCapacityUnits' --output text
+  when: state != 'absent' and dynamodb_sec_index and sec_index|succeeded
+  register: idxread
+
+- name: get current write, sec_index
+  command: aws dynamodb describe-table --region "{{ region }}" --table-name "{{ dynamodb_table }}" --query 'Table.GlobalSecondaryIndexes[].ProvisionedThroughput.WriteCapacityUnits' --output text
+  when: state != 'absent' and dynamodb_sec_index and sec_index|succeeded
+  register: idxwrite
+
+- name: read warning
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-ReadCapacity-Warning"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedReadCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((read.stdout|float)*dynamodb_warn_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "ReadCapacity Warning"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}" }'
+    alarm_actions: "{{ dynamodb_topic_arn }}"
+  when: state != 'absent'
+
+- name: removal if so defined, read warning
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-ReadCapacity-Warning"
+  when: state == 'absent'
+
+- name: read warning, sec_index
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-ReadCapacity-Warning"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedReadCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((idxread.stdout|float)*dynamodb_warn_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "ReadCapacity Warning"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}", "GlobalSecondaryIndexName": "{{ sec_index.stdout }}" }'
+    alarm_actions: "{{ dynamodb_topic_arn }}"
+  when: state != 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: removal if so defined, read warning, sec_index
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-ReadCapacity-Warning"
+  when: state == 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: read critical
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-ReadCapacity-Critical"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedReadCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((read.stdout|int)*dynamodb_crit_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "ReadCapacity Critical"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}" }'
+    alarm_actions: ["{{ dynamodb_topic_arn }}", "{{ pagerduty_topic_arn }}"]
+  when: state != 'absent'
+
+- name: removal if so defined, read critical
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-ReadCapacity-Critical"
+  when: state == 'absent'
+
+- name: read critical, sec_index
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-ReadCapacity-Critical"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedReadCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((idxread.stdout|int)*dynamodb_crit_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "ReadCapacity Critical"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}", "GlobalSecondaryIndexName": "{{ sec_index.stdout }}" }'
+    alarm_actions: ["{{ dynamodb_topic_arn }}", "{{ pagerduty_topic_arn }}"]
+  when: state != 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: removal if so defined, read critical, sec_index
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-ReadCapacity-Critical"
+  when: state == 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: write warning
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-WriteCapacity-Warning"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedWriteCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((write.stdout|float)*dynamodb_warn_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "WriteCapacity Warning"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}" }'
+    alarm_actions: "{{ dynamodb_topic_arn }}"
+  when: state != 'absent'
+
+- name: removal if so defined, write warning
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-WriteCapacity-Warning"
+  when: state == 'absent'
+
+- name: write warning, sec_index
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-WriteCapacity-Warning"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedWriteCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((idxwrite.stdout|float)*dynamodb_warn_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "WriteCapacity Warning"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}", "GlobalSecondaryIndexName": "{{ sec_index.stdout }}" }'
+    alarm_actions: "{{ dynamodb_topic_arn }}"
+  when: state != 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: removal if so defined, write warning, sec_index
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-WriteCapacity-Warning"
+  when: state == 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: write critical
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-WriteCapacity-Critical"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedWriteCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((write.stdout|float)*dynamodb_crit_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "WriteCapacity Critical"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}" }'
+    alarm_actions: ["{{ dynamodb_topic_arn }}", "{{ pagerduty_topic_arn }}"]
+  when: state != 'absent'
+
+- name: removal if so defined
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-WriteCapacity-Critical"
+  when: state == 'absent'
+
+- name: write critical, sec_index
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-WriteCapacity-Critical"
+    namespace: "AWS/DynamoDB"
+    metric: ConsumedWriteCapacityUnits
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((idxwrite.stdout|float)*dynamodb_crit_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ dynamodb_periods }}"
+    description: "WriteCapacity Critical"
+    dimensions: '{ "TableName": "{{ dynamodb_table }}", "GlobalSecondaryIndexName": "{{ sec_index.stdout }}" }'
+    alarm_actions: ["{{ dynamodb_topic_arn }}", "{{ pagerduty_topic_arn }}"]
+  when: state != 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: removal if so defined, write critical, sec_index
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "DynamoDB-{{ dynamodb_table }}-{{ sec_index.stdout }}-WriteCapacity-Critical"
+  when: state == 'absent' and dynamodb_sec_index and sec_index|succeeded
+
+- name: remove default read alarm created by AWS
+  ec2_metric_alarm:
+    state: absent
+    name: "{{ dynamodb_table }}-ReadCapacityUnitsLimit-BasicAlarm"
+    region: "{{ region }}"
+
+- name: remove default read alarm created by AWS, sec_index
+  ec2_metric_alarm:
+    state: absent
+    name: "{{ dynamodb_table }}-{{ sec_index.stdout }}-ReadCapacityUnitsLimit-BasicAlarm"
+    region: "{{ region }}"
+  when: dynamodb_sec_index and sec_index|succeeded
+
+- name: remove default write alarm recreated by AWS
+  ec2_metric_alarm:
+    state: absent
+    name: "{{ dynamodb_table }}-WriteCapacityUnitsLimit-BasicAlarm"
+    region: "{{ region }}"
+
+- name: remove default write alarm recreated by AWS, sec_index
+  ec2_metric_alarm:
+    state: absent
+    name: "{{ dynamodb_table }}-{{ sec_index.stdout }}-WriteCapacityUnitsLimit-BasicAlarm"
+    region: "{{ region }}"
+  when: dynamodb_sec_index and sec_index|succeeded
+

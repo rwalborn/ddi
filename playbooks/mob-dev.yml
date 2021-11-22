@@ -1,0 +1,12 @@
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/DEV --vault-password-file ~/.vaultpass mob-dev.yml
+
+# for maintaining configuration on MOB-DEV
+# run any time
+
+- hosts: MOB
+  remote_user: root
+  become: no
+  gather_facts: yes
+  roles:
+    - { role: jenkins_slave, extra: mob-dev }
+    - { role: mob, do: builder_config }

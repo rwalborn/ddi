@@ -1,0 +1,8 @@
+---
+- name: include install.yml
+  include: install.yml
+  when: install == true or install is undefined
+
+- name: include config.yml
+  include: config.yml
+  when: template is defined

@@ -1,0 +1,27 @@
+- name: allow hostvars[inventory_hostname] to retrieve values beyond group_vars/all
+  include_vars: ../../../group_vars/{{ vpc }}.yml
+
+- name: nonprod if sbx
+  include_vars: nonprod.yml
+  when: vpc == 'sbx'
+
+- name: search for flowlogid based on vpc
+  shell: "aws --profile {{ aws_profile }} ec2 describe-flow-logs --filter Name=resource-id,Values={{ vpc_id }} --query 'FlowLogs[].FlowLogId' --output text"
+  register: flowid
+
+- name: if flowlog is already on, abort
+  fail: msg="Flow Log for this vpc is already on"
+  when: enable and flowid == ''
+
+- name: s3 module cannot recursive, use aws cli
+  shell: "aws --profile {{ aws_profile }} s3 rm s3://{{ s3bucket }}/{{ s3prefix }} --recursive"
+  when: enable and remove_old_flowlogs
+
+- name: enable flow log
+  shell: "aws --profile {{ aws_profile }} ec2 create-flow-logs --resource-type VPC --log-group-name {{ log_group }} --traffic-type ALL --deliver-logs-permission-arn {{ deliver_arn }} --resource-ids {{ vpc_id }}"
+  when: enable
+
+- name: disable flowlog, irgore 'Unsuccessful' msg
+  shell: "aws --profile {{ aws_profile }} ec2 delete-flow-logs --flow-log-ids {{ flowid.stdout }}"
+  when: not enable
+

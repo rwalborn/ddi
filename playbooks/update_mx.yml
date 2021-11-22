@@ -1,0 +1,9 @@
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/TOOLS update_mx.yml
+
+- hosts: MX
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - mx

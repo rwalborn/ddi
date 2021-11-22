@@ -1,0 +1,28 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' sg_lan_qa.yml
+---
+- name: Creation of wide open ports (think goatse).
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+  tasks:
+    - name: Create all open ports security group for internal VPC LAN in QA
+      ec2_group:
+        name: SG_LAN_QA
+        description: All open ports security group for internal VPC LAN in QA
+        vpc_id: "{{ vpc_id }}"
+        region: us-east-1
+        rules:
+          - proto: tcp
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 0.0.0.0/0
+          # ping from icinga slave in vpc
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"

@@ -1,0 +1,8 @@
+# ansible-playbook -vv -i 'localhost,' dynamodb_backup_lambda.yml
+
+- name: update dynamodb on-demand backup lambda function
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+#    - { role: dynamodb_backup, do: lambda }

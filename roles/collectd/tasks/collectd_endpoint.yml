@@ -1,0 +1,8 @@
+- name: network plugin
+  copy:
+    src=network.conf
+    dest=/etc/collectd.d/network.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: collectd_restart

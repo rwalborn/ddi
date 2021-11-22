@@ -1,0 +1,12 @@
+/** Icinga 2 Agent Config  */
+
+include "constants.conf"
+include <itl>
+include <plugins>
+include <plugins-contrib>
+
+include "zones.conf"
+
+include "features-enabled/*.conf"
+
+max_concurrent_checks="{{ icinga_max_checks }}"

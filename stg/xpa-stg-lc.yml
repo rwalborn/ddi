@@ -1,0 +1,48 @@
+# ansible-playbook -vvvv xpa-stg-lc.yml
+---
+- name: create "{{ name_tag }}" launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/xpa-stg
+  tasks:
+    - name: create "{{ sg }}" security group
+      include: ../sec_groups/{{ sg }}_INC.yml
+
+    - name: launch configuration
+      ec2_lc:
+        name: "{{ lc }}"
+        image_id: "{{ app_ami }}"
+        key_name: "{{ key_name }}"
+        security_groups: [ "{{ ec2_group.group_id }}" ]
+        instance_profile_name: "{{ profile_name }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+        volumes:
+        - device_name: /dev/sda1
+          volume_size: 8
+          device_type: gp2
+          delete_on_termination: true
+        region: "{{ region }}"
+        assign_public_ip: false
+        user_data: |
+                    #cloud-config
+                    runcmd:
+                      - "hg -q --cwd /usr/local/share/DDI/ops pull -u"
+                      - "/root/bin/sysconfig setup_icinga_agent"
+                      - "sed -i 's/^AllowGroups .*$/AllowGroups root ldap_all centos dev/' /etc/ssh/sshd_config"
+                      - "service sshd restart"
+                      - "sed -i 's/search ec2.internal/d' /etc/resolv.conf"
+                      - 'sed -i "2 i search use1.{{ ud_env }}.doubledowncasino.com use1.{{ ud_env }}.ddc.io" /etc/resolv.conf'
+                      - "echo PEERDNS=no >> /etc/sysconfig/network"
+                      - 'wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip'
+                      - "unzip jce_policy-8.zip"
+                      - "/bin/cp -f /UnlimitedJCEPolicyJDK8/* /usr/java/latest/jre/lib/security/"
+                      - "openssl s_client -connect crowd.ddc.io:443 < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > public.crt"
+                      - "echo changeit > pass"
+                      - "/usr/java/default/bin/keytool -importcert -alias crowd -keystore /usr/java/default/jre/lib/security/cacerts -file public.crt -storepass:file pass -noprompt"
+                      - "rm -vvv pass"
+                      - "rm -vvv public.crt"
+                      - "rm -fr -vvv UnlimitedJCEPolicyJDK8"
+                      - "rm -vvv jce_policy-8.zip"

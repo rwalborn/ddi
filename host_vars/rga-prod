@@ -1,0 +1,24 @@
+# RGS-PROD VARS FILE
+
+name_tag: RGA-PROD
+
+app_tag: rgs-game-data
+app_ami: ami-b74b8da1
+instance_type: t2.medium
+spot_price: .105
+sg: SG_RGS_PROD
+fqdn: rgsadmin.prod.doubledowncasino.com
+env: production
+key_name: ops-config
+profile_name: rgs-prod
+service_tag: RGS
+
+# prefix needed for role tag for this to service to work
+prefix: RGSDDC
+
+ud_env: prod
+
+instance_port_1: 8080
+webapp_port: 8080
+config_port: 80
+

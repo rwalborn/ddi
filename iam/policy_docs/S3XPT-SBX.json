@@ -1,0 +1,29 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Stmt1410394566000",
+            "Effect": "Allow",
+            "Action": [
+                "s3:AbortMultipartUpload",
+                "s3:GetBucketAcl",
+                "s3:GetBucketCORS",
+                "s3:GetBucketLocation",
+                "s3:GetObject",
+                "s3:GetObjectAcl",
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads",
+                "s3:ListBucketVersions",
+                "s3:ListMultipartUploadParts",
+                "s3:PutObject",
+                "s3:PutObjectAcl",
+                "s3:PutObjectVersionAcl",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::ddi-experiments-nonprod",
+                "arn:aws:s3:::ddi-experiments-nonprod/*"
+            ]
+        }
+    ]
+}

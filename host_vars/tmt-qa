@@ -1,0 +1,36 @@
+# TMT-QA VARS FILE
+
+name_tag: TMT-QA
+service_tag: TMT
+icinga_profile: TMT
+hzcastqa: hzqa_tmnt
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmt.qa.doubledowncasino.com
+spot_price: 0.225
+sg: SG_TMT_QA
+
+env: qa
+profile_name: tmt-qa
+
+key_name: ops-config
+role: tmt-qa
+
+lc: TMT-QA-002
+
+ud_env: qa
+
+
+ec2_asg:
+  desired_capacity: 5
+  min_size: 5
+  max_size: 5
+  hc_type: EC2
+
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

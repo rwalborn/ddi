@@ -1,0 +1,49 @@
+# ansible-playbook -vvvv -i "localhost," foo.yml
+
+- name: elb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../host_vars/lyt
+  vars:
+    fqdn: lytddc.use1.lt.doubledowncasino.com
+    name_tag: LYT-LT
+  tasks:
+    # no security group for non-vpc ELB
+    # but make sure ping_port is open to 10.0.0.0/8 for elb traffic
+    - name: launch elb
+      ec2_elb_lb:
+        name: "{{ name_tag }}"
+        state: present
+        region: us-east-1
+        connection_draining_timeout: 30
+        cross_az_load_balancing: true
+        zones:
+          - us-east-1c
+          - us-east-1d
+        listeners:
+          - protocol: http
+            load_balancer_port: 80
+            instance_port: "{{ instance_port }}"
+        health_check:
+          ping_protocol: http
+          ping_port: "{{ instance_port }}"
+          ping_path: "/"
+          response_timeout: 5
+          interval: 10
+          unhealthy_threshold: 2
+          healthy_threshold: 2
+      register: ec2_elb_lb 
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ fqdn }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ ec2_elb_lb.elb.dns_name }}"
+      tags:
+        - route53

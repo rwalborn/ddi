@@ -1,0 +1,103 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' sg_devtools_tools.yml
+---
+- name: Create security group for Devtools in LAN Tools
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/tools
+  tasks:
+    - name: Create security group for Devtools in LAN Tools
+      ec2_group:
+        name: SG_DEVTOOLS_TOOLS
+        description: Create security group for Devtools in LAN Tools
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ region }}"
+        purge_rules: yes
+        rules:
+# Office IP's
+          - proto: -1
+            cidr_ip: 204.11.203.10/32
+          - proto: -1
+            cidr_ip: 65.117.84.83/32
+          - proto: -1
+            cidr_ip: 65.117.84.84/32
+
+# NAT Gateway IPs
+          - proto: -1
+            cidr_ip: 52.3.53.218/32
+          - proto: -1
+            cidr_ip: 52.4.29.68/32
+          - proto: -1
+            cidr_ip: 52.7.11.120/32
+          - proto: -1
+            cidr_ip: 52.7.136.250/32
+          - proto: -1
+            cidr_ip: 52.23.49.158/32
+          - proto: -1
+            cidr_ip: 52.70.231.213/32
+          - proto: -1
+            cidr_ip: 52.86.23.78/32
+          - proto: -1
+            cidr_ip: 52.86.109.187/32
+          - proto: -1
+            cidr_ip: 52.86.113.9/32
+          - proto: -1
+            cidr_ip: 52.86.175.133/32
+          - proto: -1
+            cidr_ip: 52.86.184.60/32
+          - proto: -1
+            cidr_ip: 52.86.192.147/32
+
+# VPC TOOLS
+          - proto: -1
+            cidr_ip: 192.168.0.0/22
+
+# ALL OTHER VPC'S
+          - proto: -1
+            cidr_ip: 172.0.0.0/8
+
+# OpenVPN
+          - proto: -1
+            cidr_ip: 52.90.121.124/32
+
+# Legacy sg deployer external ip list
+          - proto: -1
+            cidr_ip: 39.9.202.49/32
+          - proto: -1
+            cidr_ip: 50.18.129.4/32
+          - proto: -1
+            cidr_ip: 52.70.18.78/32
+          - proto: -1
+            cidr_ip: 52.70.133.15/32
+          - proto: -1
+            cidr_ip: 52.87.34.141/32
+          - proto: -1
+            cidr_ip: 54.83.40.181/32
+          - proto: -1
+            cidr_ip: 54.83.57.230/32
+          - proto: -1
+            cidr_ip: 54.147.24.96/32
+          - proto: -1
+            cidr_ip: 54.196.218.217/32
+          - proto: -1
+            cidr_ip: 54.198.230.107/32
+          - proto: -1
+            cidr_ip: 54.215.95.253/32
+          - proto: -1
+            cidr_ip: 54.219.211.121/32
+          - proto: -1
+            cidr_ip: 54.224.64.45/32
+          - proto: -1
+            cidr_ip: 54.225.87.139/32
+          - proto: -1
+            cidr_ip: 54.227.87.119/32
+          - proto: -1
+            cidr_ip: 54.241.42.62/32
+          - proto: -1
+            cidr_ip: 54.242.108.142/32
+          - proto: -1
+            cidr_ip: 54.243.132.241/32
+          - proto: -1
+            cidr_ip: 184.72.149.31/32
+          - proto: -1
+            cidr_ip: 204.236.176.34/32

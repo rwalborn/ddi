@@ -1,0 +1,85 @@
+# -*- python -*-
+# ex: set syntax=python:
+#
+# This is a sample buildmaster config file. It must be installed as
+# 'master.cfg' in your buildmaster's base directory.
+
+
+# This is the dictionary that the buildmaster pays attention to. We also use
+# a shorter alias to save typing.
+c = BuildmasterConfig = {}
+
+
+PROJECT_NAME = '{{ bb_project_name }}'
+PROJECT_URL = '{{ bb_project_url }}'
+TITLE_URL = '{{ bb_title_url }}'
+BUILDBOT_URL = '{{ bb_url }}'
+SLAVE_PORT = '{{ bb_slave_port }}'
+
+#######
+####### PROJECT IDENTITY
+#######
+
+c['projectName'] = PROJECT_NAME
+c['projectURL'] = PROJECT_URL
+
+# the 'title' string will appear at the top of this buildbot
+# installation's html.WebStatus home page (linked to the
+# 'titleURL') and is embedded in the title of the waterfall HTML page.
+
+c['title'] = PROJECT_NAME
+c['titleURL'] = TITLE_URL
+
+# the 'buildbotURL' string should point to the location where the buildbot's
+# internal web server (usually the html.WebStatus page) is visible. This
+# typically uses the port number set in the Waterfall 'status' entry, but
+# with an externally-visible host name which the buildbot cannot figure out
+# without some help.
+
+c['buildbotURL'] = BUILDBOT_URL
+
+#######
+####### DB URL
+#######
+
+# This specifies what database buildbot uses to store change and scheduler
+# state.  You can leave this at its default for all but the largest
+# installations.
+c['db_url'] = "sqlite:///state.sqlite"
+
+
+# Bitbucket repo push hook
+#TODO: ADD SECURITY
+
+from buildbot.status import html
+from buildbot.status.web import authz
+from buildbot.status.web.auth import HTPasswdAuth
+from buildbot.status.web.auth import BasicAuth
+
+#auth = (HTPasswdAuth('/export/autobldr/htpasswd'))
+
+authz_cfg = authz.Authz(
+    # change any of these to True to enable; see the manual for more
+    # options
+    gracefulShutdown=False,
+    forceBuild=True,
+    forceAllBuilds=False,
+    pingBuilder=False,
+    stopBuild=True,
+    stopAllBuilds=False,
+    cancelPendingBuild=True,
+)
+
+if not 'status' in c:
+    c['status'] = []
+
+c['status'].append(html.WebStatus(http_port={{ bb_http_port }}, allowForce=True,
+                                  change_hook_dialects={'bitbucket': True}))
+
+# Add the web page status target to the status array
+#c['status'].append(html.WebStatus(http_port=8089, authz=authz_cfg))
+
+from src.mobile.vpc import configure_vpc
+
+c = configure_vpc(c)
+

@@ -1,0 +1,24 @@
+# THIS WAS LEGACY ANSIBLE BEFORE OPS MIGRATION
+
+---
+# Install required configs - must conform to our haproxy_join script
+# requirements
+- template: src={{ globals_config }} dest=/etc/haproxy/conf/global.cfg
+  when: globals_config is defined
+
+- template: src={{ defaults_config }} dest=/etc/haproxy/conf/defaults.cfg
+  when: defaults_config is defined
+
+- template: src={{ frontend_config }} dest=/etc/haproxy/conf/frontend.cfg
+  when: frontend_config is defined
+
+- template: src={{ frontend_config_template }} dest=/etc/haproxy/conf/frontend.d/{{ config_name }}.cfg
+  when: frontend_config_template is defined
+
+- template: src={{ backend_config_template }} dest=/etc/haproxy/conf/backend.d/{{ config_name }}.cfg
+  when: backend_config_template is defined
+
+# Join all the configs into a single haproxy config file
+- script: scripts/haproxy_join haproxy.cfg /etc/haproxy
+
+- service: name=haproxy state=restarted

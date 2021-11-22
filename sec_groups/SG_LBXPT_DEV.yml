@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBXPT_DEV.yml
+---
+- name: LBXPT_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/xpt-dev
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

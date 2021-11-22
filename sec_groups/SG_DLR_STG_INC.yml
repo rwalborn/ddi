@@ -1,0 +1,45 @@
+---
+- name: Create the "{{ name_tag }}" security group
+  ec2_group:
+    name: "{{ sg }}"
+    description: "{{ sg }}"
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ region }}"
+    rules:
+      # Application specific port / VPC setup
+      - proto: tcp
+        from_port: "{{ instance_port }}"
+        to_port: "{{ instance_port }}"
+        cidr_ip: "{{ vpc_cidr }}"
+
+      # SSH
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 192.168.0.0/22
+
+      # Some requirements for icing
+      # (if this doesn't work, I blame Bob)
+      - proto: icmp
+        from_port: -1
+        to_port: -1
+        cidr_ip: "{{ vpc_cidr }}"
+      - proto: tcp
+        from_port: 5665
+        to_port: 5665
+        cidr_ip: "{{ icinga_master_1 }}/32"
+      - proto: tcp
+        from_port: 5665
+        to_port: 5665
+        cidr_ip: "{{ vpc_cidr }}"
+
+  register: ec2_group
+
+- name: Tag the "{{ name_tag }}" security group
+  ec2_tag:
+    resource: "{{ ec2_group.group_id }}"
+    region: "{{ region }}"
+    state: present
+    tags:
+      Name: "{{ sg }}"
+      service: "{{ service_tag }}"

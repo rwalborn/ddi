@@ -1,0 +1,4 @@
+ldaphost: ldddcm01.use1.prod.ddc.io
+basedn: "dc=doubledowncasino,dc=com"
+sshd_default_groups: 'root ldap_all'
+sshd_additional_groups: 'jump'

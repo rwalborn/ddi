@@ -1,0 +1,45 @@
+# export ANSIBLE_FORCE_COLOR=true; export AWS_PROFILE=prod; ansible-playbook -vvvv --vault-password-file ~/.vault_pass.txt ~/ddi-vpc/dev/php-dev-elb.yml
+---
+- name: ELB for PHP backed servicesb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/php
+    - ../host_vars/php-dev
+
+  tasks:
+    - name: Create "{{ elb_sg }}" security group
+      include: ../sec_groups/{{ elb_sg }}_INC.yml
+
+    - name: Launch ELB
+      ec2_elb_lb:
+        name: "{{ service_tag }}-{{ env|upper }}"
+        state: present
+        region: "{{ region }}"
+        connection_draining_timeout: "{{ ec2_elb_lb.connection_draining_timeout }}"
+        cross_az_load_balancing: true
+        subnets:
+          - "{{ subnet_pub_1 }}"
+          - "{{ subnet_pub_2 }}"
+        #zones:
+        #  - "{{ az1 }}"
+        #  - "{{ az2 }}"
+        listeners:
+          - protocol: "{{ ec2_elb_lb.listeners.protocol }}"
+            load_balancer_port: "{{ ec2_elb_lb.listeners.load_balancer_port }}"
+            instance_port: "{{ instance_port }}"
+        health_check:
+          ping_protocol: "{{ ec2_elb_lb.health_check.ping_protocol }}"
+          ping_port: "{{ instance_port }}"
+          ping_path: "{{ ec2_elb_lb.health_check.ping_path }}"
+          response_timeout: "{{ ec2_elb_lb.health_check.response_timeout }}"
+          interval: "{{ ec2_elb_lb.health_check.interval }}"
+          unhealthy_threshold: "{{ ec2_elb_lb.health_check.unhealthy_threshold }}"
+          healthy_threshold: "{{ ec2_elb_lb.health_check.healthy_threshold }}"
+        tags:
+          Name: "{{ service_tag }}-{{ env|upper }}"
+          service: "{{ service_tag }}"
+          app: "{{ app_tag }}"
+          env: "{{ env }}"

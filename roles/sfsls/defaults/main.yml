@@ -1,0 +1,19 @@
+do: nothing
+instance_type: t2.medium
+iamrole: lic
+app_tag: SmartFoxServerPro
+service_tag: SFS
+reg_domain: use1
+net: '1'
+azone: '1'
+dnszone: ddc.io
+key_name: ops-config
+app_ami: ami-abe2e8d0
+base: sfsls-linux-x86-64
+console_pw: "{{ vault_console_pw }}"
+env: tools
+sg: SG_LAN_TOOLS
+licip: 192.168.250.1
+lictype: dev
+service_fqdn: licdev.use1.tools.ddc.io
+active: false

@@ -1,0 +1,10 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+# idempotent
+
+# existing table gets update instead of being 'recreated'
+
+- name: dynamodb table
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: Balance_Service_PROD }

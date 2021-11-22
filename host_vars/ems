@@ -1,0 +1,11 @@
+app_ami: ami-4365b655
+app_tag: DDC
+rpm_tag: ddi-emailservice
+service_tag: EMS
+instance_type: c4.xlarge
+instance_port: 8080
+ping_path: /api/v1/ping
+sbx_lc: EMS-SBX-002
+lt_lc: EMS-LT-006
+stg_lc: EMS-STG-001
+prod_lc: EMS-PROD-001

@@ -1,0 +1,5 @@
+- name: config
+  include: config.yml
+
+- name: maintenance
+  include: maintenance.yml

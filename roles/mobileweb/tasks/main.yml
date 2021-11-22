@@ -1,0 +1,6 @@
+---
+- include: init.yml
+  when: task == 'configure'
+
+- include: provision.yml
+  when: task == 'provision'

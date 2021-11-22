@@ -1,0 +1,53 @@
+# Runs as ansible-playbook -vvvv dashboard-tools-elb.yml
+
+- name: elb for bi dashboard tool
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/dashboard-tools
+  tasks:
+    - include: sec_groups/{{ elb_sg }}_INC.yml
+
+    - name: launch elb
+      ec2_elb_lb:
+        name: "{{ name_tag }}"
+        state: present
+        security_group_ids: "{{ ec2_group.group_id }}"
+        region: "{{ region }}"
+        connection_draining_timeout: 30
+        cross_az_load_balancing: true
+        subnets:
+          - "{{ subnet_pub_3 }}"
+          - "{{ subnet_pub_4 }}"
+        listeners:
+          - protocol: http
+            load_balancer_port: 80
+            instance_port: 80
+        health_check:
+          ping_protocol: http
+          ping_port: 80
+          ping_path: "{{ ec2_elb_lb.health_check.ping_path_1 }}"
+          response_timeout: 5
+          interval: 10
+          unhealthy_threshold: 1
+          healthy_threshold: 1
+        tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+          app: "{{ app_tag }}"
+          env: "{{ env }}"
+      register: ec2_elb_lb
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ elb_fqdn }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ ec2_elb_lb.elb.dns_name }}"
+      tags:
+        - route53

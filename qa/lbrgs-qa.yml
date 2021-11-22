@@ -1,0 +1,35 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# to use mudevi-cnames and headevhcheck for service, define service_fqdn and set policy_routing to true
+# it is discouraged because it affects live dns record
+# step-by-step is in https://confluence.doubledowninteractive.com/display/OPS/HAProxy
+
+# instances spread into c, d, e, so we create 3 LBs, one in each
+# (originally all 4 in c)
+
+- name: 
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    app_tag: rgs-server-unfiltered
+    env_tag: qa
+    sg: SG_LBRGS_QA
+    resource_path: /rgslite/rgs-running
+    service_port: 8080
+    service_fqdn: rgs.qa.doubledowncasino.com
+    instance_type: c3.large
+    update_service_fqdn: true
+    private_lb: false
+    healthcheck: true
+    nginx: false
+    vpc: true
+    policy_routing: true
+  roles:
+    - { role: lb, name_tag: 'LBRGS-QA 01', az: us-east-1c, fqdn: lbrgs01.use1.qa.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs01.use1.qa.ddc.io }
+    - { role: lb, name_tag: 'LBRGS-QA 02', az: us-east-1d, fqdn: lbrgs02.use1.qa.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs02.use1.qa.ddc.io }
+

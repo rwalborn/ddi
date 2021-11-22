@@ -1,0 +1,23 @@
+---
+- name: create "{{ name_tag }}" security group
+  ec2_group:
+    name: "{{ sg }}"
+    description: "{{ sg }}"
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        from_port: 443
+        to_port: 443
+        cidr_ip: 0.0.0.0/0
+  register: ec2_group
+
+- name: Tag the security group with a name
+  local_action:
+    module: ec2_tag
+    resource: "{{ec2_group.group_id}}"
+    region: "{{ region }}"
+    state: present
+    tags:
+      Name: "{{ sg }}"
+      service: "{{ service_tag }}"

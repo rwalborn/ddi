@@ -1,0 +1,24 @@
+---
+# Runs as export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv ddremove.yml
+
+- name: remove datadog
+#  hosts: mgddc901_lt
+#  hosts: cb*_prod
+##  hosts: cbrgs_sbx_802
+  hosts: mobiletools_sbx_test_2
+  gather_facts: yes
+#  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: gather facts
+      ec2_facts:
+
+#    - name: remove datadog rpm
+#      yum: name=datadog-agent
+#           state=absent
+#
+#    - name:
+#      file: path=/etc/dd-agent
+#            state=absent

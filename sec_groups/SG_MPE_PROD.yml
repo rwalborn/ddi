@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_MPE_PROD.yml
+
+- name: MPE_PROD security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/mpe-prod
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

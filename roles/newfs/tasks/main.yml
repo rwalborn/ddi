@@ -1,0 +1,42 @@
+- name: xfs support
+  yum: name=xfsprogs
+       state=present
+  when: fstype == 'xfs'
+
+- name: parted install
+  yum: name=parted
+       state=present
+  when: fstype == 'xfs'
+
+- debug: msg="{{ blkdev }} already has a partition."
+  when: ansible_devices[blkdev]['partitions']
+  ignore_errors: true
+
+- name: create one partition
+  shell: parted -s -a optimal "/dev/{{ blkdev }}" mklabel gpt mkpart primary 0% 100%
+#  debug: msg="{{ blkdev }} will be partitioned"
+  when: not ansible_devices[blkdev]['partitions']
+
+# assuming partition = file system, just to be safe
+- debug: msg="{{ blkdev }} already has a file system."
+  when: ansible_devices[blkdev]['partitions']
+
+- name: make file system
+  filesystem: fstype="{{ fstype }}"
+              dev="/dev/{{ blkdev }}1"
+#  debug: msg="{{ blkdev }} will get a new file system"
+  when: not ansible_devices[blkdev]['partitions']
+
+- name: ensure mount point exists
+  file: path="{{ mountpoint }}"
+        state=directory
+  when: mountpoint is defined
+
+- name: mount file system
+  mount: name="{{ mountpoint }}"
+         src="/dev/{{ blkdev }}1"
+         fstype="{{ fstype }}"
+         opts=noatime,relatime
+         state=mounted
+#  debug: msg="/dev/{{ blkdev }}1 will be mounted at {{ mountpoint }}"
+  when: mountpoint is defined

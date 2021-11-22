@@ -1,0 +1,18 @@
+# ansible-playbook -vvvv -i "1.2.3.4," --vault-password-file ~/.vaultpass foo.yml
+
+- name: icinga
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/icinga
+
+- name: configure instance
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - { role: repo_ops }
+    - { role: icinga, local_zone: "stg"}

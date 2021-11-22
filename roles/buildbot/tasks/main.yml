@@ -1,0 +1,12 @@
+---
+- include_vars: ../vars/secrets.yml
+- include: common.yml
+
+- include: master.yml
+  when: slave_only == false
+
+- include: slave.yml
+  when: slave_only == true
+
+- include: edc_slave.yml
+  when: slave_only == 'edc'

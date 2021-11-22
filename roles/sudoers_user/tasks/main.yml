@@ -1,0 +1,21 @@
+- name: create sudoers file in /etc/sudoers.d, one file per user
+  template:
+    src: "sudoers.j2"
+    dest: "{{ sudoers_dir_path }}{{ item.username }}"
+    owner: "root"
+    group: "root"
+    mode: "0440"
+    validate: visudo -cf %s
+  with_flattened:
+    - "{{ sudoers_all }}"
+    - "{{ sudoers_user }}"
+  when: file_state == "present" or file_state == "latest" and item.username is defined and item.cmd_list is defined
+
+- name: remove sudoers-file when state absent
+  file:
+    dest: "{{ sudoers_dir_path }}{{ item.username }}"
+    state: "{{ file_state }}"
+  with_flattened:
+    - "{{ sudoers_all }}"
+    - "{{ sudoers_user }}"
+  when: file_state == "absent"

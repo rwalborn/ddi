@@ -1,0 +1,170 @@
+#- name: Install centos-release-SCL
+#  yum:
+#    name: centos-release-SCL
+#    state: present
+
+- name: Create DDI S3 Ops Repo (legacy version)
+  yum_repository:
+    name: DDI-S3-Legacy
+    description: DDI Ops Repo (Legacy)
+    baseurl: http://ddi-ops-repo.s3.amazonaws.com/$basearch/
+    gpgcheck: yes
+    gpgkey: http://ddi-ops-repo.s3.amazonaws.com/RPM-GPG-KEY-DDI
+    enabled: yes
+    s3_enabled: yes
+    priority: 1
+    state: present
+
+- name: Install REMI repo.
+  yum:
+    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    state: present
+
+- name: Install REMI configuration package.
+  yum:
+    name: http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+    state: present
+
+- name: Import REMI GPG key.
+  rpm_key:
+    key: http://rpms.remirepo.net/RPM-GPG-KEY-remi
+    state: present
+
+- name: Set priorities for yum
+  command: yum-config-manager --enable remi-php56
+
+- name: Clean YUM cache if nesc.
+  command: yum clean all
+
+- name: Update yum
+  command: yum -y update --skip-broken
+
+- name: Create PHP environment variable
+  command: echo "export CASINO_HOME=/home/webapps/casino/current/" > /etc/profile.d/casinoappdef.sh
+
+#- name: Move the OPs lograte script
+#  command: ln -s /usr/local/share/DDI/ops/logrotate.d/dealer /etc/logrotate.d/dealer
+- name: Install Apache server required rpms
+  yum:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - httpd
+
+- name: Install PHP server required rpms
+  yum:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - php56
+    - php56-php-cli
+    - php56-php-common
+    - php56-php-devel
+    - php56-php-pdo
+    - php56-php-mbstring
+    - php56-php-soap
+    - php56-php-mcrypt
+    - php56-php-mysql
+    - php56-php-mysqlnd
+    - php56-php-pear
+    - php56-php-pecl-mongo
+    - php56-php-pecl-geoip
+    - php56-php-pecl-memcache
+    - php56-php-pecl-memcached
+    - php56-php-bcmath
+    - php56-php-xml
+    - php56-php-xmlrpc
+    - php56-php-soap
+    - freetype
+    - freetype-devel
+    - fontconfig
+    - fontconfig-devel
+    - subversion
+    - zlib
+    - zlib-devel
+    - zip
+    - bzip2-devel
+    - openssl-devel
+    - gettext
+    - ImageMagick
+    - libpng
+    - libpng-devel
+    - libjpeg-turbo
+    - libjpeg-turbo-devel
+    - libtiff
+    - libtiff-devel
+    - giflib
+    - giflib-devel
+    - php-ZendFramework-full
+    - nutcracker
+    - mod_ldap
+
+- name: /var/log/httpd/php_errors.log
+  lineinfile:
+    path=/etc/php.ini
+    regexp='^;error_log = php_errors.log$'
+    line='error_log = /var/log/httpd/php_errors.log'
+
+- name: remove useless conf
+  file:
+    path=/etc/httpd/{{ item }}
+    state=absent
+  with_items:
+    - conf/httpd.conf
+    - conf.d/autoindex.conf
+    - conf.d/dojo.conf
+    - conf.d/userdir.conf
+    - conf.d/welcome.conf
+    - conf.modules.d/00-base.conf
+    - conf.modules.d/00-dav.conf
+    - conf.modules.d/00-lua.conf
+    - conf.modules.d/00-proxy.conf
+
+- name: /etc/GeoIP.conf
+  copy:
+    src=GeoIP.conf
+    dest=/etc/GeoIP.conf
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/php.d/geoip.ini
+  copy:
+    src=geoip.ini
+    dest=/etc/php.d/50-geoip.ini
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/cron.d/geoip
+  copy:
+    src=geoip.cron
+    dest=/etc/cron.d/geoip
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/logrotate.d/dealer
+  copy:
+    src=dealer
+    dest=/etc/logrotate.d/dealer
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/logrotate.d/edcclientlog
+  copy:
+    src=edcclientlog
+    dest=/etc/logrotate.d/edcclientlog
+    mode=0644
+    owner=root
+    group=root
+
+- name: /var/log/httpd
+  file:
+    src=/mnt/ebs1/log
+    dest=/var/log/httpd
+    state=link
+    force=yes

@@ -1,0 +1,34 @@
+---
+- name: create "ICINGA-QA" security group
+  ec2_group:
+    name: "{{ sg }}"
+    description: "{{ sg }}"
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 192.168.0.0/22
+      - proto: icmp
+        from_port: -1
+        to_port: -1
+        cidr_ip: 192.168.3.238/32
+      # NRPE & ICINGA API
+      - proto: tcp
+        from_port: 5665
+        to_port: 5666
+        cidr_ip: 192.168.3.238/32
+      - proto: tcp
+        from_port: 5665
+        to_port: 5666
+        cidr_ip: "{{ vpc_cidr }}"
+      - proto: icmp
+        from_port: -1
+        to_port: -1
+        cidr_ip: "{{ vpc_cidr }}"
+  register: ec2_group
+
+- name: tag the fraker!
+  command: aws ec2 create-tags --region "{{ region }}" --resources "{{ ec2_group.group_id }}" --tags Key=Name,Value="{{ sg }}"
+

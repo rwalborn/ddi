@@ -1,0 +1,28 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+# idempotent
+
+- name: adjust service limit and alarm based on new account limit
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../host_vars/capi
+  vars:
+    env: prod
+  roles:
+    - { role: cloudwatch, alarm: apigateway }
+  tasks:
+    - name: get current rateLimit
+      command: aws apigateway get-account --region "{{ region }}" --query 'throttleSettings.rateLimit' --output text
+      register: ratelimit
+
+    - name: get current burstLimit
+      command: aws apigateway get-account --region "{{ region }}" --query 'throttleSettings.burstLimit' --output text
+      register: burstlimit
+
+    - name: update rateLimit
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/throttling/rateLimit,value="{{ ratelimit.stdout }}"
+
+    - name: update burstLimit
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/throttling/burstLimit,value="{{ burstlimit.stdout }}"
+
+

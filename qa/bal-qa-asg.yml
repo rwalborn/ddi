@@ -1,0 +1,29 @@
+# Runs as ansible-playbook -vvvv bal-qa-asg.yml
+---
+- name: create "{{ name_tag }}" autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/bal-qa
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: "{{ region }}"
+      availability_zones: [ "{{ az1 }}", "{{ az2 }}" ]
+      vpc_zone_identifier: [ "{{ subnet_pri_1 }}", "{{ subnet_pri_2 }}" ]
+      launch_config_name: "{{ lc }}"
+      desired_capacity: 2
+      min_size: 2
+      max_size: 2
+      load_balancers: [ "{{ lb }}" ]
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "{{ app_tag }}"
+          rpm: "{{ rpm_tag }}"
+          service_tag: "{{ service_tag }}"
+          icinga-profile: BAL

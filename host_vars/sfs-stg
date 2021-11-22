@@ -1,0 +1,9 @@
+vpc_sg: SG_LAN_STG
+ec2_sg: Staging
+env: staging
+iamrole: sfs-stg
+icinga: SFS
+
+sfs_externals_casino_config_host: cp.stg.doubledowncasino.com
+sfs_externals_casino_config_db_host: dbddcm01.use1.stg.doubledowncasino.com
+sfs_externals_admin_config_host: staging.doubledowncasino.com

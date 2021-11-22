@@ -1,0 +1,13 @@
+# runs as export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv SG_ICINGA_SBX.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/icinga
+  vars:
+      sg: SG_ICINGA_SBX
+  tasks:
+    - include: "{{ sg }}_INC.yml"

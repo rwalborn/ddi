@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_XPT_SBX.yml
+
+- name: XPT_SBX security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/xpt-sbx
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

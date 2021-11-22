@@ -1,0 +1,69 @@
+- name: set nginx arg for sysconfig
+  set_fact: sysconfig_arg1='nginx'
+  when: nginx == true
+
+- name: set az1
+  set_fact:
+    zone: "{{ az1 }}"
+  when: az == 'az1'
+
+- name: set az2
+  set_fact:
+    zone: "{{ az2 }}"
+  when: az == 'az2'
+
+- name: launch instance
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    image: "{{ app_ami }}"
+    group: "{{ sg }}"
+    zone: "{{ zone }}"
+    region: "{{ region }}"
+    wait: yes
+    instance_profile_name: "{{ role }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      rpm: "{{ rpm_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env_tag }}"
+      service: "{{ service_tag }}"
+    user_data: |
+               #cloud-config
+               hostname: {{ fqdn }}
+               write_files:
+                 - path: /etc/cron.d/haproxy
+                   owner: root
+                   permissions: 0644
+                   content: |
+                     */5 * * * * root /root/bin/haproxy_config.py
+               runcmd:
+                 - cd /usr/local/share/DDI/ddi-ops && git pull
+                 - rm -f /tmp/icinga_vars.yml /tmp/zones.j2
+                 - yum -y erase icinga2 icinga2-common icinga2-bin icinga2-libs
+                 - userdel icinga
+                 - /root/bin/sysconfig {{ sysconfig_arg1 }}
+                 - /root/bin/haproxy_config.py --updaterepo --force
+                 - systemctl restart crond
+  register: ec2
+
+- name: get hostname
+  set_fact: hostname="{{ fqdn.split('.')[0] }}"
+
+- name: get subdomain for env
+  set_fact: subdomain="{{ fqdn.split('.')[2] }}"
+
+- name: set route53 zone
+  set_fact:
+    mgt_zone="sbx.ddc.io"
+  when: subdomain == 'sbx'
+
+- name: mgmt record for the LB instance
+  route53:
+    command: create
+    zone: "{{ mgt_zone }}"
+    record: "{{ fqdn }}"
+    type: "A"
+    ttl: 300
+    value: "{{ ec2.instances.0.public_ip }}"
+    overwrite: true

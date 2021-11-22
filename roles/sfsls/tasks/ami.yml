@@ -1,0 +1,46 @@
+- include_vars: licadmin.yml
+
+- name: installation dir
+  file:
+    path=/ddi/services
+    state=directory
+    owner=ddiuser
+    group=ddiuser
+
+- name: temp dir for download
+  file:
+    path=/ddi/tmp
+    state=directory
+    owner=ddiuser
+    group=ddiuser
+
+- name: download license server artifact from s3
+  shell: "/usr/bin/aws s3 cp s3://ddc-artifacts/sfs-license-server/{{ base }}.tar.gz /ddi/tmp/{{ base }}.tar.gz"
+
+- name: extract
+  unarchive:
+    src=/ddi/tmp/{{ base }}.tar.gz
+    dest=/ddi/services
+    copy=False
+    group=ddiuser
+    owner=ddiuser
+
+- name: symlink init script into rc3
+  file:
+    src=/ddi/services/{{ base }}/sfsls
+    dest=/etc/rc.d/rc3.d/S99sfsls
+    state=link
+
+- name: symlink init script
+  file:
+    src=/ddi/services/{{ base }}/sfsls
+    dest=/etc/init.d/sfsls
+    state=link
+
+- name: write the web console pw
+  template:
+    src=LicenseServer.properties.j2
+    dest=/ddi/services/{{ base }}/LicenseServer.properties
+    owner=ddiuser
+    group=ddiuser
+    mode=0644

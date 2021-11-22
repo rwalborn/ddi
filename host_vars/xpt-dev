@@ -1,0 +1,50 @@
+# XPT-DEV VARS FILE
+
+name_tag: XPT-DEV
+service_tag: XPT
+icinga_profile: XPT
+lb: XPT-DEV
+
+app_tag: DDC
+rpm_tag: ddi-experiment-server
+app_ami: ami-382bb62e
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_XPT_DEV
+elb_sg: SG_LBXPT_DEV
+elb_fqdn: xpt.dev.doubledowncasino.com
+env: development
+profile_name: xpt-dev
+
+# prefix needed for role tag for this to service to work
+prefix: XPTDDC
+
+lc: XPT-DEV-005
+
+ud_env: dev
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11500
+instance_port_2: 11509
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /experiments/1234
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+
+#webapp_port: 11525
+#config_port: 11509
+

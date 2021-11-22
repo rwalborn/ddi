@@ -1,0 +1,65 @@
+- name: zero out root shadow string
+  user:
+    name=root
+    password='*'
+
+- name: ensure /etc/hostname is missing
+  file:
+    path=/etc/hostname
+    state=absent
+
+- name: clean up /etc/hosts
+  copy:
+    src="hosts.{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
+    dest=/etc/hosts
+    owner=root
+    group=root
+    mode=0644
+
+- name: clean up hostname in /etc/sysconfig/network
+  lineinfile:
+    dest=/etc/sysconfig/network
+    state=absent
+    regexp='^HOSTNAME=.*$'
+
+- name: clean yum cache
+  command: yum clean all
+
+- name: empty live logs
+  shell: cp /dev/null {{ item }}
+  with_items:
+    - /var/log/btmp
+    - /var/log/cron
+    - /var/log/dmesg
+    - /var/log/lastlog
+    - /var/log/maillog
+    - /var/log/messages
+    - /var/log/secure
+    - /var/log/wtmp
+    - /var/log/yum.log
+
+- name: remove old files
+  shell: rm -rf {{ item }}
+  with_items:
+    - /var/lib/anaconda*
+    - /var/lib/boot.log
+    - /var/lib/audit/*
+    - /var/lib/cloud/*
+    - /var/lib/icinga2/*
+    - /var/log/btmp-*
+    - /var/log/cron-*
+    - /var/log/cloud-init.log
+    - /var/log/cloud-init-output.log
+    - /var/log/dmesg.old
+    - /var/log/maillog-*
+    - /var/log/messages-*
+    - /var/log/sa/*
+    - /var/log/secure-*
+    - /var/log/spooler-*
+    - /var/log/sssd/*
+    - /var/log/tuned/*
+    - /var/log/wtmp-*
+    - /var/log/yum.log-*
+
+- name: last step, remove ssh files that connections depends on
+  shell: 'rm -rf /etc/ssh/ssh_host_*'

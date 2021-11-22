@@ -1,0 +1,24 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# Sadly, all RGS-LT instances are in us-east-1e
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+  vars:
+    app_tag: rgs
+    env_tag: staging
+    sg: Staging
+    az: us-east-1e
+    resource_path: /rgslite/rgs-running
+    service_port: 8080
+    service_fqdn: rgs.staging.doubledowncasino.com
+    healthcheck: false
+    policy_routing: false
+    update_service_fqdn: true
+    private_lb: true
+  roles:
+    - { role: lb, name_tag: 'LBRGS-STG 01', fqdn: lbrgs01.use1.stg.ddc.io }

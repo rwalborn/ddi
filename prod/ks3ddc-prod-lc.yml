@@ -1,0 +1,47 @@
+# ansible-playbook -vvvv ks3ddc-prod-lc.yml
+
+- name: create launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/ks3ddc-prod
+  tasks:
+    - name: create security group
+      include: "../sec_groups/{{ sg }}_INC.yml"
+
+    - name: launch configuration
+      ec2_lc:
+        name: "{{ lc }}"
+        image_id: "{{ app_ami }}"
+        key_name: "{{ key_name }}"
+        security_groups: [ "{{ ec2_group.group_id }}" ]
+        instance_profile_name: "{{ profile_name }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 10
+            device_type: gp2
+            delete_on_termination: true
+          - device_name: /dev/xvdb
+            ephemeral: ephemeral0
+            volume_size: 75
+            delete_on_termination: true
+        region: "{{ region }}"
+        assign_public_ip: false
+        user_data: |
+                   #cloud-config
+                   mounts:
+                     - [ ephemeral0, null ]
+                   runcmd:
+                     - parted /dev/xvdb mklabel gpt
+                     - parted /dev/xvdb mkpart primary xfs 0% 100%
+                     - mkfs -t xfs /dev/xvdb1
+                     - mount /dev/xvdb1 /mnt/ephemeral
+                     - echo '/dev/xvdb1 /mnt/ephemeral xfs defaults 0 2' >> /etc/fstab
+                     - /bin/echo -e '\nappend domain-search "ec2.internal", "use1.{{ ud_env }}.doubledowncasino.com", "use1.{{ ud_env }}.ddc.io";' >> /etc/dhcp/dhclient-eth0.conf
+                     - service network restart
+                     - cd /usr/local/share/DDI/ddi-ops && git pull
+                     - /root/bin/sysconfig setup_icinga_agent
+                     - service /etc/init.d/ddi-kinesis-s3-archiver start

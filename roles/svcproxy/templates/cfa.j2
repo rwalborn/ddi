@@ -1,0 +1,47 @@
+global
+  chroot /var/empty/haproxy
+  maxconn 20000
+  stats socket /var/run/haproxy.sock
+  log 127.0.0.1:514 local0 notice
+  user haproxy
+  group haproxy
+  quiet
+  daemon
+
+mailers mymailers
+  mailer postfix 127.0.0.1:25
+
+defaults
+  mode http
+  maxconn 20000
+  bind-process 1
+  timeout connect 5s
+  timeout client 5s
+  timeout server 5s
+  timeout http-request 3s
+  timeout http-keep-alive 3s
+  log global
+  balance leastconn
+  option httplog
+  option dontlognull
+  option redispatch
+  option log-health-checks
+  option http-ignore-probes
+  option http-buffer-request
+  stats enable
+  stats uri /haproxy-status
+  stats auth admin:ddi4ever
+  email-alert mailers mymailers
+  email-alert from donotreply@ddc.io
+  email-alert to bayerqgibcl+ops-doggy-park@in.mailroom.hipch.at
+
+resolvers mydns
+  nameserver dhcp {{ ansible_dns.nameservers[0] }}:53
+  resolve_retries       3
+  timeout retry         1s
+  hold valid           10s
+
+listen CFA
+  bind :80
+  option httpchk GET {{ health_check_url }}
+  server {{ svc_hostname }} {{ svc_fqdn }}:{{ svc_port }} check resolvers mydns

@@ -1,0 +1,33 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# to use multi-cnames and healthcheck for service, define service_fqdn and set policy_routing to true
+# it is discouraged because it affects live dns record
+# step-by-step is in https://confluence.doubledowninteractive.com/display/OPS/HAProxy
+
+# instances spread into c, d, e, so we create 3 LBs, one in each
+# (originally all 4 in c)
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+  vars:
+    app_tag: php-casino
+    env_tag: load_test
+    sg: LoadTest
+    resource_path: /ddchealthchk.html
+    service_port: 80
+    service_fqdn: lt.doubledowncasino.com
+    instance_type: c3.xlarge
+    update_service_fqdn: true
+    private_lb: false
+    healthcheck: true
+    nginx: true
+    policy_routing: true
+  roles:
+    #- { role: lb, name_tag: 'LBAPP-LT 01', az: us-east-1c, fqdn: lbapp01.use1.lt.ddc.io }
+    #- { role: cloudwatch, alarm: route53, recordset: lbapp01.use1.lt.ddc.io }
+    - { role: lb, name_tag: 'LBAPP-LT 02', az: us-east-1d, fqdn: lbapp02.use1.lt.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbapp02.use1.lt.ddc.io }

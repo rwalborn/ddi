@@ -1,0 +1,26 @@
+# KS3DDC-DEV VARS FILE
+
+name_tag: KS3DDC-DEV
+lb: KS3DDC-DEV
+service_tag: KS3DDC
+
+app_tag: DDI
+rpm_tag: ddi-kinesis-s3-archiver
+app_ami: ami-c812a0de
+icinga-profile: KS3DDC
+instance_type: m3.xlarge
+spot_price: .42
+sg: SG_KS3DDC_DEV
+
+env: development
+key_name: ops-config
+profile_name: ks3ddc-qa
+prefix: KS3
+deployment: DEV
+
+ud_env: dev
+
+lc: KS3DDC-DEV-001
+hc_type: EC2
+
+

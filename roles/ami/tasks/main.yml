@@ -1,0 +1,193 @@
+---
+
+# do not define special_ami variable for centos
+# it is used to non-centos situation, such as amazon linux
+
+- name: enable mtu probing so we don't have issues with jumbo frames on the internet
+  sysctl: name="net.ipv4.tcp_mtu_probing"
+          value=1
+          sysctl_set=yes
+          state=present
+          reload=yes
+  when: special_ami is undefined
+
+- name: install epel
+  yum: name=epel-release state=installed
+
+- name: upgrade distro
+  shell: yum upgrade -y
+
+#- name: remove cloud-init
+#  yum: name=cloud-init
+#       state=absent
+#  when: special_ami is undefined
+
+- name: install needful
+  yum: name={{ item }} state=installed
+  with_items:
+    - htop 
+    - git
+    - mercurial
+    - ansible
+    - wget
+    - bind-utils
+    - tcpdump
+    - sysstat
+    - vim
+    - ntp
+    - ntpdate
+    - curl
+    - libselinux-python
+    - python-pip
+    - python2-ndg_httpsclient
+    - s3cmd
+    - lsof
+    - mlocate
+    - strace
+  when: special_ami is undefined
+
+- name: install aws cli
+  pip: name=awscli
+  when: special_ami is undefined
+
+- name: replace ntp.conf with AWS timeservers
+  copy: src=centos6x.ntp.conf
+        dest=/etc/ntp.conf
+        owner=root
+        mode=0644
+
+# we run on UTC now
+#- name: Set timezone to PST
+#  file: src=/usr/share/zoneinfo/US/Pacific  dest=/etc/localtime state=link force=yes
+#  when: ansible_date_time.tz != 'PST' or ansible_date_time.tz != 'PDT'
+
+- name: restart ntp for changes to take effect
+  service: name=ntpd
+           enabled=yes
+           state=restarted
+
+- name: copy custom .bashrc
+  copy: src=.bashrc
+        dest=/root/.bashrc
+        owner=root
+        mode=0644
+
+- name: copy custom .vimrc
+  copy: src=.vimrc
+        dest=/root/.vimrc
+        owner=root
+        mode=0644
+
+- name: replace the centos 6x selinux config
+  copy: src=centos6x.config
+        dest=/etc/selinux/config
+        owner=root
+        mode=0644
+  when: special_ami is undefined
+
+- name: disable selinux before reboot
+  shell: setenforce 0
+  when: special_ami is undefined
+
+- name: copy yum-s3-iam
+  copy: src=yum-plugin-s3-iam-1.0.3-1.noarch.rpm
+        dest=/root/yum-plugin-s3-iam-1.0.3-1.noarch.rpm
+        owner=root
+
+- name: install yum-s3-iam
+  shell: yum install /root/yum-plugin-s3-iam-1.0.3-1.noarch.rpm -y
+
+- name: delete yum-s3-iam rpm to be tidy
+  shell: rm /root/yum-plugin-s3-iam-1.0.3-1.noarch.rpm
+
+- name: copy DDI.repo
+  copy: src=DDI.repo
+        dest=/etc/yum.repos.d/DDI.repo
+        owner=root
+        mode=0644
+  when: special_ami is undefined
+
+- name: copy DDI-S3-Releases.repo
+  copy: src=DDI-S3-Releases.repo
+        dest=/etc/yum.repos.d/DDI-S3-Releases.repo
+        owner=root
+        mode=0644
+  when: special_ami is undefined
+
+- name: modify /etc/yum.conf
+  lineinfile: dest=/etc/yum.conf line="failovermethod=roundrobin"
+
+# leave this out because ddi/ops repo is an open question
+#- name: create /root/bin
+#  shell: mkdir /root/bin
+
+#- name: copy aws_hostname_by_id.sh
+#  copy: src=aws_hostname_by_id.sh
+#        dest=/etc/init.d/aws_hostname
+#        owner=root
+#        mode=0755
+
+- name: copy aws_hostname_by_id.sh
+  copy: src=aws_hostname.CentOS_7
+        dest=/etc/init.d/aws_hostname
+        owner=root
+        mode=0755
+
+- name: move aws_hostname into init sequence
+  service: name=aws_hostname
+           enabled=yes
+
+- name: copy fetchkey.sh
+  copy: src=fetchkey.sh
+        dest=/usr/local/sbin/fetchkey.sh
+        owner=root
+        mode=0755
+  when: special_ami is undefined
+
+- name: modify rc.local to run fetchkey.sh
+  lineinfile: dest=/etc/rc.local 
+              line="test -x /usr/local/sbin/fetchkey.sh && /usr/local/sbin/fetchkey.sh"
+              state=present
+              insertafter=EOF
+  when: special_ami is undefined
+
+#- name: modify rc.local to allow bootstrap ala Jeremy
+#  lineinfile: dest=/etc/rc.local 
+#              line="curl http://169.254.169.254/latest/user-data | base64 -d | cat > /tmp/bootstrap.yml && /usr/bin/ansible-playbook --inventory="localhost," /tmp/bootstrap.yml"
+#              state=present
+#              insertafter=EOF
+
+- name: comment out requiretty line in sudoers
+  lineinfile:
+    dest=/etc/sudoers
+    state=present
+    backrefs=yes
+    regexp='^(Defaults\s*requiretty)$'
+    line='#\1'
+
+- name: set max for local uid
+  lineinfile:
+    dest=/etc/login.defs
+    state=present
+    regexp='^UID_MAX'
+    line='UID_MAX 2000'
+
+- name: set max for local gid
+  lineinfile:
+    dest=/etc/login.defs
+    state=present
+    regexp='^GID_MAX'
+    line='GID_MAX 2000'
+
+- name: zero out root shadow string
+  user:
+    name=root
+    password='*'
+
+- name: disable services
+  service: name={{ item }} enabled=no
+  with_items:
+    - acpid
+    - iptables
+    - ip6tables
+

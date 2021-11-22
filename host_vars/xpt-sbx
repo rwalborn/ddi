@@ -1,0 +1,45 @@
+# XPT-SBX VARS FILE
+
+name_tag: XPT-SBX
+service_tag: XPT
+icinga_profile: XPT
+lb: XPT-SBX
+
+app_tag: DDC
+rpm_tag: ddi-experiment-server
+app_ami: ami-382bb62e
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_XPT_SBX
+elb_sg: SG_LBXPT_SBX
+elb_fqdn: xpt.sbx.doubledowncasino.com
+env: sbx
+profile_name: xpt-sbx
+
+# prefix needed for role tag for this to service to work
+prefix: XPTDDC
+
+lc: XPT-SBX-005
+
+ud_env: sbx
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11500
+instance_port_2: 11509
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /experiments/1234
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2

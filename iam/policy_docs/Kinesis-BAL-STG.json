@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Stmt1425386124000",
+      "Effect": "Allow",
+      "Action": [
+        "kinesis:DescribeStream",
+        "kinesis:ListStreams",
+        "kinesis:PutRecord",
+        "kinesis:PutRecords",
+        "kinesis:GetShardIterator",
+        "kinesis:GetRecords",
+        "kinesis:MergeShards",
+        "kinesis:SplitShard"
+      ],
+      "Resource": [
+        "arn:aws:kinesis:us-east-1:143177584759:stream/BALDDC-STG"
+      ]
+    }
+  ]
+}

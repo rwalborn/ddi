@@ -1,0 +1,37 @@
+- name: install rpm
+  yum: name="supervisor-{{ supervisor_version }}" state=installed
+
+- name: start service
+  service:
+    name=supervisor
+    enabled=yes
+    state=started
+  when: not baking
+
+- name: ensure /etc/supervisord.d
+  file:
+    path=/etc/supervisord.d
+    state=directory
+    mode=0775
+    owner=root
+    group=ddiuser
+
+- name: supervisord.conf
+  template:
+    src=supervisord.conf.j2
+    dest=/etc/supervisord.conf
+    mode=0644
+    owner=root
+    group=root
+  notify: restart supervisor
+  when: not baking
+
+- name: socket
+  template:
+    src=00-unix-socket.ini.j2
+    dest=/etc/supervisord.d/00-unix-socket.ini
+    mode=0644
+    owner=root
+    group=root
+  notify: restart supervisor
+  when: not baking

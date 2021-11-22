@@ -1,0 +1,214 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+- name: elb for pastebin
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/paste
+  vars:
+    fqdn: paste.ddc.io
+    name_tag: PASTEBIN-TOOLS
+    elb_sg: SG_LBPASTEBIN_TOOLS
+    app_tag: TOOLS
+    env: tools
+    service_tag: OPS
+  tasks:
+    - include: sec_groups/SG_ELB443_INC.yml
+    - name: launch elb
+      ec2_elb_lb:
+        name: "{{ name_tag }}"
+        state: present
+        security_group_ids: "{{ ec2_group.group_id }}"
+        region: us-east-1
+        connection_draining_timeout: 30
+        cross_az_load_balancing: true
+        subnets:
+          - "{{ subnet_pub_1 }}"
+          - "{{ subnet_pub_2 }}"
+        listeners:
+          - protocol: https
+            instance_protocol: http
+            load_balancer_port: 443
+            instance_port: 80
+            ssl_certificate_id: "{{ ssl_cert_arn }}"
+          - protocol: http
+            instance_protocol: http
+            load_balancer_port: 80
+            instance_port: 80
+        health_check:
+          ping_protocol: http
+          ping_port: 80
+          ping_path: /
+          response_timeout: 5
+          interval: 10
+          unhealthy_threshold: 2
+          healthy_threshold: 2
+        tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+          app: "{{ app_tag }}"
+          env: "{{ env }}"
+      register: ec2_elb_lb
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: "{{ fqdn }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ ec2_elb_lb.elb.dns_name }}"
+      tags:
+        - route53
+
+
+- name: pastebin-tools 
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    name_tag: 'PASTEBIN-TOOLS'
+    fqdn: paste.use1.tools.ddc.io
+    sg: SG_PASTEBIN_TOOLS
+    lb: PASTEBIN-TOOLS
+    role: OPS
+    env: tools
+
+  tasks:
+    - include: sec_groups/SG_OPS80_INC.yml
+    - name: launch instance
+      ec2:
+        key_name: ops-config
+        instance_type: c3.large
+        image: "{{ centos_7_ebs_hvm }}"
+        group: "{{ sg }}"
+        vpc_subnet_id: "{{ subnet_pri_2 }}"
+        assign_public_ip: false
+        zone: "{{ az2 }}"
+        region: "{{ region }}"
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "TOOLS"
+          service: "OPS"
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn }}"
+        wait: yes
+      register: ec2
+    - name: Add instances to host group
+      local_action: add_host hostname={{ ec2.instances.0.private_ip }} instanceid={{ ec2.instances.0.id }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=420 state=started
+    - name: allow cloud-init to execute
+      pause: seconds=15
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: "{{ fqdn }}"
+        type: A
+        ttl: 300
+        value: "{{ ec2.instances.0.private_ip }}"
+
+
+- name: configure instance
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars:
+    name_tag: 'PASTEBIN-TOOLS'
+    fqdn: paste.use1.tools.ddc.io
+  vars_files:
+    - ../group_vars/tools
+  roles:
+    - ldap_client
+    - spacewalk
+    - { role: icinga, local_zone: 'tools' }
+  tasks:
+    - include_vars: ../roles/spacewalk/vars/spacewalk.yml
+
+    - name: enable scl channel
+      shell: "spacewalk-channel -a -c centos7-x86_64-scl -u {{ spacewalk_admin_user }} -p {{ spacewalk_admin_pw }}"
+
+    - name: install packages
+      yum: state=installed package={{item}}
+      with_items:
+        - rh-php70-php
+        - rh-php70-php-gd
+        - gd
+        - httpd24
+    - name: get privatebin
+      unarchive:
+        src: https://github.com/PrivateBin/PrivateBin/archive/1.1.tar.gz
+        dest: /tmp/
+        remote_src: True
+
+    - name: move privatebin files to html dir
+      shell: "mv /tmp/PrivateBin-1.1/* /opt/rh/httpd24/root/var/www/html/"
+
+    - name: write config file
+      blockinfile:
+        create: yes
+        marker: ";----- { mark } ANSIBLE MANAGED BLOCK -----"
+        dest: /opt/rh/httpd24/root/var/www/html/cfg/conf.ini
+        mode: 644
+        block: |
+          ; config file for PrivateBin
+          ;
+          ; An explanation of each setting can be find online at https://github.com/PrivateBin/PrivateBin/wiki/Configuration.
+
+          [main]
+          discussion = true
+          opendiscussion = false
+          password = true
+          fileupload = false
+          burnafterreadingselected = true
+          defaultformatter = "plaintext"
+          sizelimit = 2097152
+          template = "bootstrap"
+          notice = "Note: This is a temporary paste service for short term storage/delivery! For best security deliver the password to your paste in a different method than the link  ie:(pw hipchat, link jira/email/etc)"
+          languageselection = false
+          zerobincompatibility = false
+
+          [expire]
+          default = "1day"
+          [expire_options]
+          5min = 300
+          10min = 600
+          1hour = 3600
+          1day = 86400
+          1week = 604800
+
+          [formatter_options]
+          plaintext = "Plain Text"
+          syntaxhighlighting = "Source Code"
+          markdown = "Markdown"
+
+          [traffic]
+          ; time limit between calls from the same IP address in seconds
+          ; Set this to 0 to disable rate limiting.
+          limit = 10
+          header = "X_FORWARDED_FOR"
+          dir = "/tmp/data"
+
+          [purge]
+          limit = 300
+          batchsize = 10
+          dir = "/tmp/data"
+
+          [model]
+          class = Filesystem
+          [model_options]
+          dir = "/tmp/data"
+
+    - name: enable httpd24 service
+      service: state=restarted enabled=yes name=httpd24-httpd.service

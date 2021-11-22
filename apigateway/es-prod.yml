@@ -1,0 +1,7 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: launch elasticsearch domain for apigateway
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: elasticsearch, name: apigateway, instance_count: 3 }

@@ -1,0 +1,24 @@
+---
+# MQDDC-QA VARS FILE
+
+sg: SG_LAN_QA
+key_name: ops-config
+profile_name: mqddc-qa
+prefix: MQDDC
+env: QA
+service_tag: mqddc
+app_tag: DDC
+dd_env: qa
+
+fqdn_prefix: mqddc
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.qa.doubledowncasino.com
+
+instance_type: m3.xlarge
+
+lbname: LBMQDDC-TEST
+
+rt53_zone: ddc.io
+

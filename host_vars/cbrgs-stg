@@ -1,0 +1,22 @@
+---
+# CBRGS-STG VARS FILE
+
+sg: SG_LAN_STG
+key_name: ops-config
+profile_name: cbrgs-stg
+fqdn_prefix: cbrgs
+prefix: CBRGS
+env: STG
+dd_env: stg
+
+instance_type: m3.xlarge
+
+memory_quota: 13915
+cluster_ram_quota: 13915
+cluster_index_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 13659
+
+

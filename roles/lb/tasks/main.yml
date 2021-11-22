@@ -1,0 +1,10 @@
+# service_fqdn code is disabled because it is too complicated
+# route53 healthcheck is moved to cloudwatch to be combined with alarm
+
+- name: deploy instances and create health check
+  include: deploy-ec2.yml
+  when: deploy and not vpc
+
+- name: deploy instances and create health check
+  include: deploy-vpc.yml
+  when: deploy and vpc

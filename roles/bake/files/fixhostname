@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# a fix for cloud-init to set hostname properly
+# it only changes hostname when cloud-config sets hostname
+
+USERDATA_HOSTNAME=`curl -s http://169.254.169.254/latest/user-data |egrep -s ^hostname:`
+
+if [ ! -z "$USERDATA_HOSTNAME" ]; then
+  HN=`echo $USERDATA_HOSTNAME | sed 's/hostname: *\"*\([^.]*\)\..*/\1/'`
+  hostname $HN
+  echo $HN > /etc/hostname
+  test -x /bin/systemctl && systemctl restart rsyslog || service rsyslog restart
+fi

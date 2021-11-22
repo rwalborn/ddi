@@ -1,0 +1,13 @@
+- name: set max for local uid
+  lineinfile:
+    dest=/etc/login.defs
+    state=present
+    regexp='^UID_MAX'
+    line='UID_MAX 2000'
+
+- name: set max for local gid
+  lineinfile:
+    dest=/etc/login.defs
+    state=present
+    regexp='^GID_MAX'
+    line='GID_MAX 2000'

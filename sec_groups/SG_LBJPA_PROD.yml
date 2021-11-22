@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBJPA_PROD.yml
+---
+- name: LBJPA_PROD security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/jpa-prod
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

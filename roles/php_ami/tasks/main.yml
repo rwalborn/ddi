@@ -1,0 +1,129 @@
+---
+
+- name: enable mtu probing so we don't have issues with jumbo frames on the internet
+  sysctl: name="net.ipv4.tcp_mtu_probing"
+          value=1
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+- name: install epel
+  yum: name=epel-release state=installed
+
+- name: upgrade distro
+  shell: yum upgrade -y
+
+- name: remove cloud-init
+  yum: name=cloud-init
+       state=absent
+
+- name: install needful
+  yum: name={{ item }} state=installed
+  with_items:
+    - htop
+    - git
+    - bind-utils
+    - tcpdump
+    - sysstat
+    - vim
+    - ntp
+    - ntpdate
+    - curl
+    - libselinux-python
+    - python-pip
+    - s3cmd
+    - lsof
+    - mlocate
+    - strace
+    - xfsprogs
+    - bwm-ng
+
+- name: install aws cli
+  pip: name=awscli
+
+- name: replace ntp.conf with AWS timeservers
+  copy: src=centos7x.ntp.conf
+        dest=/etc/ntp.conf
+        owner=root
+        mode=0644
+
+- name: restart ntp for changes to take effect
+  service: name=ntpd
+           enabled=yes
+           state=restarted
+
+- name: copy custom .bashrc
+  copy: src=.bashrc
+        dest=/root/.bashrc
+        owner=root
+        mode=0644
+
+- name: copy custom .vimrc
+  copy: src=.vimrc
+        dest=/root/.vimrc
+        owner=root
+        mode=0644
+
+- name: copy .bash_profile
+  copy: src=.bash_profile
+        dest=/root/.bash_profile
+        owner=root
+        mode=0644
+
+- name: copy aws_hostname_by_id.sh
+  copy: src=aws_hostname_by_id.sh
+        dest=/usr/local/sbin/aws_hostname_by_id.sh
+        owner=root
+        mode=0755
+
+- name: replace the centos 7x selinux config
+  copy: src=centos7x.config
+        dest=/etc/selinux/config
+        owner=root
+        mode=0644
+
+- name: disable selinux before reboot
+  shell: setenforce 0
+
+- name: disable services
+  service: name={{ item }} enabled=no
+  with_items:
+    - acpid
+    - iptables
+    - ip6tables
+
+#- name: copy yum-s3-iam
+#  copy: src=yum-s3-iam-1.0-1.noarch.rpm
+#        dest=/root/yum-s3-iam-1.0-1.noarch.rpm
+#        owner=root
+#
+#- name: install yum-s3-iam
+#  shell: yum install /root/yum-s3-iam-1.0-1.noarch.rpm -y
+#
+#- name: delete yum-s3-iam rpm to be tidy
+#  file: path=/root/yum-s3-iam-1.0-1.noarch.rpm
+#        state=absent
+
+- name: copy DDI-S3-Releases.repo
+  copy: src=DDI-S3-Releases.repo
+        dest=/etc/yum.repos.d/DDI-S3-Releases.repo
+        owner=root
+        mode=0644
+
+- name: copy DDI.repo
+  copy: src=DDI.repo
+        dest=/etc/yum.repos.d/DDI.repo
+        owner=root
+        mode=0644
+
+#- name: Backup rc.local and set the value in rc.local to survive reboot
+#  shell: "cp -p /etc/rc.d/rc.local /etc/rc.d/rc.local.`date +%Y%m%d-%H:%M`"
+#
+#- name: replace /etc/rc.local so the above changes keep on reboot
+#  copy: src=rc.local
+#        dest=/etc/rc.d/rc.local
+#        owner=root
+#        group=root
+#        mode=0755
+
+

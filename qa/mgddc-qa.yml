@@ -1,0 +1,191 @@
+---
+# Runs as ansible-playbook -vvvv -i 'localhost,' mgddc-qa.yml --vault-password-file ~/.vault_pass.txt
+
+###############################################################################
+#                                                                             #
+#  YOU MUST UNCOMMENT THIS LINE IN ORDER FOR THIS TO RUN                      #
+#   - ../group_vars/qa                                                           #
+#  IN ORDER FOR THIS TO RUN                                                   #
+#  THIS WAS DONE TO PREVENT ACCIDENTALLY RUNNING THIS AGAINST A LIVE CLUSTER  #
+#                                                                             #
+#  RECOMMENT THE LINE AFTER RUNNING SO IT DOES NOT ACCIDENTALLY GET CHECKED   #
+#  BACK INTO SOURCE CONTROL                                                   #
+#                        *** YOU HAVE BEEN WARNED ***                         #
+#                                                                             #
+###############################################################################
+
+- name: Creation of "{{ prefix }}-{{ env }}" MongoDB instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+#    - ../group_vars/qa
+  vars:
+    region: "{{ region }}"
+    key_name: ops-config
+    sg: SG_LAN_QA
+    ami: "{{ mg_ami }}"
+    instance_type: c3.xlarge
+    profile_name: mgddc-qa
+    prefix: MGDDC
+    env: QA
+    dd_env: qa
+    az: "{{ az1 }}"
+    subnet: "{{ subnet_pri_1 }}"
+    number: 801
+  tasks:
+    - name: Launch instances
+      local_action:
+        module: ec2
+        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        group: "{{ sg }}"
+        instance_type: "{{ instance_type }}"
+        instance_profile_name: "{{ profile_name }}"
+        image: "{{ ami }}"
+        vpc_subnet_id: "{{ subnet }}"
+        zone: "{{ az }}"
+        count: 1
+        volumes:
+          - device_name: /dev/xvdb
+            volume_size: 40
+            ephemeral: ephemeral0
+            delete_on_termination: true
+          - device_name: /dev/xvdc
+            volume_size: 40
+            ephemeral: ephemeral1
+            delete_on_termination: true
+        instance_tags:
+          Name: "{{ prefix }}{{ number }}-{{ env }}"
+          env: "{{ dd_env }}"
+          app: "{{ app_tag }}"
+          service: "{{ service_tag }}"
+        wait: yes
+      register: ec2
+
+    - name: Add EC2 instances to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=mongo-node
+      with_items: "{{ ec2.instances }}"
+
+    - name: Wait for SSH to be available
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: "{{ ec2.instances }}"
+
+- name: add raid and install mongo
+  vars_files:
+    - ../group_vars/qa
+    - ../group_vars/vaults/qa
+  hosts: mongo-node
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    
+    - name: create /dev/md0
+      shell: mdadm --create /dev/md0 --name=0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc -R
+    
+    - name: save the md0 config to survive reboot
+      shell: mdadm --detail --brief /dev/md0 >> /etc/mdadm.conf
+    
+    - name: partition
+      shell: 'echo \; | sfdisk /dev/md0'
+    
+    - name: format /dev/md0 as xfs
+      filesystem: fstype=xfs dev=/dev/md0
+    
+    - name: mount /opt/mongo
+      mount: name=/opt/mongo
+             src=/dev/md0
+             fstype=xfs
+             opts=noatime,relatime
+             state=mounted
+    
+    - name: create /var/lib/mongo
+      file: path=/opt/mongo/var/lib/mongo
+            state=directory
+            mode=0755
+    
+    - name: create symlink /var/lib/mongo
+      file: src=/opt/mongo/var/lib/mongo
+            dest=/var/lib/mongo
+            state=link
+            force=yes
+    
+    - name: create /var/log/mongo
+      file: path=/opt/mongo/var/log/mongo
+            state=directory
+            mode=0755
+    
+    - name: create symlink /var/log/mongo
+      file: src=/opt/mongo/var/log/mongo
+            dest=/var/log/mongo
+            state=link
+            force=yes
+    
+    - name: install mongodb 2.4.1
+      yum: name={{ item }}
+           state=present
+           exclude=mongodb-org,mongodb-org-server
+      with_items:
+        - /root/mongo-10gen-2.4.1-mongodb_1.x86_64.rpm
+        - /root/mongo-10gen-server-2.4.1-mongodb_1.x86_64.rpm
+    
+    - name: chown /opt/mongo/var
+      file: path=/opt/mongo/var
+            owner=mongod
+            group=mongod
+            recurse=yes
+    
+    - name: chown symlink /var/lib/mongo
+      file: src=/opt/mongo/var/lib/mongo
+            dest=/var/lib/mongo
+            state=link
+            owner=mongod
+            group=mongod
+            force=yes
+    
+    - name: chown symlink /var/log/mongo
+      file: src=/opt/mongo/var/log/mongo
+            dest=/var/log/mongo
+            state=link
+            owner=mongod
+            group=mongod
+            force=yes
+    
+    - name: set ulimit -n
+      shell: sed -i "s/^ulimit.*/ulimit -n 60000/" /etc/init.d/mongod && sed -i "/ulimit -n/a\ulimit -u 32000" /etc/init.d/mongod
+    
+    - name: insure mongod is running and setup in chkconfig
+      service: name=mongod
+               state=restarted
+               enabled=yes
+
+    - name: enable rest
+      lineinfile: dest=/etc/mongod.conf
+                  line="rest=true"
+                  state=present
+
+    - name: enable rest
+      lineinfile: dest=/etc/mongod.conf
+                  line="replSet = DDCShard1"
+                  state=present
+
+    - name: stop mongo
+      service: name=mongod state=restarted
+
+    - name: pin mongdb version in yum.conf to prevent yum upgrade of mongo
+      lineinfile: dest=/etc/yum.conf
+                  state=present
+                  line='exclude=mongo-10gen,mongo-10gen-server,mongodb-org,mongodb-org-server,mongodb-org-shell,mongodb-org-mongos,mongodb-org-tools'
+
+    - name: insert/update "Match User" configuation block in /etc/ssh/sshd_config
+      blockinfile:
+        dest: /etc/security/limits.d/91-mongod.conf
+        create: yes
+        state: present
+        block: |
+          #
+          mongod          soft    nproc     30000
+          mongod          hard    nproc     30000
+          mongod          soft    nofile     60000
+          mongod          hard    nofile     60000

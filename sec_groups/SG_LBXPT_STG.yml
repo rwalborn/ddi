@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBXPT_STG.yml
+---
+- name: LBXPT_STG security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/xpt-stg
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

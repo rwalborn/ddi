@@ -1,0 +1,22 @@
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/STG --tags=up mw-mob-stg.yml
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/STG --tags=down mw-mob-stg.yml
+
+# this playbook exists to test out the logic
+
+- hosts: LBMOB
+  gather_facts: no
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars:
+    env: stg
+  tasks:
+    - name: maintenance window up
+      shell: "cd /etc/nginx; ln -sf /usr/local/share/DDI/ddi-ops/{{ env }}/nginx/nginx.conf.maintenance /etc/nginx/nginx.conf; systemctl restart nginx"
+      tags:
+        - up
+    - name: maintenance window up
+      shell: "cd /etc/nginx; ln -sf /usr/local/share/DDI/ddi-ops/{{ env }}/nginx/nginx.conf /etc/nginx/nginx.conf; systemctl restart nginx"
+      tags:
+        - down

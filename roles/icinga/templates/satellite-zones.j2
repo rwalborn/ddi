@@ -1,0 +1,42 @@
+/* see constants.conf for actual definitions                                           */
+
+/* Icinga Master zone, director global, and endpoint                                   */
+
+object Zone "director-global" {
+  global = true
+}
+
+object Zone "master" {
+  endpoints = [ "{{ icinga_master_fqdn }}" ]
+}
+
+/* Master endpoint */
+object Endpoint "{{ icinga_master_fqdn }}" {
+  host = "{{ icinga_master_fqdn }}"
+  port = "5665"
+}
+
+/* NodeName should be fqdn for Satellites, instance-id for Agents                      */
+/* ZoneName should be one of sbx,dev,qa,lt,stg,prod (value of local_zone in playbook ) */
+
+/* Self */
+object Endpoint NodeName {
+}
+
+/* Satellite Endpoint(s) from defaults/main.yml for specific zone  */
+/* can't define endpoint twice, so skip for when fqdn is self */
+/* Zone should contain local node, and local satellites from defaults/main.yml         */
+
+{% for satellite in satellites[local_zone] %}
+{% if satellite != fqdn %}
+object Endpoint "{{ satellite }}" {
+  host = "{{ satellite }}"
+  port = "5665"
+}
+{% endif %}
+{% endfor %}
+
+object Zone ZoneName {
+        endpoints = [ NodeName, {% for satellite in satellites[local_zone] %}{% if satellite != fqdn %}"{{satellite}}"{% if not loop.last %},{% endif %}{%endif%}{% endfor %} ]
+        parent = "master"
+}

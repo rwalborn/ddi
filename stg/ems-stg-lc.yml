@@ -1,0 +1,45 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/ems
+  vars:
+    name_tag: EMS-STG-001
+    role: ems-stg
+    sg: SG_EMS_STG
+  tasks:
+  - name: security group
+    ec2_group:
+      name: "{{ sg }}"
+      description: "{{ sg }}"
+      vpc_id: "{{ vpc_id }}"
+      region: us-east-1
+      rules:
+        - proto: tcp
+          from_port: "{{ instance_port }}"
+          to_port: "{{ instance_port }}"
+          cidr_ip: "{{ vpc_cidr }}"
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 192.168.0.0/22
+    register: ec2_group
+  - name: launch configuration
+    ec2_lc:
+      name: "{{ name_tag }}"
+      image_id: "{{ app_ami }}"
+      key_name: ops-config
+      security_groups: [ "{{ ec2_group.group_id }}" ]
+      instance_profile_name: "{{ role }}"
+      instance_type: "{{ instance_type }}"
+      instance_monitoring: false
+      volumes:
+      - device_name: /dev/sda1
+        volume_size: 8
+        device_type: gp2
+        delete_on_termination: true
+      region: us-east-1
+      assign_public_ip: false

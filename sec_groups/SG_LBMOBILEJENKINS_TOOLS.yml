@@ -1,0 +1,14 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/jenkins
+  vars:
+    sg: SG_LBMOBILEJENKINS_TOOLS
+    service_tag: MOB  
+  tasks:
+    - include: "{{ sg }}_INC.yml"

@@ -1,0 +1,18 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+  vars:
+    service_tag: MOB
+    app_tag: DDC
+    env_tag: staging
+    sg: SG_LAN_STG
+    nginx: true
+    instance_type: c3.xlarge
+    private_lb: false
+  roles:
+    - { role: lb, name_tag: 'LBMOB-STG', az: az1, fqdn: lbmob01.use1.stg.ddc.io }

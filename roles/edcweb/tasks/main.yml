@@ -1,0 +1,10 @@
+---
+- include: init.yml
+  when: task == 'init'
+
+- include: provision.yml
+  when: task == 'provision'
+
+- include: apache.yml
+  when: task == 'apache'
+

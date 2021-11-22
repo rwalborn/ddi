@@ -1,0 +1,26 @@
+---
+- name: create /etc/ssh/keys/root for auth keys lockdown
+  file: path=/etc/ssh/keys/root
+        state=directory
+        mode=0744
+
+- name: copy the root auth keys to /etc/ssh/keys/root/
+  shell: '/bin/cp /home/centos/.ssh/authorized_keys /etc/ssh/keys/root/authorized_keys'
+
+- name: perms
+  file: path=/etc/ssh/keys/root/authorized_keys
+        state=touch
+        mode=0600
+- name:
+  lineinfile: dest=/etc/ssh/sshd_config
+              state=present
+              line='AuthorizedKeysFile      /etc/ssh/keys/%u/authorized_keys'
+
+- name: remove the
+  file: path=/root/.ssh/authorized_keys
+        state=absent
+
+- name: restart sshd
+  service: name=sshd
+           state=restarted
+

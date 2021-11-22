@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_JPT_QA.yml
+
+- name: JPT_QA security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/jpt-qa
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

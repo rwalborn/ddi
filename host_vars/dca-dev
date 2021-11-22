@@ -1,0 +1,25 @@
+# DCA-DEV VARS FILE
+
+name_tag: DCA-DEV
+
+app_tag: DDC
+rpm_tag: daily-challenge-admin
+app_ami: ami-18e7790e
+instance_type: t2.medium
+sg: SG_DCA_DEV
+fqdn: dca.dev.doubledowncasino.com
+env: development
+key_name: ops-config
+# Yep, we're re-using the dch iam role
+profile_name: dch-dev
+service: DCH
+
+# prefix needed for role tag for this to service to work
+prefix: DCHDDC
+
+ud_env: dev
+
+instance_port_1: 8080
+webapp_port: 8080
+config_port: 80
+

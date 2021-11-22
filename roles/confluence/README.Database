@@ -1,0 +1,38 @@
+
+XML backup does not restore with confluence, so not even worth trying that method.
+
+# old database confluence-legacy is only accessible from jumphost portforward, so portforward and pg_dump it
+pg_dump -h localhost -U jira -W confluence -Fc -f confluence.dump
+
+# new database aurora was created with superuser, but each role creates their own database
+psql -h atlassian-aurora.cogj9jonzgb4.us-east-1-beta.rds.amazonaws.com -U confluence -W -d DBD
+CREATE DATABASE confluence WITH ENCODING 'UNICODE' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0;
+
+
+# old database owner was jira, we're fixing that to confluence owner in the restore phase
+pg_restore -h atlassian-aurora.cogj9jonzgb4.us-east-1-beta.rds.amazonaws.com -O -n public -e --role=confluence -U confluence -W -d confluence confluence.dump
+
+
+# now just update the confluence database settings to point to the correct url and username/pw
+
+# mount ebs volume snapshot of old instance as /mnt/atlassian-backup
+# remove large items that are useless to new instance
+rm -rf /mnt/atlassian-backup/confluence/logs/*
+rm -rf /mnt/atlassian-backup/confluence/temp/*
+# copy old atlassian installation over existing same version install
+cp -rv /mnt/atlassian-backup/confluence /mnt/atlassian/
+
+# remove large items that are useless to new instance
+rm -rf /mnt/atlassian-backup/application-data/confluence/temp/*
+rm -rf /mnt/atlassian-backup/application-data/confluence/logs/*
+rm -rf /mnt/atlassian-backup/application-data/confluence/backups/*
+# copy old atlassian data and attachments over new install
+cp -rv /mnt/atlassian-backup/application-data/confluence/* /mnt/atlassian/confluence-data/
+
+server.xml
+        <Connector className="org.apache.coyote.tomcat4.CoyoteConnector" port="8080" minProcessors="5"
+                   maxProcessors="75"
+                   enableLookups="false"
+                   scheme="https" proxyName="confluence.ddc.io" proxyPort="443"
+                   acceptCount="10" debug="0" connectionTimeout="20000"
+                   useURIValidationHack="false" URIEncoding="UTF-8"/>

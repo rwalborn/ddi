@@ -1,0 +1,53 @@
+# Runs as ansible-playbook -vvvv jira-tools.yml --ask-vault
+---
+- name: configure security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+     name_tag: JIRA-TOOLS
+     sg: "SG_ATLASSIAN_TOOLS"
+  tasks:
+    - include: "sec_groups/{{ sg }}_INC.yml"
+
+- name: configure elb security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+     name_tag: JIRA-TOOLS
+     sg: "SG_ATLASSIAN_TOOLS_ELB"
+  tasks:
+    - include: "sec_groups/{{ sg }}_INC.yml"
+
+# comment this out if you do not need to build/rebuild instance
+- name: build instance
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    name_tag: JIRA-TOOLS
+    sg: "SG_ATLASSIAN_TOOLS"
+  roles:
+    - { role: jira, build: true, config: false }
+
+- name: configure instance
+  vars_files:
+    - ../group_vars/tools
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - { role: newfs, blkdev: 'xvdf', mountpoint: '/mnt/atlassian'}
+    - spacewalk
+    - ldap_client
+    - icinga
+    - { role: jira, build: false, config: true }

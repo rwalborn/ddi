@@ -1,0 +1,26 @@
+# DCA-QA VARS FILE
+
+name_tag: DCA-QA
+
+app_tag: DDC
+service_tag: dca
+rpm_tag: daily-challenge-admin
+app_ami: ami-18e7790e
+instance_type: t2.medium
+sg: SG_DCA_QA
+fqdn: dca.qa.doubledowncasino.com
+env: qa
+key_name: ops-config
+# Yep, we're re-using the dch iam role
+profile_name: dch-qa
+service: DCH
+
+# prefix needed for role tag for this to service to work
+prefix: DCHDDC
+
+ud_env: qa
+
+instance_port_1: 8080
+webapp_port: 8080
+config_port: 80
+

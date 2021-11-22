@@ -1,0 +1,56 @@
+- name: for jenkins agent
+  yum:
+    name=java-1.8.0-openjdk
+    state=installed
+
+- name: if jenkins_nodename is not defined in extra
+  set_fact: jenkins_nodename="{{ ansible_nodename }}"
+  when: jenkins_nodename is undefined
+
+- name: /etc/sysconfig/jenkins-slave
+  template:
+    src=jenkins-slave.j2
+    dest=/etc/sysconfig/jenkins-slave
+    mode=0644
+    owner=root
+    group=root
+  register: slaveconf
+
+- name: log rotate
+  copy:
+    src=jenkins-slave.logrotate
+    dest=/etc/logrotate.d/jenkins-slave
+    mode=0644
+    owner=root
+    group=root
+
+- name: init script
+  copy:
+    src=jenkins-slave.init
+    dest=/etc/rc.d/init.d/jenkins-slave
+    mode=0755
+    owner=root
+    group=root
+
+- name: Download file with check, overwrite when changed/missing
+  get_url:
+    url: "{{ jenkins_url }}/jnlpJars/agent.jar"
+    dest: /var/lib/jenkins/bin/agent.jar
+    force: yes
+    url_username: "{{ jnlp_user }}"
+    url_password: "{{ jnlp_pass }}"
+    owner: jenkins
+    group: jenkins
+  register: agentjar
+
+- name: service
+  service:
+    name=jenkins-slave
+    enabled=yes
+    state=started
+
+- name: bounce jenkins agent if changed
+  service:
+    name=jenkins-slave
+    state=restarted
+  when: slaveconf.changed or agentjar.changed

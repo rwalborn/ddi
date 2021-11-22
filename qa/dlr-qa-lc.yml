@@ -1,0 +1,136 @@
+# export ANSIBLE_FORCE_COLOR=true; export AWS_PROFILE=prod; ansible-playbook -vvvv --vault-password-file ~/.vault_pass.txt ~/ddi-vpc/dev/php-dev-lc.yml
+- name: Create PHP launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/dlr
+    - ../host_vars/dlr-qa
+  vars:
+    profile_name: DLR-QA
+    version: "003"
+  tasks:
+    - name: create "{{ sg }}" security group
+      include: ../sec_groups/{{ sg }}_INC.yml
+
+    - name: Find the latest DLR ami
+      ec2_ami_find:
+        name: "{{ svc }}-*"
+        owner: 143177584759
+        region: "{{ region }}"
+        sort: name
+        sort_order: descending
+        sort_end: 1
+      register: ami_find
+
+    - name: Show the AMI we found
+      debug:
+        var: ami_find
+
+    - name: Launch configuration
+      ec2_lc:
+        name: "{{ profile_name|upper }}-{{ ami_find.results[0].tags.version }}"
+        image_id: "{{ ami_find.results[0].ami_id }}"
+        key_name: "{{ key_name }}"
+        security_groups: [ "{{ ec2_group.group_id }}" ]
+        instance_profile_name: "{{ profile_name|lower }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+
+        volumes:
+        - device_name: /dev/sda1
+          volume_size: 8
+          device_type: gp2
+          delete_on_termination: true
+
+        - device_name: /dev/sdf
+          volume_size: 50
+          device_type: gp2
+          delete_on_termination: true
+
+        region: "{{ region }}"
+
+        user_data: |
+                   #cloud-config
+                   disk_setup:
+                     /dev/xvdf:
+                       table_type: mbr
+                       layout: True
+                       overwrite: True
+                   # XXX: changed to match Isaac's mobphp
+                   fs_setup:
+                     - label: ebs1
+                       filesystem: xfs
+                       device: /dev/xvdf1
+
+                   mounts:
+                     - [ /dev/xvdf1, /mnt/ebs1, xfs, defaults, '0', '2' ]
+
+                   runcmd:
+                   - "mkdir -p /mnt/ebs1/log"
+                   - "touch /mnt/ebs1/log/edcClientLog.txt"
+                   - "chown apache:apache /mnt/ebs1/log/edcClientLog.txt"
+                   - "hg -q --cwd /usr/local/share/DDI/ddi-ops pull -u"
+                   - "/usr/local/share/DDI/ddi-ops/scripts/aws_hostname_by_iam.sh"
+                   - "/root/bin/sysconfig setup_icinga_agent"
+
+                   - "sed -i 's/^AllowGroups .*$/AllowGroups root ldap_all centos dev/' /etc/ssh/sshd_config"
+                   - "service sshd restart"
+
+                   - "sed -i 's/search ec2.internal/d' /etc/resolv.conf"
+                   - 'sed -i "2 i search use1.{{ env_domain }}.doubledowncasino.com use1.{{ env_domain }}.ddc.io" /etc/resolv.conf'
+                   - "echo PEERDNS=no >> /etc/sysconfig/network"
+
+                   - sed -i 's/;date.timezone =/date.timezone = \"America\/Los_Angeles\"/' /etc/php.ini
+
+                   - "mkdir /etc/nutcracker/"
+                   - "ln -fs /usr/local/share/DDI/ddi-ops/{{ env_domain }}/nutcracker.yml /etc/nutcracker/nutcracker.yml"
+                   - "service nutcracker restart"
+
+                   - 'yum -y install php-dealer'
+
+                   - 'echo "SetEnv APPLICATION_ENV {{ application_env }}" >> /etc/httpd/conf.d/env.conf'
+                   - "ln -fs /usr/local/share/DDI/ddi-ops/{{ env_domain }}/dealer_httpd/conf.d/rightscale-reverse.conf /etc/httpd/conf.d/rightscale-reverse.conf"
+                   - "ln -fs /usr/local/share/DDI/ddi-ops/{{ env_domain }}/dealer_httpd/rightscale.d /etc/httpd/rightscale.d"
+                   - "ln -fs /usr/local/share/DDI/ddi-ops/{{ env_domain }}/dealer_httpd/conf/httpd.conf /etc/httpd/conf/httpd.conf"
+                   - "ln -fs /usr/local/share/DDI/ddi-ops/logrotate.d/php-balance-events /etc/logrotate.d/php-balance-events"
+
+                   - sed -i '/# LoadModule foo_module modules\/mod_foo.so/a LoadModule filter_module modules\/mod_filter.so' /etc/httpd/conf/httpd.conf
+                   - sed -i '/# LoadModule foo_module modules\/mod_foo.so/a LoadModule unixd_module modules\/mod_unixd.so' /etc/httpd/conf/httpd.conf
+                   - sed -i '/# LoadModule foo_module modules\/mod_foo.so/a LoadModule access_compat_module modules\/mod_access_compat.so' /etc/httpd/conf/httpd.conf
+                   - sed -i '/# LoadModule foo_module modules\/mod_foo.so/a Include conf.modules.d\/*.conf' /etc/httpd/conf/httpd.conf
+
+                   - sed -i 's/LoadModule authn_default_module modules\/mod_authn_default.so/#LoadModule authn_default_module modules\/mod_authn_default.so/' /etc/httpd/conf/httpd.conf
+                   - sed -i 's/LoadModule authn_alias_module modules\/mod_authn_alias.so/#LoadModule authn_alias_module modules\/mod_authn_alias.so/' /etc/httpd/conf/httpd.conf
+                   - sed -i 's/LoadModule authz_default_module modules\/mod_authz_default.so/#LoadModule authz_default_module modules\/mod_authz_default.so/' /etc/httpd/conf/httpd.conf
+                   - sed -i 's/LoadModule mem_cache_module modules\/mod_mem_cache.so/#LoadModule mem_cache_module modules\/mod_mem_cache.so/' /etc/httpd/conf/httpd.conf
+                   - sed -i 's/LoadModule disk_cache_module modules\/mod_disk_cache.so/LoadModule cache_disk_module modules\/mod_cache_disk.so/' /etc/httpd/conf/httpd.conf
+
+                   - sed -i 's/LoadModule ldap_module modules\/mod_ldap.so/#LoadModule ldap_module modules\/mod_ldap.so/' /etc/httpd/conf/httpd.conf
+                   - sed -i 's/LoadModule authnz_ldap_module modules\/mod_authnz_ldap.so/#LoadModule authnz_ldap_module modules\/mod_authnz_ldap.so/' /etc/httpd/conf/httpd.conf
+                   - sed -i 's/LoadModule cgi_module modules\/mod_cgi.so/#LoadModule cgi_module modules\/mod_cgi.so/' /etc/httpd/conf/httpd.conf
+                   - sed -i 's/DefaultType text\/plain/#DefaultType text\/plain/' /etc/httpd/conf/httpd.conf
+
+                   - /usr/bin/geoipupdate
+
+                   - rm /etc/php.d/20-xsl.ini
+                   - 'echo "extension=/opt/remi/php56/root/usr/lib64/php/modules/mongo.so" >> /etc/php.d/30-mongodb.ini'
+                   - 'echo "extension=/opt/remi/php56/root/usr/lib64/php/modules/geoip.so" > /etc/php.d/geoip.ini'
+
+                   - mkdir -p /mnt/ephemeral/log
+                   - ln -fs /mnt/ebs1/log/ /mnt/ephemeral/log/httpd
+                   - touch /mnt/ebs1/log/php_log
+                   - chmod 664 /mnt/ebs1/log/php_log
+                   - chmod 777 /mnt/ebs1/log
+
+                   - systemctl enable httpd
+                   - systemctl restart httpd
+
+
+
+                   write_files:
+                     - path: /etc/sudoers.d/dev
+                       owner: root
+                       permission: 0400
+                       content: |
+                                %dev ALL=(ALL) NOPASSWD:ALL

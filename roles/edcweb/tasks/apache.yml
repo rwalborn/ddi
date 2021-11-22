@@ -1,0 +1,115 @@
+
+- include_vars: roles/buildbot/vars/common.yml
+- include_vars: roles/buildbot/vars/secrets.yml
+- include_vars: roles/buildbot/vars/buildslave.yml
+
+# more mess piled onto the mess
+#- name: Set marker for the environment
+#  shell: 'echo {{ buildslave_name }} > {{ autobldr_home }}/slave_hostname.txt'
+#  sudo_user: "{{ autobldr_username }}"
+#
+#- name: update buildslave name
+#  replace:
+#    dest: "{{ autobldr_home }}/{{ buildslave_dir }}/buildbot.tac"
+#    #regexp: 'slavename =.*$' replace="slavename = '{{ buildslave_name }}-slave'
+
+- name: install boto3 with pip, here is as good as anyplace for this mess to run
+  pip:
+    name: boto3
+    state: present
+
+- name: remove the stench of the mobile
+  file:
+    path: /usr/share/php/Zend
+    state: absent
+
+- name: install zend library, crazy old version that's special from the mobile secret sauce
+  unarchive:
+    src: https://packages.zendframework.com/releases/ZendFramework-1.12.20/ZendFramework-1.12.20.tar.gz
+    dest: /usr/share/php
+    remote_src: True
+
+- name: symlink to Zend
+  file:
+    src: /usr/share/php/ZendFramework-1.12.20/library/Zend
+    dest: /usr/share/php/Zend
+    state: link
+
+- name: Create vhost directories
+  file:
+    path: /etc/httpd/{{ item }}
+    mode: 0755
+    state: directory
+  with_items:
+    - sites-available
+    - sites-enabled
+
+# Before 2.3, option 'dest', 'destfile' or 'name' was used instead of 'path'
+- name: 
+  lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    insertafter: EOF
+    line: 'Include /etc/httpd/sites-enabled/*.conf'
+
+- name: remove the stench of the mobile file
+  file:
+    path: /etc/httpd/sites-available/mobile.dev.apache.conf
+    state: absent
+
+- name: remove the stench of the mobile file
+  file:
+    path: /etc/httpd/sites-enabled/mobile.dev.apache.conf
+    state: absent
+
+- name: template out /etc/httpd/sites-available/casino-api.conf
+  template:
+    src: casino-api.apache.conf.j2
+    dest: /etc/httpd/sites-available/casino-api.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: link /etc/httpd/sites-available/casino-api.conf
+  file:
+    src: /etc/httpd/sites-available/casino-api.conf
+    dest: /etc/httpd/sites-enabled/casino-api.conf
+    owner: root
+    group: root
+    state: link
+
+# Before 2.3, option 'dest', 'destfile' or 'name' was used instead of 'path'
+- name:
+  lineinfile:
+    path: /etc/httpd/conf.d/env.conf
+    state: present
+    create: yes
+    line: 'SetEnv APPLICATION_ENV {{ tag | lower }}'
+    owner: root
+    group: root
+    mode: 0644
+
+- name: install this version of php-casino, for reasons
+  yum:
+    name: php-casino-1.0.2873.13
+    state: present
+
+- name: change perms for reasons
+  file:
+    path: /home/autobldr/repo
+    recurse: yes
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0755
+
+- name: change perms for reasons
+  file:
+    path: /home/webapps/casino
+    recurse: yes
+    owner: apache
+    group: apache
+    mode: 0755
+
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted

@@ -1,0 +1,38 @@
+/* Icinga Master zone configuration          */
+/* see constants.conf for actual definitions */
+
+object Endpoint NodeName {
+}
+
+object Zone ZoneName {
+        endpoints = [ NodeName ]
+}
+
+object Zone "director-global" {
+  global = true
+}
+
+/* Every satellite must also have an Endpoint                              */
+/* Zones should contain satellite endpoints from defaults/main.yml         */
+
+{% for zone in zones %}
+
+
+{% for satellite in satellites[zone] %}
+object Endpoint "{{ satellite }}" {
+  host = "{{ satellite }}"
+  port = "5665"
+}
+{% endfor %}
+
+
+
+
+
+object Zone "{{ zone }}" {
+        endpoints = [ {% for satellite in satellites[zone] %}"{{satellite}}"{% if not loop.last %}, {% endif %}{% endfor %} ]
+        parent = ZoneName
+}
+
+
+{% endfor %}

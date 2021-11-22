@@ -1,0 +1,114 @@
+---
+- name: create elb
+  ec2_elb_lb:
+    name: "{{ name_tag }}"
+    state: present
+    security_group_ids: sg-947649e8
+    region: us-east-1
+    connection_draining_timeout: 30
+    cross_az_load_balancing: true
+    subnets:
+       - "{{ subnet_pub_1 }}"
+       - "{{ subnet_pub_2 }}"
+    listeners:
+       - protocol: http
+         instance_protocol: http
+         load_balancer_port: 80
+         instance_port: 8080
+       - protocol: https
+         instance_protocol: http
+         load_balancer_port: 443
+         instance_port: 8080
+         ssl_certificate_id: "{{ ssl_cert_arn }}"
+    health_check:
+       ping_protocol: http
+       ping_port: 8080
+       ping_path: /secure/Dashboard.jspa
+       response_timeout: 5
+       interval: 10
+       unhealthy_threshold: 2
+       healthy_threshold: 2
+    stickiness:
+       type: application
+       enabled: yes
+       cookie: JSESSIONID
+    tags:
+       Name: "{{ name_tag }}"
+       service: OPS
+       app: TOOLS
+       env: tools
+  register: ec2_elb_lb
+
+- name: Launch instance
+  ec2:
+    region: "{{ region }}"
+    key_name: ops-config
+    group: "{{ sg }}"
+    instance_type: c3.xlarge
+    instance_profile_name: OPS
+    image: "{{ centos_7_ebs_hvm }}"
+    vpc_subnet_id: "{{ subnet_pri_2 }}"
+    zone: "{{ az2 }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      env: tools
+      service: OPS
+      icinga-profile: Jira-Paged
+      application: Atlassian
+    user_data: |
+      #cloud-config
+      hostname: "{{ jira_domain }}"
+    wait: yes
+  register: ec2
+
+- name: attach instance to ELB
+  ec2_elb:
+    instance_id: "{{ ec2.instances.0.id }}"
+    ec2_elbs: "{{ ec2_elb_lb.elb.name }}"
+    state: present
+    region: us-east-1
+  # ignore errors as it will fail healthcheck and we don't care at this point
+  ignore_errors: yes
+  when: ec2 is defined
+
+- name: create EBS Volume
+  ec2_vol:
+    region: "{{ region }}"
+    instance: "{{ ec2.instances.0.id }}"
+    name: "{{ name_tag }} sdf"
+    device_name: /dev/sdf
+    volume_type: gp2
+    volume_size: 500
+    delete_on_termination: yes
+  when: ec2 is defined
+
+- name: register dns
+  route53:
+    command: create
+    overwrite: true
+    zone: doubledowninteractive.com
+    record: "{{ jira_domain }}"
+    type: CNAME
+    ttl: 60
+    value: "{{ ec2_elb_lb.elb.dns_name }}"
+  when: ec2_elb_lb is defined
+
+- name: register mgmt dns
+  route53:
+    command: create
+    overwrite: true
+    zone: ddc.io
+    record: "{{ jira_mgt }}"
+    type: CNAME
+    ttl: 60
+    value: "{{ ec2.instances.0.private_dns_name }}"
+  when: ec2 is defined
+
+- name: add new instance to host group
+  local_action: add_host hostname={{ ec2.instances.0.private_ip }} groupname=launched
+
+  when: ec2 is defined
+
+- name: Wait for SSH to be available
+  wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=300 state=started
+  when: ec2 is defined

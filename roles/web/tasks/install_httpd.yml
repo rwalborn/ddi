@@ -1,0 +1,177 @@
+---
+# These tasks install http and php modules # Required args:
+#   http_ver
+#   php_ver
+#   php_conf_dir
+#
+- name: enable DDI repo
+  yum_repository:
+    name: DDI
+    description: DDI repo
+    baseurl: http://ddi-ops-repo.s3.amazonaws.com/$basearch
+    enabled: yes
+    gpgcheck: no
+    s3_enabled: yes
+
+# moved to edcweb/apache 
+#- name: install boto3 with pip, here is as good as anyplace for this mess to run
+#  pip:
+#    name: boto3
+
+- name: Install PHP
+  yum:
+    name: "{{ php_ver }}"
+    state: present
+    enablerepo: epel
+
+# DDI PHP includes these already?
+- name: Install PHP extras
+  yum:
+    name: "{{ item }}"
+    state: installed
+    enablerepo: epel
+  with_items:
+    - '{{ php_ver }}-common'
+    - '{{ php_ver }}-devel'
+    - '{{ php_ver }}-pdo'
+    - '{{ php_ver }}-mbstring'
+    - '{{ php_ver }}-soap'
+    - '{{ php_ver }}-mcrypt'
+    - '{{ php_ver }}-pecl-memcache'
+    - '{{ php_ver }}-pecl-memcached'
+
+- name: Install pear the DDI way
+  yum:
+    name: "{{ php_ver }}-pear"
+    state: present
+  when: php_ver == 'php55w'
+
+- name: Install mysqlnd the normal way
+  yum:
+    name: "{{ php_ver }}-mysqlnd"
+    state: present
+  when: php_ver != 'php55w'
+
+# HACK until rpm version conflict is fixed in our repo
+- name: Install ddi mysqlnd
+  get_url:
+    url: http://repo03.use1.prod.ddc.io/DDI/6/DDI/php55w-mysqlnd-5.5.14-1.el6.x86_64.rpm
+    dest: /tmp
+  when: php_ver == 'php55w'
+
+- name: install php55w-mysqlnd
+  shell: 'rpm --nodeps -ivh /tmp/php55w-mysqlnd-5.5.14-1.el6.x86_64.rpm'
+  ignore_errors: yes
+  when: php_ver == 'php55w'
+
+- file:
+    path: /tmp/php55w-mysqlnd-5.5.14-1.el6.x86_64.rpm
+    state: absent
+  when: php_ver == 'php55w'
+# END HACK
+
+- name: Install libs
+  yum:
+    name: "{{ item }}"
+    state: present
+    enablerepo: epel
+  with_items:
+    - memcached
+    - GeoIP-devel
+    - GeoIP
+    - openssl-devel
+
+- name: Download geoip extension, non-core ansible module fails
+  command: 'pecl install geoip'
+  ignore_errors: yes
+
+- name: Download mongo extension, non-core ansible module fails
+  shell: "yes '' | pecl install mongo"
+  ignore_errors: yes
+
+- name: Add memcache.so to php ini
+  lineinfile:
+#    path: "{{ php_conf_dir }}/memcache.ini"	# ansible 2.3 and higher uses path
+    dest: "{{ php_conf_dir }}/memcache.ini"	# ansible 2.3 and lower uses dest
+    state: present
+#    regex: '^extension= line=extension=memcache.so create=yes'
+    line: 'extension= line=extension=memcache.so create=yes'
+    create: yes
+  ignore_errors: yes
+
+- name: Add GeoIP extension to PHP INI
+  lineinfile:
+    dest: "{{ php_conf_dir }}/geoip.ini"
+    state: present
+#    regex: '^extension=geoip.so'
+    line: 'extension=geoip.so'
+    create: yes
+  ignore_errors: yes
+
+#Build process completed successfully
+#Installing '/usr/lib64/php/modules/mongo.so'
+#install ok: channel://pecl.php.net/mongo-1.6.14
+#configuration option "php_ini" is not set to php.ini location
+#You should add "extension=mongo.so" to php.ini
+# BUT WE DO IT THIS WAY WHY?
+
+- name: Add mongo extension to PHP INI
+  lineinfile:
+    dest: "{{ php_conf_dir }}/mongo.ini"
+    state: present
+    line: 'extension=mongo.so'
+    create: yes
+  ignore_errors: yes
+
+- name: Check if GeoIP database exists
+  stat:
+    path: /usr/share/GeoIP/GeoIPCity.dat
+  register: geoip_database_file
+
+- name: Get GeoIP database
+  get_url:
+    url: http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz
+    dest: /usr/share/GeoIP
+  when: geoip_database_file.stat.exists == false
+
+- name: Unpack GeoIP database
+  shell: 'gunzip /usr/share/GeoIP/GeoLiteCity.dat.gz && mv /usr/share/GeoIP/GeoLiteCity.dat /usr/share/GeoIP/GeoIPCity.dat'
+  when: geoip_database_file.stat.exists == false
+
+
+# another way to install zend, likely better coming from source
+#- name: install zend library
+#  unarchive:
+#    src: https://packages.zendframework.com/releases/ZendFramework-1.12.20/ZendFramework-1.12.20.tar.gz
+#    dest: /usr/share/php
+#    remote_src: True
+
+- name: Add Zend library
+  unarchive:
+    src: Zend.tar.gz
+    dest: /usr/share/php
+    creates: /usr/share/php/Zend/Application.php
+
+- name: Set httpd config ServerName
+  lineinfile:
+    dest: /etc/httpd/conf/httpd.conf
+    line: 'ServerName 127.0.0.1'
+
+# 777? again?
+- name: Change logfile perms
+  file:
+    path: /var/log/httpd/mobileClientLog.txt
+    state: touch
+    mode: 0777
+
+# good time fun (WTF 777?)
+- name:
+  file:
+    path: /var/log/httpd
+    mode: 0777
+
+- name: Updating chkconfig
+  service:
+    name: httpd
+    state: started
+    enabled: yes

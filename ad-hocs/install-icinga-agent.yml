@@ -1,0 +1,31 @@
+# RUN IN PROD AS ansible-playbook -vvvv install-icinga-agent.yml -e 'nametag=D2-SBX zone=dev' --vault-password-file ~/.vault_pass.txt 
+# RUN IN NONPROD AS export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv install-icinga-agent.yml -e 'nametag=D2-SBX zone=dev' --vault-password-file ~/.vault_pass.txt
+---
+- name: gather the facts, just the facts
+  hosts: localhost
+  gather_facts: no
+  vars:
+    region: us-east-1
+  tasks:
+    - name: get facts
+      ec2_remote_facts:
+        region: "{{ region }}"
+        filters:
+          "tag:Name": "{{ nametag }}"
+      register: ec2_facts
+
+    - name: Add EP2 instances to host group
+      local_action: add_host hostname={{ item.private_ip_address }} groupname=node
+      with_items: "{{ec2_facts.instances}}"
+
+- name: configure instance
+  hosts: node
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/dev
+  roles:
+    - { role: repo_ops }
+    - { role: icinga, local_zone: "{{ zone }}"}
+

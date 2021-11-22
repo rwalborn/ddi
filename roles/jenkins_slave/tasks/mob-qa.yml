@@ -1,0 +1,5 @@
+- name: mobile common
+  include: mobile.yml
+
+- name: generate jenkins_nodename
+  set_fact: jenkins_nodename='qa'

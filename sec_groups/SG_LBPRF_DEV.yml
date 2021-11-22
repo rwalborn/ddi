@@ -1,0 +1,25 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: LBPRF_DEV security group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/dev
+  tasks:
+    - name: create security group
+      ec2_group:
+        name: SG_LBPRF_DEV
+        description: SG_LBPRF_DEV
+        vpc_id: "{{ vpc_id }}"
+        region: us-east-1
+        rules:
+          # carbon
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          # ping from icinga slave in vpc
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"

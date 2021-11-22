@@ -1,0 +1,44 @@
+# JPA-SBX VARS FILE
+
+name_tag: JPA-SBX
+service_tag: JPT
+icinga_profile: JPA
+lb: JPA-SBX
+
+app_tag: DDC
+rpm_tag: ddi-jackpot-service-admin-webapp
+app_ami: ami-85cbbc93
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_JPA_SBX
+elb_sg: SG_LBJPA_SBX
+zone: sbx.doubledowncasino.com
+elb_fqdn: jpa.sbx.doubledowncasino.com
+env: sbx
+key_name: dev-ops-config
+profile_name: jpa-sbx
+
+lc: JPA-SBX-007
+
+ud_env: sbx
+
+ec2_asg:
+  desired_capacity: 1
+  min_size: 1
+  max_size: 1
+  hc_type: EC2
+
+instance_port_1: 8080
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /login
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+

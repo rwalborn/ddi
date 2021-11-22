@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_XPA_QA.yml
+
+- name: XPA_QA security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/xpa-qa
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

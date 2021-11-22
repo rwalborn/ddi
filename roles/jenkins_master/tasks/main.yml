@@ -1,0 +1,7 @@
+---
+- name: include_vars
+  include_vars: "{{ var }}.yml"
+  when: var != 'nothing'
+
+- name: stand up the instance
+  include: standup.yml

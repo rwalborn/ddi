@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+
+<project name="run_tomcat" default="usage" basedir="/usr/local/tomcat6/domains/rgs">
+
+
+<!-- ============================================================= -->
+<!-- ENVIRONMENT VARIABLES                                         -->
+<!-- ============================================================= -->
+
+  <property environment="env"/>
+
+
+<!-- ============================================================= -->
+<!-- GLOBAL VARIABLES                                              -->
+<!-- ============================================================= -->
+  
+  <!-- Configuration Variables -->
+  <property name="heap.start"        value="2048m"/>
+  <property name="heap.max"          value="5632m"/>
+  <property name="perm.max"          value="1536m"/>
+  <property name="domain.name"       value="rgs.doubledowncasino.com" />
+  <property name="new.size"          value="512m"/>
+
+  <!-- Path Variables -->
+  <property name="tomcat.dir"        value="/usr/local/tomcat6 "/>
+  <property name="catalina.home"     value="/usr/local/tomcat6"/>
+  <property name="catalina.base"     value="/usr/local/tomcat6/domains/rgs"/>
+  <property name="myjava.home"       value="/usr/java/jdk1.7" />  
+
+
+<!-- ============================================================= -->
+<!-- SET PATH                                                      -->
+<!-- ============================================================= -->
+
+  <path id="project.path">
+    <pathelement location="${myjava.home}/bin"/>
+    <pathelement location="${myjava.home}/jre/bin"/>
+    <pathelement location="${myjava.library.path}"/>
+    <pathelement location="${env.PATH}"/>
+  </path>
+
+  <property name="app.path"   refid="project.path" />
+
+
+<!-- ============================================================= -->
+<!-- CLASSPATH                                                     -->
+<!-- ============================================================= -->
+
+  <path id="project.class.path">
+    <pathelement location="${myjava.home}/lib/tools.jar"/>
+    <pathelement location="${catalina.home}/bin/bootstrap.jar"/>
+  </path>  
+  
+  <property name="app.classpath"   refid="project.class.path" />  
+
+
+<!-- ============================================================= -->
+<!-- TARGET: "usage"                                               -->
+<!-- ============================================================= -->
+
+  <target name="usage">
+
+     <echo> This ant script is used to start/stop      </echo> 
+     <echo> the tomcat server "${domain.name}".        </echo>
+     <echo> The target "tomcat_start" or tomcat_stop"  </echo>
+     <echo> must be specified.                         </echo>
+
+  </target>
+
+
+<!-- ============================================================= -->
+<!-- TARGET: "tomcat_start"                                        -->
+<!-- ============================================================= -->
+
+  <target name="tomcat_start">
+
+    <!-- Output classpath/path strings -->
+    <echo message="Starting Tomcat"/>  
+    
+    <!-- Launch JVM -->
+    <java fork="true" 
+          classname="org.apache.catalina.startup.Bootstrap" 
+          classpathref="project.class.path"
+          spawn="false"
+          jvm="${myjava.home}/bin/java">
+
+      <!-- Class argument -->
+      <arg value="start" />
+
+      <!-- JVM args -->
+      <jvmarg value="-server" /> 
+      <jvmarg value="-Xms${heap.start}" /> 
+      <jvmarg value="-Xmx${heap.max}" /> 
+      <jvmarg value="-XX:MaxPermSize=${perm.max}" /> 
+      <jvmarg value="-XX:NewRatio=3" />
+      <jvmarg value="-XX:+UseG1GC" />
+      <!--jvmarg value="-XX:NewSize=${new.size}" />
+      <jvmarg value="-XX:+UseConcMarkSweepGC" />
+      <jvmarg value="-XX:+UseParNewGC" /-->
+
+      <!-- Tomcat args -->
+      <jvmarg value="-Dcatalina.home=${catalina.home}" /> 
+      <jvmarg value="-Dcatalina.base=${catalina.base}" /> 
+      <jvmarg value="-DwebappLogs=${catalina.base}/logs" /> 
+      <jvmarg value="-Djava.io.tmpdir=${catalina.base}/tmp" /> 
+      <jvmarg value="-javaagent:/opt/appdynamics/javaagent.jar"/>
+       
+      <!-- Set/Export Environment Variables -->
+      <env key="PATH" path="${app.path}"/>
+      <env key="LD_LIBRARY_PATH" path="${app.ld_library_path}"/>
+      
+    </java>
+
+  </target>
+
+
+<!-- ============================================================= -->
+<!-- TARGET: "tomcat_stop"                                         -->
+<!-- ============================================================= -->
+
+  <target name="tomcat_stop">
+
+    <echo message="Stopping Tomcat"/>
+
+    <java fork="true" 
+          classname="org.apache.catalina.startup.Bootstrap" 
+          classpathref="project.class.path"
+          spawn="false"
+          jvm="${myjava.home}/bin/java">
+
+      <!-- Class argument -->
+      <arg value="stop" />
+
+      <!-- JVM args -->
+      <jvmarg value="-Xms${heap.start}" /> 
+      <jvmarg value="-Xmx${heap.max}" /> 
+
+      <!-- Tomcat args -->
+      <jvmarg value="-Dcatalina.home=${catalina.home}" /> 
+      <jvmarg value="-Dcatalina.base=${catalina.base}" /> 
+      <jvmarg value="-DwebappLogs=${catalina.base}/logs" /> 
+      <jvmarg value="-Djava.io.tmpdir=${catalina.base}/tmp" /> 
+       
+      <!-- Set/Export Environment Variables -->
+      <env key="PATH" path="${app.path}"/>
+      <env key="LD_LIBRARY_PATH" path="${app.ld_library_path}"/>
+      
+    </java>
+
+  </target>
+
+</project>
+

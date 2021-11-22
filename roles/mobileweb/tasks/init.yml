@@ -1,0 +1,92 @@
+---
+# Configures new server
+- include_vars: common.yml
+
+# These are mobile web server specific directory structures, so leaving out of the web role tasks
+- name: Make the repo dir
+  file:
+    path: "{{ www_repo_dir }}"
+    state: directory
+    mode: 0755
+
+- name: Make the casino dir
+  file:
+    path: "{{ virtual_www_root }}"
+    state: directory
+    mode: 0755
+
+- name: Make the repo symlink
+  file:
+    src: "{{ www_repo_dir }}"
+    dest: "{{ www_repo_link_dest }}"
+    state: link
+
+- name: Make the repo contents dir
+  file:
+    path: "{{ www_repo_dir }}/mobile/www"
+    state: directory
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0755
+
+#- name: Check for svn source
+#  stat:
+#    path: "{{ www_repo_dir }}/mobile/www/build"
+#  register: svn_source
+#
+## Save time here.  We might want to just keep one svn repo and use links
+## Perhaps svn copy?
+#- name: Copy svn source to the repo dir
+#  shell: "cp -r {{ autobldr_home }}/{{ dev_dir }}/{{ svn_working_dir }}/default/* {{ www_repo_dir }}/mobile/"
+#  when: svn_source.stat.exists == false
+#
+#- name: Copy dot svn
+#  shell: "cp -r {{ autobldr_home }}/{{ dev_dir }}/{{ svn_working_dir }}/default/.svn {{ www_repo_dir }}/mobile/"
+#  when: svn_source.stat.exists == false
+
+- name: Set permission for svn updates
+  file:
+    path: "{{ www_repo_dir }}/mobile"
+    recurse: yes
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0775
+
+- name: Make the web home dir
+  file:
+    path: "{{ virtual_www_root }}"
+    state: directory
+    mode: 0755
+
+- name: Make the current symlink
+  file:
+    src: "{{ current_www_dir }}"
+    dest: "{{ virtual_www_root }}/current"
+    state: link
+
+# Before 2.3, option 'dest', 'destfile' or 'name' was used instead of 'path'
+- name:
+  lineinfile:
+    path: /etc/httpd/conf.d/env.conf
+    state: present
+    create: yes
+    line: 'SetEnv APPLICATION_ENV sandbox'
+    owner: root
+    group: root
+    mode: 0644
+
+# this is changed for reasons... always reasons...
+#- name: Add php application env var
+#  lineinfile:
+#    dest: /etc/httpd/conf.d/env.conf
+#    state: present
+#    line: 'SetEnv APPLICATION_ENV {{ VPC }}_{{ ENVIRONMENT }}'
+#    create: yes
+
+#- name: Add application.ini config file
+#  template:
+#    src: mobile_web.ini.j2
+#    dest: /tmp/appini
+#
+#- name: Append ini to master
+#  shell: "cat /tmp/appini >>{{ virtual_www_root }}/current/application/configs/application.ini"

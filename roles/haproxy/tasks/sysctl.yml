@@ -1,0 +1,48 @@
+# http://www.slideshare.net/haproxytech/haproxy-best-practice
+
+- name: centos7 default is 32768 60999
+  sysctl: name="net.ipv4.ip_local_port_range"
+          value='1025 65534'
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+- name: centos7 default is 128
+  sysctl: name="net.ipv4.tcp_max_syn_backlog"
+          value='100000'
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+- name: centos7 default is 1000
+  sysctl: name="net.core.netdev_max_backlog"
+          value='100000'
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+- name: centos7 default is 128
+  sysctl: name="net.core.somaxconn"
+          value='65534'
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+# reduce receive buffer per tcp conn
+- name: centos7 default is 4096 87380 6291456
+  sysctl: name="net.ipv4.tcp_rmem"
+          value='4096 16060 64060'
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+# reduce max send buffer per tcp conn
+- name: centos7 default is 4096 16384 4194304
+  sysctl: name="net.ipv4.tcp_wmem"
+          value='4096 16384 262144'
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+# no net.ipv4.tcp_slow_start_after_idle tuning: stay with centos7 default at 1/enabled
+# no iptables tuning: net.netfilter.nf_conntrack_max = 131072

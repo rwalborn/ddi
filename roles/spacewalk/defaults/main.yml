@@ -1,0 +1,25 @@
+spacewalk_host: spacewalk.use1.tools.ddc.io
+spacewalk_master: spacewalk.use1.tools.ddc.io
+spacewalk_admin_user: operations
+spacewalk_admin_pw: "{{ vault_spacewalk_admin_pw }}"
+ssl_pw: "{{ vault_ssl_pw }}"
+ssl_privkey: "{{ vault_ssl_privkey }}"
+registerme: true
+oscap: true
+proxy: false
+master: false
+baking: false
+packages: false
+zones:
+  - SBX
+  - DEV
+  - QA
+  - LT
+  - STG
+  - PROD
+  - TOOLS
+
+extra_channels: ''
+
+baking_packages:
+  - jq

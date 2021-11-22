@@ -1,0 +1,43 @@
+# BAL-PROD VARS FILE
+
+name_tag: BAL-PROD
+lb: BAL-PROD
+service_tag: BAL
+
+app_tag: DDC
+rpm_tag: ddc-balance-webapp
+app_ami: ami-81d56b97
+instance_type: c3.2xlarge
+sg: SG_BAL_PROD
+elb_sg: SG_LBBAL_PROD
+elb_fqdn: bal.use1.prod.doubledowncasino.com
+env: production
+key_name: ops-config
+profile_name: bal-prod
+prefix: BAL
+deployment: PROD
+
+lc: BAL-PROD-003
+hc_type: EC2
+instance_port_1: 11050
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 4
+  min_size: 4
+  max_size: 5
+  hc_type: EC2
+
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /status
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 5
+    healthy_threshold: 5

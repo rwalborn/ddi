@@ -1,0 +1,68 @@
+# CCP-SBX VARS FILE
+
+name_tag: CCP-SBX
+service_tag: CCP
+lb: CCP-SBX
+
+app_tag: DDC
+rpm_tag: casino-config
+app_ami: ami-99fb248f
+instance_type: c3.xlarge
+spot_price: .266
+sg: SG_CCP_SBX
+elb_sg: SG_LBCCP_SBX
+elb_fqdn: ccp.use1.sbx.doubledowncasino.com
+env: sbx
+key_name: dev-ops-config
+profile_name: ccp-sbx
+
+lc: CCP-SBX-001
+
+ud_env: sbx
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 8005
+#testing with just one port first
+#instance_port_2: 11000
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /api/versionInfo
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+
+# these go into the ami/ccp-ami.yml at present
+# vars here to avoid another file for ccp
+# another fine mess left behind by nathan
+
+ddi_cpddc_deploy:
+  package_version: 1.2.9-1
+ddi_cpddc_config:
+  service_name: casino-config
+  config_listeners:
+    - s3ConfigListener
+  config_listener_properties:
+    configListenerNotificationDelayMillis: 30000
+  environment_name: sbx
+  env_properties:
+    hipchatEnabled: true
+    hipchatChannel: ConfigChanges
+    hipchatAuthToken: 9efab731f659f3a666598e8c02d4d3
+  s3bucket: ddc-artifacts
+  tarball_dir: /ddi/services/casino-config/tarballs
+# from vault
+  mysql_server: dbddc.use1.sbx.doubledowncasino.com
+  mysql_user: admin 
+

@@ -1,0 +1,5 @@
+{% for host in groups['couchbase-nodes'] %}
+
+/opt/couchbase/bin/couchbase-cli server-add -c 127.0.0.1:8091 -u {{ cb_admin_user }} -p {{ cb_admin_pw }} --server-add={{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8091 --server-add-username={{ cb_admin_user }} --server-add-password={{ cb_admin_pw }}
+
+{% endfor %}

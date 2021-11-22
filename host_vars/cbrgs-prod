@@ -1,0 +1,21 @@
+---
+# cbrgs-prod vars file
+
+sg: SG_LAN_PROD
+key_name: ops-config
+profile_name: cb-prod
+fqdn_prefix: cbrgs
+prefix: CBRGS
+env: PROD
+dd_env: prod
+
+instance_type: i2.xlarge
+
+memory_quota: 29584
+cluster_ram_quota: 29584
+cluster_index_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 29329
+

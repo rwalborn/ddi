@@ -1,0 +1,24 @@
+---
+# MQDDC-PROD VARS FILE
+
+sg: SG_LAN_PROD
+key_name: ops-config
+profile_name: mqddc-prod
+prefix: MQDDC
+icinga_profile: MQDDC-Paged
+env: PROD
+dd_env: prod
+service_tag: MQDDC
+
+fqdn_prefix: mqddc
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.prod.doubledowncasino.com
+
+instance_type: c3.2xlarge
+
+lbname: LBMQDDC
+
+rt53_zone: ddc.io
+

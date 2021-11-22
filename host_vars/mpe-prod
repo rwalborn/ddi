@@ -1,0 +1,43 @@
+# MPE-PROD VARS FILE
+
+name_tag: MPE-PROD
+lb: MPE-PROD
+icinga_profile: MP-Paged
+service_tag: MPE
+
+app_tag: DDC
+rpm_tag: ddc-player-engine-service-sa
+app_ami: ami-320b7e24
+instance_type: m3.xlarge
+sg: SG_MPE_PROD
+elb_sg: SG_LBMPE_PROD
+elb_fqdn: mpe.prod.doubledowncasino.com
+env: production
+key_name: ops-config
+profile_name: mpe-prod
+
+lc: MPE-PROD-002
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 10
+  min_size: 10
+  max_size: 10
+  hc_type: EC2
+
+instance_port_1: 11432
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /HealthCheck
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 5
+    healthy_threshold: 5
+
+

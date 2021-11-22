@@ -1,0 +1,8 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: cloudwatch alarm for dynamodb
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: EMSADDR-USE1-PROD, dynamodb_sec_index: true }
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: EMSTOKEN-USE1-PROD, dynamodb_sec_index: true }

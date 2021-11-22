@@ -1,0 +1,58 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/dws
+  vars:
+    sg: SG_DWS_SBX
+    profile_name: dws-sbx
+  tasks:
+    - name: create "{{ sg }}" security group
+      include: ../sec_groups/{{ sg }}_INC.yml
+
+    - name: find latest lc
+      ec2_lc_find:
+        name_regex: "{{ profile_name | upper }}-*"
+        region: us-east-1
+        sort_order: descending
+        limit: 1
+      register: search
+
+    - name: new version
+      set_fact: byone="{{ ((search.results.0.name.split('-')[2] | int) + 1) }}"
+      when: search.results|length > 0
+
+    - name: if there is no prior version
+      set_fact: ver='001'
+      when: search.results|length == 0
+
+    - name: new version string
+      set_fact: ver="{{ byone.zfill(3) }}"
+      when: search.results|length > 0
+  
+    - name: launch configuration
+      ec2_lc:
+        name: "{{ profile_name | upper }}-{{ ver }}"
+        image_id: "{{ app_ami }}"
+        key_name: "{{ key_name }}"
+        security_groups: [ "{{ ec2_group.group_id }}" ]
+        instance_profile_name: "{{ profile_name }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+        volumes:
+        - device_name: /dev/sda1
+          volume_size: 8
+          device_type: gp2
+          delete_on_termination: true
+        region: "{{ region }}"
+        assign_public_ip: false
+        user_data: |
+                   #cloud-config
+                   runcmd:
+                     - cd /usr/local/share/DDI/ddi-ops && git pull
+                     - /root/bin/sysconfig
+                     - sed -i 's/^AllowGroups .*$/AllowGroups root ldap_all centos dev/' /etc/ssh/sshd_config
+                     - service sshd restart

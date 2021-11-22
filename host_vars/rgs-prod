@@ -1,0 +1,52 @@
+# RGS-PROD VARS FILE
+
+name_tag: RGS-PROD
+lb: RGS-PROD
+
+app_tag: rgs-server-filtered
+app_ami: ami-b74b8da1
+instance_type: c3.2xlarge
+sg: SG_RGS_PROD
+elb_sg: SG_LBRGS_PROD
+elb_fqdn: rgs.prod.doubledowncasino.com
+env: production
+key_name: ops-config
+profile_name: rgs-prod
+service_tag: RGS
+
+# prefix needed for role tag for this to service to work
+prefix: RGSDDC
+
+lc: RGS-PROD-002
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 10
+  min_size: 10
+  max_size: 10
+  hc_type: EC2
+
+instance_port_1: 8080
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /rgslite/rgs-running
+    response_timeout: 2
+    interval: 5
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+
+
+
+
+
+
+webapp_port: 8080
+config_port: 80
+

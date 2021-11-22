@@ -1,0 +1,117 @@
+- name: set nginx arg for sysconfig
+  set_fact: sysconfig_arg1='nginx'
+  when: nginx
+
+# route53 policy routing should always accompanied by health check, thus public ip
+# there are total of 6 use cases here
+
+- name: case 1 subnet_pri_1
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pri_1 }}"
+    zone: "{{ az1 }}"
+    assign_public_ip: no
+  when: private_lb and not policy_routing and az == 'az1'
+
+- name: case 2 subnet_pub_1
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pub_1 }}"
+    zone: "{{ az1 }}"
+    assign_public_ip: yes
+  when: private_lb and policy_routing and az == 'az1'
+
+- name: case 3 subnet_pri_2
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pri_2 }}"
+    zone: "{{ az2 }}"
+    assign_public_ip: no
+  when: private_lb and not policy_routing and az == 'az2'
+
+- name: case 4 subnet_pub_2
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pub_2 }}"
+    zone: "{{ az2 }}"
+    assign_public_ip: yes
+  when: private_lb and policy_routing and az == 'az2'
+
+# when private_lb is false, then it is public subnet anyway
+- name: case 5 subnet_pub_1
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pub_1 }}"
+    zone: "{{ az1 }}"
+    assign_public_ip: yes
+  when: not private_lb and az == 'az1'
+
+- name: case 6 subnet_pub_2
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pub_2 }}"
+    zone: "{{ az2 }}"
+    assign_public_ip: yes
+  when: not private_lb and az == 'az2'
+
+- name: launch instance
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    image: "{{ app_ami }}"
+    group: "{{ sg }}"
+    zone: "{{ zone }}"
+    wait: yes
+    wait_timeout: 500
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    assign_public_ip: "{{ assign_public_ip }}"
+    region: "{{ region }}"
+    instance_profile_name: "{{ role }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      app: "{{ app_tag }}"
+      rpm: "{{ rpm_tag }}"
+      env: "{{ env_tag }}"
+      service: "{{ service_tag }}"
+    user_data: |
+               #cloud-config
+               hostname: {{ fqdn }}
+               write_files:
+                 - path: /etc/cron.d/haproxy
+                   owner: root
+                   permissions: 0644
+                   content: |
+                     */5 * * * * root /root/bin/haproxy_config.py
+               runcmd:
+                 - cd /usr/local/share/DDI/ddi-ops && git pull
+                 - /root/bin/sysconfig {{ sysconfig_arg1 }}
+                 - /root/bin/haproxy_config.py --updaterepo --force
+                 - systemctl restart crond
+  register: ec2
+
+- name: get hostname
+  set_fact: hostname="{{ fqdn.split('.')[0] }}"
+
+- name: get subdomain for env
+  set_fact: subdomain="{{ fqdn.split('.')[2] }}"
+
+- name: set route53 zone
+  set_fact:
+    mgt_zone="sbx.ddc.io"
+  when: subdomain == 'sbx'
+
+- name: mgmt record for the LB instance
+  route53:
+    command: create
+    zone: "{{ mgt_zone }}"
+    record: "{{ fqdn }}"
+    type: "A"
+    ttl: 300
+    value: "{{ ec2.instances.0.public_ip }}"
+    overwrite: true
+  when: ec2.instances.0.public_ip != ''
+
+- name: mgmt record for the LB instance
+  route53:
+    command: create
+    zone: "{{ mgt_zone }}"
+    record: "{{ fqdn }}"
+    type: "A"
+    ttl: 300
+    value: "{{ ec2.instances.0.private_ip }}"
+    overwrite: true
+  when: ec2.instances.0.public_ip == ''

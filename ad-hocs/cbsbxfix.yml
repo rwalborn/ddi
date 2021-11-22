@@ -1,0 +1,100 @@
+# RUN IN NONPROD AS export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv cbsbxfix.yml -e 'nametag=CBAPP-SBX 810' 
+---
+- name: gather the facts, just the facts
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: get facts
+      ec2_remote_facts:
+        region: us-east-1
+        filters:
+          "tag:Name": "{{ nametag }}"
+      register: ec2_facts
+
+    - name: Add EP2 instances to host group
+      local_action: add_host hostname={{ item.private_ip_address }} groupname=node
+      with_items: "{{ec2_facts.instances}}"
+
+    - debug:
+        var: ec2_facts
+
+- name: give sudo access to user/group
+  hosts: node
+  gather_facts: yes
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: Add user to AllowUsers
+      replace:
+        backup: yes
+        dest: /etc/sssd/sssd.conf
+        regexp: '^ldap_uri = ldap://ldap00-tools.ddc.io,ldap://ldap01-tools.ddc.io'
+        replace: 'ldap_uri = ldap://ldap00.sbx.singledowncasino.com'
+
+    - name: restart sssd
+      service: name=sssd
+               state=restarted
+
+#    - name: disable DDI repo for reasons
+#      yum_repository:
+#        name: DDI
+#        baseurl: http://ddi-ops-repo.s3.amazonaws.com/x86_64/
+#        description: DDI ops repo
+#        enabled: no
+
+    - name: remove ntp
+      yum:
+        name: "{{ item }}"
+        state: absent
+      with_items:
+        - ntp
+        - ntpdate
+
+    - name: install chrony
+      yum:
+        name: chrony
+        state: present
+
+    - name: enable chronyd because WTF rhel?
+      service:
+        name: chronyd
+        enabled: yes
+        state: started
+
+#    - name: renable DDI repo
+#      yum_repository:
+#        name: DDI
+#        description: DDI 
+#        baseurl: http://ddi-ops-repo.s3.amazonaws.com/x86_64/
+#        gpgcheck: no
+#        priority: 1
+#        s3_enabled: yes
+#        enabled: yes
+
+    - name: remove default time servers
+      lineinfile:
+        path: /etc/chrony.conf
+        state: absent
+        line: "{{ item }}"
+      with_items:
+        - '# Use public servers from the pool.ntp.org project.'
+        - '# Please consider joining the pool (http://www.pool.ntp.org/join.html).'
+        - 'server 0.rhel.pool.ntp.org iburst'
+        - 'server 1.rhel.pool.ntp.org iburst'
+        - 'server 2.rhel.pool.ntp.org iburst'
+        - 'server 3.rhel.pool.ntp.org iburst'
+
+    - name: add internal time servers
+      blockinfile:
+        # Before ansible v 2.3 option 'dest' was used instead of 'path'
+        path: /etc/chrony.conf
+        state: present
+        insertbefore: BOF
+        block: |
+          # Use public servers from the pool.ntp.org project.
+          # Please consider joining the pool (http://www.pool.ntp.org/join.html).
+          server ntp01.use1.tools.ddc.io iburst
+          server ntp02.use1.tools.ddc.io iburst
+          server ntp03.use1.tools.ddc.io iburst
+          server ntp04.use1.tools.ddc.io iburst

@@ -1,0 +1,50 @@
+- name: install via yum
+  yum: name={{ item }} state=installed
+  with_items:
+    - postfix
+    - mailx
+
+- name: update mydestination
+  template:
+    src=main.cf.j2
+    dest=/etc/postfix/main.cf
+    owner=root
+    group=root
+    mode=644
+  register: conf
+
+- name: update virtual alias
+  template:
+    src=virtual.j2
+    dest=/etc/postfix/virtual
+    owner=root
+    group=root
+    mode=644
+  register: virtual
+
+- name: enable postfix
+  service:
+    name=postfix
+    state=started
+    enabled=yes
+
+- name: change root alias
+  lineinfile:
+    dest=/etc/aliases
+    state=present
+    backrefs=yes
+    regexp='^#(root.*)marc$'
+    line='\1techops@doubledown.com'
+
+- name: restart when conf is updated
+  command: postalias /etc/aliases
+ 
+- name: rehash virtual alias map
+  command: postmap /etc/postfix/virtual
+  when: virtual.changed
+
+- name: restart when conf is updated
+  service:
+    name=postfix
+    state=restarted
+  when: conf.changed

@@ -1,0 +1,18 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    name_tag: LBRGS-DEV
+    app_tag: rgs-server-unfiltered
+    env_tag: development
+    sg: Dev
+    service_fqdn: rgs.dev.doubledowncasino.com
+  roles:
+    - { role: lb, name_tag: 'LBRGS-DEV 01', az: us-east-1c, fqdn: lbrgs01.use1.dev.ddc.io }
+    - { role: lb, name_tag: 'LBRGS-DEV 02', az: us-east-1d, fqdn: lbrgs02.use1.dev.ddc.io }
+

@@ -1,0 +1,4 @@
+---
+- name: install old version
+  include: v3.3.5.yml
+  when: version == '3.3.5'

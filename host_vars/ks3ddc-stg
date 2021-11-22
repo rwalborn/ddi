@@ -1,0 +1,26 @@
+# KS3DDC-STG VARS FILE
+
+name_tag: KS3DDC-STG
+icinga-profile: KS3DDC
+service_tag: KS3DDC
+
+app_tag: DDC
+rpm_tag: ddi-kinesis-s3-archiver
+app_ami: ami-b91219c2
+instance_type: m3.xlarge
+sg: SG_KS3DDC_STG
+
+env: staging
+key_name: ops-config
+profile_name: ks3ddc-stg
+prefix: KS3
+deployment: STG
+
+instance_port_1: 80
+
+ud_env: stg
+
+lc: KS3DDC-STG-001
+hc_type: EC2
+
+

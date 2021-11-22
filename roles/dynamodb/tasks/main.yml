@@ -1,0 +1,15 @@
+- name: dynamodb table
+  dynamodb_table:
+    name: "{{ name }}"
+    state: "{{ state }}"
+    region: "{{ region }}"
+    hash_key_name: "{{ hash_key_name }}"
+    hash_key_type: "{{ hash_key_type }}"
+    read_capacity: "{{ read_cap }}"
+    write_capacity: "{{ write_cap }}"
+
+- name: table arn will not be available right away
+  pause: seconds=10
+
+- name: set tags
+  command: "aws --profile {{ aws_profile }} dynamodb tag-resource --resource-arn arn:aws:dynamodb:us-east-1:{{ aws_acct }}:table/{{ name }} --tags Key=Name,Value={{ name }} Key=service,Value={{ service_tag }}"

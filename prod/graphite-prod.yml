@@ -1,0 +1,45 @@
+# new build or rebuild
+# xvdb will be automatically mounted
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass -e "rebuild=true" graphite-prod.yml
+
+# to add a new volume in the future, xvdc
+# uncommnent the 2 xvdc role lines
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass graphite-prod.yml
+
+# run anytime for config management
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass graphite-prod.yml
+
+- name: graphite playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    name_tag: GRAPHITE-PROD
+    fqdn: graphite01.use1.prod.ddc.io
+    subnet: subnet-f33121aa
+  roles:
+    - { role: graphite, blkdev: xvdb }
+#    - { role: graphite, blkdev: xvdc }
+  tasks:
+    - name: find instance ip
+      command: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ ip.stdout }}" groupname=launched
+
+- name: Configure instances
+  hosts: launched
+  remote_user: root
+  become: no
+  become_method: sudo
+  gather_facts: true
+  vars_files:
+    - ../group_vars/prod
+  roles:
+    - { role: newfs, blkdev: xvdb, fstype: 'xfs', mountpoint: /d01 }
+#    - { role: newfs, blkdev: xvdc, fstype: 'xfs', mountpoint: /d02 }
+    - ldap_client
+    - { role: graphite, config: true }
+    - { role: collectd, collectd_endpoint: true }

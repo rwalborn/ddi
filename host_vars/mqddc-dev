@@ -1,0 +1,23 @@
+---
+# MQDDC-DEV VARS FILE
+
+sg: SG_LAN_DEV
+key_name: ops-config
+profile_name: mqddc-dev
+prefix: MQDDC
+env: DEV
+service_tag: mqddc
+dd_env: development
+
+fqdn_prefix: mqddc
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.dev.doubledowncasino.com
+
+instance_type: m3.xlarge
+
+lbname: LBMQDDC
+
+rt53_zone: ddc.io
+

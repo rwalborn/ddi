@@ -1,0 +1,79 @@
+- name: get host sequence
+  set_fact: seq="{{ fqdn.split('.')[0] | regex_replace('^[a-z]+(\\d+)$', '\\1') }}"
+
+- name: get name_tag
+  set_fact: name_tag="LIC-TOOLS {{ seq }}"
+
+- name: set default in the loop
+  set_fact:
+    azone='1'
+    net='1'
+
+- name: set net assignment to 2 when host sequence is an even number
+  set_fact:
+    azone='2'
+    net='2'
+  when: ((seq|int)%2) == 0
+
+- name: increment net by 2 for sewage
+  set_fact:
+    net="{{ ((azone|int)+2) }}"
+
+- name: prod license
+  set_fact:
+    licip=192.168.250.2
+    service_fqdn=licprod.use1.tools.ddc.io
+  when: lictype == 'prod'
+
+- name: allow hostvars[inventory_hostname] to retrieve values beyond group_vars/all
+  include_vars: ../../../group_vars/tools.yml
+
+- name: launch instance in VPC
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    region: "{{ region }}"
+    vpc_subnet_id: "{{ hostvars[inventory_hostname]['subnet_pri_' + net] }}"
+    zone: "{{ hostvars[inventory_hostname]['az' + azone] }}"
+    group: "{{ sg }}"
+    image: "{{ app_ami }}"
+    instance_profile_name: "{{ iamrole }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env }}"
+      service: "{{ service_tag }}"
+      icinga-profile: SFSLicense-Paged
+    user_data: |
+               #cloud-config
+               hostname: {{ fqdn }}
+               runcmd:
+                 - cd /usr/local/share/DDI/ddi-ops && git pull
+                 - /root/bin/sysconfig
+                 - s3cmd get --force s3://ddc-artifacts/sfs-license-server/licenses_{{ lictype }}.sfl /ddi/services/{{ base }}/licenses.sfl
+                 - ip addr add {{ licip }} dev eth0
+                 - iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 60006 -j DNAT --to-destination {{ licip }}:60006
+                 - service sfsls restart
+    wait: yes
+  register: vpc
+
+- name: host record
+  route53:
+    command: create
+    zone: "{{ dnszone }}"
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ vpc.instances.0.private_ip }}"
+    overwrite: true
+
+- name: service record
+  route53:
+    command: create
+    zone: "{{ dnszone }}"
+    record: "{{ service_fqdn }}"
+    type: CNAME
+    ttl: 60
+    value: "{{ fqdn }}"
+    overwrite: true
+  when: active

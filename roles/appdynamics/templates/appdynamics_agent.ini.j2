@@ -1,0 +1,12 @@
+[AppDynamics Agent]
+extension = appdynamics_agent.so
+agent.log4cxx_config = /usr/lib/appdynamics-php5/php/conf/appdynamics_agent_log4cxx.xml
+agent.php_agent_root = /usr/lib/appdynamics-php5
+agent.controller.hostName = {{ account }}.saas.appdynamics.com
+agent.controller.port = 443
+agent.applicationName = {{ app }}
+agent.tierName = {{ tier }}
+agent.nodeName = {{ ansible_hostname }}
+agent.controller.ssl.enabled = 1
+agent.accountName = {{ account }}
+agent.accountAccessKey = {{ access_key }}

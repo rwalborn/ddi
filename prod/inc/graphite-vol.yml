@@ -1,0 +1,36 @@
+- name: find volume
+  command: aws ec2 describe-volumes --region "{{ region }}" --filters 'Name=tag:Name,Values="{{ app }} {{ blkdev }}"' --query "Volumes[].VolumeId" --output text
+  register: volume
+
+# aws ec2 describe-volumes --volume-ids "{{ volume.stdout }}" --query "Volumes[].Attachments[].State"
+
+#- debug: msg="attach {{ volume.stdout }} to {{ hostvars.localhost.ec2.instances.0.id }}"
+
+- name: attach volume if found
+  ec2_vol:
+    instance: "{{ instance }}"
+    id: "{{ volume.stdout }}"
+    device_name: "/dev/{{ blkdev }}"
+    region: "{{ region }}"
+  when: volume.stdout|length > 0 and instance is defined
+
+# See IFPRJ-515 for spec research
+- name: create volume if not found
+  ec2_vol:
+    name: "{{ app }} {{ blkdev }}"
+    device_name: "{{ blkdev }}"
+    volume_size: 350
+    volume_type: gp2
+    zone: "{{ zone }}" 
+    region: "{{ region }}"
+    delete_on_termination: false
+  register: created
+  when: volume.stdout|length == 0 
+
+- name: attach volume after creation
+  ec2_vol:
+    instance: "{{ instance }}"
+    id: "{{ created.volume_id }}"
+    device_name: "/dev/{{ blkdev }}"
+    region: "{{ region }}"
+  when: created.volume_id is defined and instance is defined

@@ -1,0 +1,29 @@
+# SmartFoxServerPro-1.6.9 actually installs 1.6.6.
+# Don't ask me why. I did not create the rpm.
+- name: packages
+  yum: name={{ item }} state=installed
+  with_items:
+   - SmartFoxServerPro-1.6.9-DDI14
+   - killcx
+
+- name: java
+  yum: name={{ item }} state=installed
+  with_items:
+   - java-1.8.0-openjdk
+  when: ansible_distribution_major_version == '7'
+
+# /etc/init.d symlink already in rpm
+- name: init scipt
+  copy:
+    src=sfs
+    dest={{ sfs_base_config_path }}/sfs
+
+- name: create /home/cap/smartfox/shared/cached-copy
+  file:
+    dest=/home/cap/smartfox/shared/cached-copy
+    state=directory
+
+- name: create /home/cap/smartfox/releases
+  file:
+    dest=/home/cap/smartfox/releases
+    state=directory

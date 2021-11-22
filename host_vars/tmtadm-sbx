@@ -1,0 +1,24 @@
+# TMTADM-SBX VARS FILE
+
+name_tag: TMTADM-SBX
+service_tag: TMTADM
+icinga_profile: TMTADM
+# hzcastsbx: hzsbx_tmnt
+
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmtadm.use1.sbx.doubledowncasino.com
+spot_price: 0.225
+sg: SG_TMTADM_SBX
+env: sbx
+profile_name: tmtadm-sbx
+
+key_name: dev-ops-config
+role: tmtadm-sbx
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

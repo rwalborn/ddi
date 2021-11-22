@@ -1,0 +1,7 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: cloudwatch alarm for elb
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: cloudwatch, alarm: elb, elb: BAL-PROD }

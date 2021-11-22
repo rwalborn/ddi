@@ -1,0 +1,7 @@
+---
+- name: get certificate to trust
+  shell: "openssl s_client -connect {{ crowd_host }}:443 < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > public.crt"
+
+- name: import ssl certificate
+  shell: "echo {{ java_keystore_pw }} | /bin/keytool -import -alias doubledowninteractive -noprompt -keystore /etc/pki/java/cacerts -file public.crt"
+  ignore_errors: true

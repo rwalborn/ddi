@@ -1,0 +1,12 @@
+- name: launch data pipeline for dynamodb
+  cloudformation:
+    stack_name: "{{ table }}-Backup"
+    state: "present"
+    region: "us-east-1"
+    disable_rollback: true
+    template: "roles/cloudformation/files/dynamodb-datapipeline.json"
+    template_parameters:
+      TableName: "{{ table }}"
+      S3OutputLoc: "{{ s3outputloc }}"
+      ReadRatio: "{{ readratio }}"
+      Timeout: "{{ timeout }}"

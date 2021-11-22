@@ -1,0 +1,30 @@
+# ansible-playbook -vvvv -i "localhost," --ask-vault-pass foo.yml
+
+# This playbook does not launch instances or register dns
+# It configures launched instances
+# It depends on inventory file in /etc/ansible/inventory_by_nametag
+
+- name: Configure instance(s)
+  hosts: LYT-LT
+  user: root
+  gather_facts: True
+  vars:
+    sshd_additional_groups: 'dev qa'
+    sudoers_user:
+      # IFPRJ-358 for code coverage
+      - username: qaansible
+        disable_requiretty: true
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+  roles:
+    - sudoers_user
+  tasks:
+    - name: sshd_config AllowGroups
+      lineinfile:
+        dest=/etc/ssh/sshd_config
+        regexp='^AllowGroups (.*)$'
+        line="AllowGroups root ldap_all {{ sshd_additional_groups }}"
+        backrefs=yes
+      register: sshdconfig
+    - service: name=sshd state=reloaded
+      when: sshdconfig.changed

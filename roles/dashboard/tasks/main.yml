@@ -1,0 +1,81 @@
+- include_vars: ddiunixteam.yml
+
+- name: install top directory
+  file:
+    path: /mnt/data/ddiuser
+    state: directory
+    owner: ddiuser
+    group: ddiuser
+
+- name: install directory
+  file:
+    path: /mnt/data/ddiuser/webapps
+    state: directory
+    owner: ddiuser
+    group: ddiuser
+
+- name: install webapps
+  file:
+    path: /mnt/data/ddiuser/webapps/tmpfiles
+    state: directory
+    owner: ddiuser
+    group: ddiuser
+
+- name: Symlink EBS volume directories
+  file:
+    src: /mnt/data/ddiuser/webapps
+    dest: /ddi/home/ddiuser/webapps
+    force: true
+    state: link
+
+- name: install via yum
+  yum: name={{ item }} state=installed
+  with_items:
+    - curl
+    - tcl
+    - tcl-devel
+    - gcc
+    - gcc-c++
+    - postgresql
+    - ImageMagick
+    - sysstat
+    - postgresql-devel
+    - wget
+    - mercurial
+    - python-setuptools
+    - python-psycopg2
+    - redis
+    - nodejs
+    - nodejs-forever-agent
+    - python-redis
+    - python-argparse
+    - npm
+    - nodejs-forever-agent
+
+- name: python dependent
+  pip: name={{ item }} state=latest
+  with_items:
+    - XlsxWriter
+    - PyMySQL
+    - openpyxl
+
+- name: copy config.j2 file to ddiuser config directory
+  template: src=ssh_config.j2 dest=/ddi/home/ddiuser/.ssh/config
+
+- name: use same ddi-unixteam key to checkout BI repo
+  copy:
+    content="{{ vault_ddiunixteam_key }}"
+    dest=/ddi/home/ddiuser/.ssh/hg_rsa
+    owner=ddiuser
+    group=ddiuser
+    mode=0600
+
+- name: clone bi repo as ddiuser since hg module does not use arg
+  shell: su -l ddiuser -c 'cd /mnt/data/ddiuser/webapps; hg clone ssh://bitbucket/Valkrysa/dashboard'
+
+- name: Symlink dashboard-prod
+  file:
+    src: /mnt/data/ddiuser/webapps/dashboard/dashboard-prod
+    dest: /etc/rc.d/init.d/dashboard
+    force: true
+    state: link

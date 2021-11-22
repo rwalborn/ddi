@@ -1,0 +1,4 @@
+extra: nothing
+method: jnlp
+ec2: false
+opstest: false

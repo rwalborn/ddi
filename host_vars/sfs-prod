@@ -1,0 +1,9 @@
+vpc_sg: SG_LAN_PROD
+ec2_sg: 'production, Prod'
+env: production
+iamrole: sfs-prod
+icinga: SFS-Paged
+
+sfs_externals_casino_config_host: cp.doubledowncasino.com
+sfs_externals_casino_config_db_host: master1.doubledowncasino.com
+sfs_externals_admin_config_host: doubledowncasino.com

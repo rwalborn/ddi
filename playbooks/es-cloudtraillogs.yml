@@ -1,0 +1,7 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: launch elasticsearch domain
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: elasticsearch, name: cloudtraillogs, service_tag: CLS }

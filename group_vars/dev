@@ -1,0 +1,112 @@
+---
+vpc_id: vpc-7bb4021f
+vpc_cidr: 172.17.0.0/16
+subnet_pri_1c: subnet-a67099d0
+subnet_pub_1c: subnet-b97099cf
+subnet_pri_1d: subnet-39dedd60
+subnet_pub_1d: subnet-06dedd5f
+classiclink_sg: sg-70d7bd16
+icinga_sg: sg-bc8a4fc1
+this_env: dev
+spacewalk_host: spacewalkproxy.use1.dev.ddc.io
+
+# NEW STYLE SINCE SUBS ARE IN DIFF AZ'S IN NONPROD
+subnet_pri_1: subnet-a67099d0
+subnet_pub_1: subnet-b97099cf
+subnet_pri_2: subnet-39dedd60
+subnet_pub_2: subnet-06dedd5f
+
+region: us-east-1
+az1: us-east-1c
+az2: us-east-1d
+zone: doubledowncasino.com
+
+aws_acct: 143177584759
+key_name: ops-config
+
+aurora_master_user: DBA
+aurora_master_pw: "{{ vault_aurora_master_pw }}"
+mysql_casino_pw: "{{ vault_mysql_casino_pw }}"
+
+cb_admin_user: admin
+cb_admin_pw: "{{ vault_cb_admin_pw }}"
+cb_ro_user: user
+cb_ro_pw: "{{ vault_cb_ro_pw }}"
+
+mg_ro_user: datadog
+mg_ro_pw: "{{ vault_mg_ro_pw }}"
+
+mq_ro_user: guest
+mq_ro_pw: guest
+
+dd_api_key: "{{ vault_dd_api_key }}"
+
+sssd_conf:
+  ca_cert_path: /etc/openldap/cacerts
+  ldap_servers:
+     - ldap00-dev.ddc.io
+
+cn: dev.doubledowncasino.com
+cert_key: "{{ vault_cert_key }}"
+cert_body: |
+  -----BEGIN CERTIFICATE-----
+  MIIFiDCCBHCgAwIBAgIQBLfEO/tIZiJM9lRAGaBvPDANBgkqhkiG9w0BAQsFADBw
+  MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
+  d3cuZGlnaWNlcnQuY29tMS8wLQYDVQQDEyZEaWdpQ2VydCBTSEEyIEhpZ2ggQXNz
+  dXJhbmNlIFNlcnZlciBDQTAeFw0xNjA2MjgwMDAwMDBaFw0xNzEwMTgxMjAwMDBa
+  MH8xCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdT
+  ZWF0dGxlMSQwIgYDVQQKExtEb3VibGUgRG93biBJbnRlcmFjdGl2ZSBMTEMxIzAh
+  BgNVBAMMGiouZGV2LmRvdWJsZWRvd25jYXNpbm8uY29tMIIBIjANBgkqhkiG9w0B
+  AQEFAAOCAQ8AMIIBCgKCAQEAqprGiHJtE1f3twpjgpUhK0VvkzWvG34B6ZiGsIUh
+  JT3/OEVxJ5ccNHpxjYo6nPpLKh2NAU2TTPPW6SFRQENrXZ/5XMCd97Hz/KTbN6aj
+  FwBLVGCjPEzDhFEUgNK6k+zAFwjm+LkXuoRyYaQr1KbEJFnQmRADT+7iHcUZ3b4g
+  vjnSWErnzjag9WesxgGoWYmgXt7Re/foZfTLRmw86GeJiObkMBLqbN7gkYloO1Ve
+  0btwi1F2TBnm1K8joHzVz4OWaCjnQ+l4nrIqr1vLERZL/+pzuXg85rJyVMguxk8T
+  Vv8HixfrAhbL6DnTmVIFJ2YBp+rz9TU56YcwxKNKkRa4DQIDAQABo4ICDTCCAgkw
+  HwYDVR0jBBgwFoAUUWj/kK8CB3U8zNllZGKiErhZcjswHQYDVR0OBBYEFIDGTk0N
+  dsXtTpMyiQcgGhXCL7krMD8GA1UdEQQ4MDaCGiouZGV2LmRvdWJsZWRvd25jYXNp
+  bm8uY29tghhkZXYuZG91YmxlZG93bmNhc2luby5jb20wDgYDVR0PAQH/BAQDAgWg
+  MB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjB1BgNVHR8EbjBsMDSgMqAw
+  hi5odHRwOi8vY3JsMy5kaWdpY2VydC5jb20vc2hhMi1oYS1zZXJ2ZXItZzUuY3Js
+  MDSgMqAwhi5odHRwOi8vY3JsNC5kaWdpY2VydC5jb20vc2hhMi1oYS1zZXJ2ZXIt
+  ZzUuY3JsMEwGA1UdIARFMEMwNwYJYIZIAYb9bAEBMCowKAYIKwYBBQUHAgEWHGh0
+  dHBzOi8vd3d3LmRpZ2ljZXJ0LmNvbS9DUFMwCAYGZ4EMAQICMIGDBggrBgEFBQcB
+  AQR3MHUwJAYIKwYBBQUHMAGGGGh0dHA6Ly9vY3NwLmRpZ2ljZXJ0LmNvbTBNBggr
+  BgEFBQcwAoZBaHR0cDovL2NhY2VydHMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0U0hB
+  MkhpZ2hBc3N1cmFuY2VTZXJ2ZXJDQS5jcnQwDAYDVR0TAQH/BAIwADANBgkqhkiG
+  9w0BAQsFAAOCAQEAdJBWNbIo1Pv1JJ7cCglUgSGg1zml4LCJcpdea/9lgVFWD75P
+  tSz/XXaBOhPrwJUKLiITb+NVA5an7T5MeoziN/yudL1kxrsNoqI0pIZ7hZgtRzDu
+  ENd3QiV7qs3k2Z0QiPYnRVw0o8BVt5u/ySO9sddAPq3VpXc/xsoFpRldtLsV3iey
+  wmkv6ElXq0OhsHLMyFDpZDsv9yJmC7X10JQNqiwjbIy98u7TF9AjZXTwlVtj0/QA
+  RTn1OnqMel80n4cdKG9Klzyq1DNzadSluPsh9A3TGHWuUK4FSpHFxyI2aJ2J8URZ
+  /BGs5P0m8/16L68jL9XqSEHU68hfMhJAxo1yVg==
+  -----END CERTIFICATE-----
+cert_chain: |
+  -----BEGIN CERTIFICATE-----
+  MIIEsTCCA5mgAwIBAgIQBOHnpNxc8vNtwCtCuF0VnzANBgkqhkiG9w0BAQsFADBs
+  MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
+  d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBIaWdoIEFzc3VyYW5j
+  ZSBFViBSb290IENBMB4XDTEzMTAyMjEyMDAwMFoXDTI4MTAyMjEyMDAwMFowcDEL
+  MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3
+  LmRpZ2ljZXJ0LmNvbTEvMC0GA1UEAxMmRGlnaUNlcnQgU0hBMiBIaWdoIEFzc3Vy
+  YW5jZSBTZXJ2ZXIgQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC2
+  4C/CJAbIbQRf1+8KZAayfSImZRauQkCbztyfn3YHPsMwVYcZuU+UDlqUH1VWtMIC
+  Kq/QmO4LQNfE0DtyyBSe75CxEamu0si4QzrZCwvV1ZX1QK/IHe1NnF9Xt4ZQaJn1
+  itrSxwUfqJfJ3KSxgoQtxq2lnMcZgqaFD15EWCo3j/018QsIJzJa9buLnqS9UdAn
+  4t07QjOjBSjEuyjMmqwrIw14xnvmXnG3Sj4I+4G3FhahnSMSTeXXkgisdaScus0X
+  sh5ENWV/UyU50RwKmmMbGZJ0aAo3wsJSSMs5WqK24V3B3aAguCGikyZvFEohQcft
+  bZvySC/zA/WiaJJTL17jAgMBAAGjggFJMIIBRTASBgNVHRMBAf8ECDAGAQH/AgEA
+  MA4GA1UdDwEB/wQEAwIBhjAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIw
+  NAYIKwYBBQUHAQEEKDAmMCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdpY2Vy
+  dC5jb20wSwYDVR0fBEQwQjBAoD6gPIY6aHR0cDovL2NybDQuZGlnaWNlcnQuY29t
+  L0RpZ2lDZXJ0SGlnaEFzc3VyYW5jZUVWUm9vdENBLmNybDA9BgNVHSAENjA0MDIG
+  BFUdIAAwKjAoBggrBgEFBQcCARYcaHR0cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQ
+  UzAdBgNVHQ4EFgQUUWj/kK8CB3U8zNllZGKiErhZcjswHwYDVR0jBBgwFoAUsT7D
+  aQP4v0cB1JgmGggC72NkK8MwDQYJKoZIhvcNAQELBQADggEBABiKlYkD5m3fXPwd
+  aOpKj4PWUS+Na0QWnqxj9dJubISZi6qBcYRb7TROsLd5kinMLYBq8I4g4Xmk/gNH
+  E+r1hspZcX30BJZr01lYPf7TMSVcGDiEo+afgv2MW5gxTs14nhr9hctJqvIni5ly
+  /D6q1UEL2tU2ob8cbkdJf17ZSHwD2f2LSaCYJkJA69aSEaRkCldUxPUd1gJea6zu
+  xICaEnL6VpPX/78whQYwvwt/Tv9XBZ0k7YXDK/umdaisLRbvfXknsuvCnQsH6qqF
+  0wGjIChBWUMo0oHjqvbsezt3tkBigAVBRQHvFwY+3sAzm2fTYS5yh+Rp/BIAV0Ae
+  cPUeybQ=
+  -----END CERTIFICATE-----

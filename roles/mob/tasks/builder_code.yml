@@ -1,0 +1,22 @@
+# do the small ones first with ansible
+# large ones will run in the background
+
+- name: buildbot scripts
+  hg:
+    repo: 'ssh://hg@bitbucket.org/ddimobiledev/mobile-buildbot-scripts'
+    dest: /mnt/ephemeral/home/jenkins/mobile-buildbot-scripts
+  become: true
+  become_user: jenkins
+
+- name: launchpad
+  git:
+    repo: 'ssh://git@bitbucket.org/ddimobiledev/launchpad.git'
+    dest: /mnt/ephemeral/home/jenkins/launchpad
+  become: true
+  become_user: jenkins
+
+- name: large desktop-web-src
+  shell: "su - jenkins -c 'cd /mnt/ephemeral/home/jenkins; hg clone ssh://hg@bitbucket.org/ddimobiledev/desktop-web-src &'"
+
+- name: large mobile-web
+  shell: "su - jenkins -c 'cd /mnt/ephemeral/home/jenkins; hg clone ssh://hg@bitbucket.org/ddimobiledev/mobile-web &'"

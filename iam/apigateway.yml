@@ -1,0 +1,41 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  vars:
+    role: apigateway
+  tasks:
+  - name: test to see if the role exists
+    command: aws iam get-role --role-name "{{ role }}"
+    ignore_errors: true
+    register: result
+
+  - name: create role if not found
+    iam:
+      name: "{{ role }}"
+      iam_type: role
+      state: present
+    when: result|failed
+
+  - name: update trust
+    command: "aws iam update-assume-role-policy --role-name {{ role }} --policy-document file://policy_docs/{{ role }}-trust.json"
+    when: result|success
+
+  - name: attach policy arn
+    command: "aws iam attach-role-policy --policy-arn {{ item }} --role-name {{ role }}"
+    with_items:
+      - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+    when: result|success
+
+  - name: update inline
+    iam_policy:
+      iam_type: role
+      iam_name: "{{ role }}"
+      state: present
+      policy_name: "{{ item }}"
+      policy_document: "policy_docs/{{ item }}.json"
+    with_items:
+      - lambda_elasticsearch_execution
+    when: result|success
+

@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_JPA_LT.yml
+
+- name: JPA_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+    - ../host_vars/jpa-lt
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

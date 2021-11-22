@@ -1,0 +1,12 @@
+- include: apigateway.yml
+  when: alarm == 'apigateway'
+
+- include: dynamodb.yml
+  when: alarm == 'dynamodb'
+
+- include: elb.yml
+  when: alarm == 'elb'
+
+- include: route53.yml
+  when: alarm == 'route53'
+

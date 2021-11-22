@@ -1,0 +1,59 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    sg: SG_METRICS_PROD
+  tasks:
+    - name: create security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: us-east-1
+        rules:
+          # carbon
+          - proto: tcp
+            from_port: 2003
+            to_port: 2004
+            cidr_ip: "{{ vpc_cidr }}"
+          - proto: tcp
+            from_port: 2003
+            to_port: 2004
+            cidr_ip: 10.0.0.0/8
+          # carbon-relay
+          - proto: tcp
+            from_port: 2013
+            to_port: 2014
+            cidr_ip: "{{ vpc_cidr }}"
+          - proto: tcp
+            from_port: 2013
+            to_port: 2014
+            cidr_ip: 10.0.0.0/8
+          # collectd network
+          - proto: udp
+            from_port: 25826
+            to_port: 25826
+            cidr_ip: "{{ vpc_cidr }}"
+          - proto: udp
+            from_port: 25826
+            to_port: 25826
+            cidr_ip: 10.0.0.0/8
+          # trust tools vpc
+          - proto: -1
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 192.168.0.0/22
+          # temp for testing
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 10.0.0.0/8
+          # ping from icinga slave in vpc
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"

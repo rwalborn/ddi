@@ -1,0 +1,41 @@
+# ansible-playbook -vv --ask-vault spacewalk.yml -e 'env=prod' -e 'nametag=CBMET-PROD*3*'
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: bailout if no env set
+      fail:
+        msg: "Bailing out you must specify env -e 'env=qa'  ex: for env qa"
+      when: env is not defined
+    - name: bailout if no nametag set
+      fail:
+        msg: "Bailing out you must specify nametag -e 'nametag=CBMET'  ex: for nodes named CBMET"
+      when: nametag is not defined
+
+- name: gather the facts, just the facts
+  hosts: localhost
+  gather_facts: no
+  vars:
+    region: us-east-1
+  tasks:
+    - name: get facts
+      ec2_remote_facts:
+        region: "{{ region }}"
+        filters:
+          "tag:Name": "{{ nametag }}"
+      register: ec2_facts
+
+    - name: "Add {{ nametag }} instances to host group"
+      local_action: add_host hostname={{ item.private_ip_address }} groupname=nodes
+      with_items: "{{ec2_facts.instances}}"
+
+
+- name: configure instance
+  hosts: nodes
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/{{ env|lower }}
+  roles:
+    - ../roles/spacewalk

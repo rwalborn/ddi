@@ -1,0 +1,6 @@
+- name: enable mtu probing so we don't have issues with jumbo frames on the internet
+  sysctl: name="net.ipv4.tcp_mtu_probing"
+          value=1
+          sysctl_set=yes
+          state=present
+          reload=yes

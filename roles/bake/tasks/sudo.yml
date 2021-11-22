@@ -1,0 +1,7 @@
+- name: comment out requiretty line in sudoers
+  lineinfile:
+    dest=/etc/sudoers
+    state=present
+    backrefs=yes
+    regexp='^(Defaults\s*requiretty)$'
+    line='#\1'

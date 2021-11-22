@@ -1,0 +1,7 @@
+- name: stand up an instance
+  include: standup.yml
+  when: do == 'standup'
+
+- name: config management
+  include: config.yml
+  when: do == 'config'

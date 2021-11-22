@@ -1,0 +1,46 @@
+# not ready for use
+
+- name: saltstack-repo
+  yum_repository:
+    name: SaltStack
+    description: SaltStack repo for RHEL/Centos $releasever
+    baseurl: https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
+    enabled: yes
+    failovermethod: priority
+    gpgcheck: yes
+    gpgkey: https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-GPG-KEY.pub
+
+- name: install via yum
+  yum: name={{ item }} state=installed
+  with_items:
+    - salt
+    - salt-minion
+    - python2-boto3
+    - GitPython
+    - libmetalink
+    - m2crypto
+
+- name: /etc/gitconfig
+  copy:
+    src=gitconfig
+    dest=/etc/gitconfig
+    owner=root
+    group=root
+    mode=0640
+
+- name: /etc/salt/minion.d/masterless.conf
+  copy:
+    src=masterless.conf
+    dest=/etc/salt/minion.d/masterless.conf
+    owner=root
+    group=root
+    mode=0640
+
+- name: /etc/salt/grains
+  copy:
+    src=grains
+    dest=/etc/salt/grains
+    owner=root
+    group=root
+    mode=0640
+

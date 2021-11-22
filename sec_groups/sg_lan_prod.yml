@@ -1,0 +1,38 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - group_vars/prod
+  vars:
+    sg: SG_LAN_PROD
+  tasks:
+    - name: create security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 0.0.0.0/0
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"
+          # for nagios in EC2 Classic
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: 10.71.160.234/32
+      register: group
+
+    - name: name the security group
+      command: aws ec2 create-tags --region "{{ region }}" --resources "{{ group.group_id }}" --tags Key=Name,Value="{{ sg }}"

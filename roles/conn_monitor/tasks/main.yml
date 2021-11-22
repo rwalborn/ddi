@@ -1,0 +1,34 @@
+- include_vars: sqscreds.yml
+
+- name: Create app directory
+  file: path={{ app_dir }} state=directory
+  register: dir_created
+
+- template: src=get_connections.py dest={{ app_dir }}/get_connections.py mode=0700
+  when: dir_created|success
+
+- template: src=get_connections.sh dest={{ app_dir }}/get_connections.sh mode=0700
+  when: dir_created|success
+
+- name: install packages
+  yum: name={{ item }} state=installed
+  with_items:
+    - python-virtualenv
+    - iproute
+  register: packages_installed
+
+- name: create virtualenv
+  command: virtualenv {{ app_dir }}/venv -p python2.6 creates="{{ app_dir }}/venv"
+  register: venv_created
+  when: packages_installed|success
+
+- name: install pip packages
+  pip: name={{ item }} state=present virtualenv={{ app_dir }}/venv
+  with_items:
+    - requests
+    - boto3
+  when: venv_created|success
+  register: venv_ready
+
+- template: src=tcpconn_cron dest=/etc/cron.d/tcpconns
+  when: venv_ready|success

@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_LBDASH_TOOLS.yml
+---
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - group_vars/tools
+    - host_vars/dashboard-tools
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"
+

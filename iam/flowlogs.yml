@@ -1,0 +1,31 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# need ansible 2.3
+
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    role: flowlogs
+    aws_profile: nonprod_admins
+    aws_acct: 416386939808
+  tasks:
+  - name: create policy
+    command: "aws --profile {{ aws_profile }} iam create-policy --policy-name {{ item }} --policy-document file://policy_docs/{{ item }}.json"
+    with_items:
+      - firehose_VPCFlowLogsToS3
+      - lambda_VPCFlowLogsToS3
+      - logs_CreatePut
+    ignore_errors: yes
+
+  - name: create role with trust
+    iam_role:
+      name: "{{ role }}"
+      assume_role_policy_document: "{{ lookup('file', 'policy_docs/assumerole_' + role + '.json') }}"
+      state: present
+      managed_policy:
+        - "arn:aws:iam::{{ aws_acct }}:policy/firehose_VPCFlowLogsToS3"
+        - "arn:aws:iam::{{ aws_acct }}:policy/lambda_VPCFlowLogsToS3"
+        - "arn:aws:iam::{{ aws_acct }}:policy/logs_CreatePut"
+    ignore_errors: yes

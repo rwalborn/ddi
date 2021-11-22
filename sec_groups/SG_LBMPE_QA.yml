@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBMPE_QA.yml
+---
+- name: LBMPE_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/mpe-qa
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

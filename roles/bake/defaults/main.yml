@@ -1,0 +1,4 @@
+distro: nada
+growpart: false
+setupansible: true
+bake: false

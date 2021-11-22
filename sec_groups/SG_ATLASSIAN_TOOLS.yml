@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_JIRA_TOOLS.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+      sg: SG_ATLASSIAN_TOOLS
+  tasks:
+    - include: "{{ sg }}_INC.yml"

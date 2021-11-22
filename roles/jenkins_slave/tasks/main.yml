@@ -1,0 +1,15 @@
+---
+- name: set up user environment
+  include: user.yml
+
+- name: extra tasks
+  include: "{{ extra }}.yml"
+  when: extra != 'nothing'
+
+- name: if slave installation method is by ssh
+  include: ssh.yml
+  when: method == 'ssh'
+
+- name: if slave installation method is by jnlp
+  include: jnlp.yml
+  when: method == 'jnlp'

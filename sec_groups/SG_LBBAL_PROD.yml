@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_LBBAL_PROD.yml
+---
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - group_vars/prod
+    - host_vars/bal-prod
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"
+

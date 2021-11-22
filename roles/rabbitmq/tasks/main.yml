@@ -1,0 +1,8 @@
+---
+- name: bake an AMI
+  include: ami.yml
+  when: do == 'ami'
+
+- name: stand up an instance
+  include: standup.yml
+  when: do == 'standup'

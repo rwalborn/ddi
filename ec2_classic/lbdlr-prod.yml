@@ -1,0 +1,30 @@
+---
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# to use multi-cnames and healthcheck for service, define service_fqdn and set ha to true
+# it is discouraged because it affects live dns record
+# step-by-step is in https://confluence.doubledowninteractive.com/display/OPS/HAProxy
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    app_tag: php-dealer
+    env_tag: production
+    sg: production
+    az: us-east-1c
+    resource_path: /debug
+    service_port: 80
+    service_fqdn: dlrddc.use1.prod.doubledowncasino.com
+    healthcheck: true
+    policy_routing: true
+    update_service_fqdn: true
+    private_lb: false
+  roles:
+    - { role: lb, name_tag: 'LBDLR-PROD 01', az: us-east-1c, fqdn: lbdlr01.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbdlr01.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBDLR-PROD 02', az: us-east-1d, fqdn: lbdlr02.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbdlr02.use1.prod.ddc.io }

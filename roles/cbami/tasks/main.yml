@@ -1,0 +1,177 @@
+---
+
+#- name:
+#  lineinfile: "dest=/etc/cloud/cloud.cfg 
+#               line='mounts:'"
+#
+#- name:
+#  lineinfile: "dest=/etc/cloud/cloud.cfg 
+#               line=' - [ ephemeral0, null ]'"
+
+#- name: enable mtu probing so we don't have issues with jumbo frames on the internet
+#  sysctl: name="net.ipv4.tcp_mtu_probing"
+#          value=1
+#          sysctl_set=yes
+#          state=present
+#          reload=yes
+
+#- name: install epel
+#  yum:
+#    name: epel-release
+#    state: installed
+
+#- name: upgrade distro
+#  shell: yum upgrade -y
+
+#- name: remove cloud-init
+#  yum: name=cloud-init
+#       state=absent
+
+#- name: install needful
+#  yum: name={{ item }} state=installed
+#  with_items:
+#    - htop
+#    - wget
+#    - git
+#    - bind-utils
+#    - tcpdump
+#    - sysstat
+#    - vim
+#    - ntp
+#    - ntpdate
+#    - curl
+#    - libselinux-python
+#    - python-pip
+#    - s3cmd
+#    - lsof
+#    - mlocate
+#    - strace
+#    - xfsprogs
+
+#- name: install aws cli
+#  pip: name=awscli
+
+#- name: replace ntp.conf with AWS timeservers
+#  copy: src=centos6x.ntp.conf
+#        dest=/etc/ntp.conf
+#        owner=root
+#        mode=0644
+
+#- name: restart ntp for changes to take effect
+#  service: name=ntpd
+#           enabled=yes
+#           state=restarted
+#
+#- name: copy custom .bashrc
+#  copy: src=.bashrc
+#        dest=/root/.bashrc
+#        owner=root
+#        mode=0644
+#
+#- name: copy custom .vimrc
+#  copy: src=.vimrc
+#        dest=/root/.vimrc
+#        owner=root
+#        mode=0644
+#
+#- name: copy .bash_profile
+#  copy: src=.bash_profile
+#        dest=/root/.bash_profile
+#        owner=root
+#        mode=0644
+#
+#- name: copy aws_hostname_by_id.sh
+#  copy: src=aws_hostname_by_id.sh
+#        dest=/usr/local/sbin/aws_hostname_by_id.sh
+#        owner=root
+#        mode=0755
+#
+#- name: replace the centos 6x selinux config
+#  copy: src=centos6x.config
+#        dest=/etc/selinux/config
+#        owner=root
+#        mode=0644
+#
+#- name: disable selinux before reboot
+#  shell: setenforce 0
+
+#- name: disable services
+#  service:
+#    name: "{{ item }}"
+#    enabled: no
+#  with_items:
+#    - acpid
+#    - iptables
+#    - ip6tables
+
+#- name: copy yum-s3-iam
+#  copy:
+#    src: yum-plugin-s3-iam-1.1.0-1.noarch.rpm
+#    dest: /root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm
+#    owner: root
+#
+#- name: install yum-s3-iam
+#  shell: 'yum install /root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm -y'
+#
+#- name: delete yum-s3-iam rpm to be tidy
+#  shell: 'rm /root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm'
+#
+#- name: copy DDI.repo
+#  copy:
+#    src: DDI.repo
+#    dest: /etc/yum.repos.d/DDI.repo
+#    owner: root
+#    mode: 0644
+
+
+## THESE ARE PREINSTALLED FOR FASTER INSTANCE LAUNCH
+
+## COUCHBASE 4.5.1 COMMUNITY
+- name: download couchbase
+  get_url:
+    url: http://packages.couchbase.com/releases/4.5.1/couchbase-server-community-4.5.1-centos7.x86_64.rpm
+    dest: /root/couchbase-server-community-4.5.1-centos7.x86_64.rpm
+
+### COUCHBASE 4.1 FOR CENTOS 6
+#- name: download couchbase
+#  get_url:
+#    url: http://packages.couchbase.com/releases/4.1.0/couchbase-server-enterprise-4.1.0-centos6.x86_64.rpm
+#    dest: /root/couchbase-server-enterprise-4.1.0-centos6.x86_64.rpm
+
+## COUCHBASE 3.1.3 FOR CENTOS 6
+#- name: download couchbase
+#  get_url: url=http://packages.couchbase.com/releases/3.1.3/couchbase-server-enterprise-3.1.3-centos6.x86_64.rpm
+#           dest=/root/couchbase-server-enterprise-3.1.3-centos6.x86_64.rpm
+
+#- name: Set the swappiness value for the running system
+#  shell: echo 0 > /proc/sys/vm/swappiness
+#
+#- name: Backup sysctl.conf
+#  shell: cp -p /etc/sysctl.conf /etc/sysctl.conf.`date +%Y%m%d-%H:%M`
+#
+#- name: Set the value in /etc/sysctl.conf so it stays after reboot
+#  shell: echo '' >> /etc/sysctl.conf
+#
+#- name: Set the value in /etc/sysctl.conf so it stays after reboot
+#  shell: echo '#Set swappiness to 0 to avoid swapping' >> /etc/sysctl.conf
+#
+#- name: Set the value in /etc/sysctl.conf so it stays after reboot
+#  shell: echo 'vm.swappiness = 0' >> /etc/sysctl.conf
+#
+#- name: Disable THP on a running system
+#  shell: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+#
+#- name: Disable THP on a running system
+#  shell: echo never > /sys/kernel/mm/transparent_hugepage/defrag
+#
+#- name: Backup rc.local and set the value in rc.local to survive reboot
+#  shell: "cp -p /etc/rc.d/rc.local /etc/rc.d/rc.local.`date +%Y%m%d-%H:%M`"
+#
+#- name: replace /etc/rc.local so the above changes keep on reboot
+#  copy: src=rc.local
+#        dest=/etc/rc.d/rc.local
+#        owner=root
+#        group=root
+#        mode=0755
+
+

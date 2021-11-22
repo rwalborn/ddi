@@ -1,0 +1,52 @@
+# RGS-STG VARS FILE
+
+name_tag: RGS-STG
+lb: RGS-STG
+
+app_tag: rgs-server-filtered
+app_ami: ami-b74b8da1
+instance_type: c3.large
+sg: SG_RGS_STG
+elb_sg: SG_LBRGS_STG
+elb_fqdn: rgs.stg.doubledowncasino.com
+env: staging
+key_name: ops-config
+profile_name: rgs-stg
+service_tag: RGS
+
+# prefix needed for role tag for this to service to work
+prefix: RGSDDC
+
+lc: RGS-STG-002
+
+ud_env: stg
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 8080
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /rgslite/rgs-running
+    response_timeout: 2
+    interval: 5
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+
+
+
+
+
+
+webapp_port: 8080
+config_port: 80
+

@@ -1,0 +1,26 @@
+---
+# cbpng-prod vars file
+
+sg: SG_LAN_PROD
+key_name: ops-config
+profile_name: cbpng-prod
+fqdn_prefix: cbpng
+fqdn_suffix: ddc.io
+rt53_zone: ddc.io
+prefix: CBPNG
+env: PROD
+dd_env: prod
+ic_env: production
+app_tag: DDC
+icinga_profile: Couchbase-Paged
+
+instance_type: i2.xlarge
+
+cluster_ram_quota: 28724
+cluster_index_ramsize: 256
+cluster_fts_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 28724
+

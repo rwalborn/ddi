@@ -1,0 +1,12 @@
+---
+- name: original sfs_base role
+  include: base.yml
+
+- name: original sfs_config role
+  include: config.yml
+
+- name: original sfs_deploy role
+  include: deploy.yml
+
+- name: original sfs_prod role
+  include: prod.yml

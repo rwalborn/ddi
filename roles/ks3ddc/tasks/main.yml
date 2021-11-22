@@ -1,0 +1,39 @@
+#install ddi-releases repo
+
+- name: install ddi-kinesis-s3-archiver
+  yum:
+    name: ddi-kinesis-s3-archiver
+    state: present
+
+- name: Create config directory
+  file:
+    path: /ddi/services/ddi-kinesis-s3-archiver/config
+    state: directory
+    mode: 0755
+    owner: ddiuser
+    group: ddiuser
+
+- name: Copy ddi-kinesis.properties file to ddiuser config directory
+  copy:
+    src: ddi-kinesis.properties
+    dest: /ddi/services/ddi-kinesis-s3-archiver/config/ddi-kinesis-s3-archiver-prod.properties
+    mode: 0644
+    owner: ddiuser
+    group: ddiuser
+
+- name: Create log dir
+  file:
+    path: /var/log/ddi/ddi-kinesis-s3-archiver/log
+    state: directory
+    mode: 0755
+    owner: ddiuser
+    group: ddiuser
+
+- name: Copy kinesis.cron to kinesis
+  copy:
+    src: kinesis.cron
+    dest: /etc/cron.d/kinesis
+    mode: 0644
+    owner: root
+    group: root
+

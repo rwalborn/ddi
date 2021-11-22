@@ -1,0 +1,5 @@
+#cloud-config
+hostname: {{ fqdn }}
+runcmd:
+  - cd /usr/local/share/DDI/ddi-ops && git pull
+  - /root/bin/sysconfig

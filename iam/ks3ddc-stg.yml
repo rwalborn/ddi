@@ -1,0 +1,47 @@
+## Runs as ansible-playbook -vvvv ks3ddc-stg.yml
+#
+## ansible 2.0 iam_policy creates inline policy, not stand-alone policy
+#
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  vars:
+    role: ks3ddc-stg
+  tasks:
+    - name: create role
+      iam:
+        name: "{{ role }}"
+        iam_type: role
+        state: present
+      ignore_errors: yes
+
+# ansible 2.0 iam_policy creates inline policy, not stand-alone policy
+    - name: create policy
+      command: "aws iam create-policy --policy-name {{ item }} --policy-document file://policy_docs/{{ item }}.json"
+      with_items:
+        - dynamodb-ks3ddc-access
+        - Kinesis_Stream_SFS_PROD
+        - Kinesis_Stream_SFS_STG
+        - policygen-Kinesis_S3_Archiver_Access-201411171536
+        - policygen-Kinesis_S3_Archiver_Access-201412021126
+        - policygen-Kinesis_S3_Archiver_Access-201412051435
+        - policygen-Kinesis_S3_Archiver_Access-201501281328
+      ignore_errors: yes
+      
+    - name: attach aws policy
+      command: "aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/{{ item }} --role-name {{ role }}"
+      with_items:
+        - AmazonEC2ReadOnlyAccess
+    
+    - name: attach our policy
+      command: "aws iam attach-role-policy --policy-arn arn:aws:iam::143177584759:policy/{{ item }} --role-name {{ role }}"
+      with_items:
+        - S3YumOpsRepo
+        - dynamodb-ks3ddc-access
+        - Kinesis_Stream_SFS_PROD
+        - Kinesis_Stream_SFS_STG
+        - policygen-Kinesis_S3_Archiver_Access-201411171536
+        - policygen-Kinesis_S3_Archiver_Access-201412021126
+        - policygen-Kinesis_S3_Archiver_Access-201412051435
+        - policygen-Kinesis_S3_Archiver_Access-201501281328
+

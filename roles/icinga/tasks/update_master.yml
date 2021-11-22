@@ -1,0 +1,13 @@
+---
+- name: setup zones.conf
+  template: src=zones.j2 dest=/etc/icinga2/zones.conf mode=0640 owner=root group=icinga
+  register: icingaconfig
+
+- name: Enable Icinga Service
+  service: name=icinga2 enabled=yes state=restarted
+  when: icingaconfig|success
+  register: restart_icinga
+
+- name: Director Kickstart
+  shell: icingacli director kickstart run
+  when: restart_icinga|success

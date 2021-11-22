@@ -1,0 +1,19 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# global secondary index is not supported yet by ansible 2.0.1.0
+# see https://github.com/ansible/ansible-modules-extras/pull/1443
+
+- name: create dynamodb table
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/dch-prod
+  vars:
+    table1: "{{ lb }}-{{ prefix}}"
+    read: 40
+    write: 40
+  tasks:
+    - name: create dynamodb table 1
+      command: aws dynamodb create-table --table-name "{{ table1 }}" --attribute-definitions AttributeName=dealer_id,AttributeType=S AttributeName=email_address,AttributeType=S --key-schema AttributeName=dealer_id,KeyType=HASH AttributeName=email_address,KeyType=RANGE --global-secondary-indexes IndexName=email_address_index,KeySchema="{AttributeName=email_address,KeyType=HASH}",Projection="{ProjectionType=ALL}",ProvisionedThroughput="{ReadCapacityUnits={{ read }},WriteCapacityUnits={{ write }}}" --provisioned-throughput ReadCapacityUnits="{{ read }}",WriteCapacityUnits="{{ write }}" --stream-specification StreamEnabled=false
+

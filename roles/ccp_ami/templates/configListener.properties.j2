@@ -1,0 +1,9 @@
+{% if ddi_cpddc_config.config_listener_properties is defined %}
+{% for key,value in ddi_cpddc_config.config_listener_properties.items() %}
+{{ key }}={{ value }}
+{% endfor %}
+{% endif %}
+s3Bucket={{ ddi_cpddc_config.s3bucket }}
+tarball.dir={{ ddi_cpddc_config.tarball_dir }}
+
+

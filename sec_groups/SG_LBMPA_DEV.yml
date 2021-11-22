@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBMPA_DEV.yml
+---
+- name: LBMPA_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/mpa-dev
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

@@ -1,0 +1,7 @@
+---
+# Buildbmaster vars
+# Encrypted with ansible-vault
+buildbot_source_repo_name: ssh://hg@bitbucket.org/ddimobiledev/buildbot-0.8.8
+buildbot_repo_name: ssh://hg@bitbucket.org/ddimobiledev/mobile-buildbot
+ddi_ops_repo_name: ssh://hg@bitbucket.org/ddi/ops
+buildbot_master_dir: merc-bb

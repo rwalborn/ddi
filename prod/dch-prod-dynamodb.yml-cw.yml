@@ -1,0 +1,15 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+# idempotent
+
+# existing table gets update instead of being 'recreated'
+
+- name: add cloudwatch alarms to dynamodb table
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/dch-prod
+  vars:
+    table1: "{{ lb }}-{{ prefix}}"
+  roles:
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: "{{ table1 }}" }

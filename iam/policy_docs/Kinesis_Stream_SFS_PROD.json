@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Stmt1422480455000",
+      "Effect": "Allow",
+      "Action": [
+        "kinesis:DescribeStream",
+        "kinesis:ListStreams",
+        "kinesis:GetShardIterator",
+        "kinesis:GetRecords"
+      ],
+      "Resource": [
+        "arn:aws:kinesis:us-east-1:143177584759:stream/SFS_PROD"
+      ]
+    }
+  ]
+}

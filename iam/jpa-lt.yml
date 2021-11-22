@@ -1,0 +1,27 @@
+## Runs as ansible-playbook -vvvv jpa-lt.yml
+#
+## ansible 2.0 iam_policy creates inline policy, not stand-alone policy
+#
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  vars:
+    role: jpa-lt
+  tasks:
+    - name: create role
+      iam:
+        name: "{{ role }}"
+        iam_type: role
+        state: present
+      ignore_errors: yes
+
+    - name: attach aws policy
+      command: "aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/{{ item }} --role-name {{ role }}"
+      with_items:
+        - AmazonEC2ReadOnlyAccess
+    
+    - name: attach our policy
+      command: "aws iam attach-role-policy --policy-arn arn:aws:iam::143177584759:policy/{{ item }} --role-name {{ role }}"
+      with_items:
+        - S3YumOpsRepo
+

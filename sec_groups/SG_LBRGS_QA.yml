@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBRGS_QA.yml
+---
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/rgs-qa
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

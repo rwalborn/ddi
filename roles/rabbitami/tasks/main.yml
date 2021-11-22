@@ -1,0 +1,167 @@
+---
+
+#- name: enable mtu probing so we don't have issues with jumbo frames on the internet
+#  sysctl: name="net.ipv4.tcp_mtu_probing"
+#          value=1
+#          sysctl_set=yes
+#          state=present
+#          reload=yes
+#
+#- name: install epel
+#  yum: name=epel-release state=installed
+#
+#- name: upgrade distro
+#  shell: yum upgrade -y
+#
+#- name: remove cloud-init
+#  yum: name=cloud-init
+#       state=absent
+#
+#- name: install needful
+#  yum: name={{ item }} state=installed
+#  with_items:
+#    - htop
+#    - wget
+#    - git
+#    - bind-utils
+#    - tcpdump
+#    - sysstat
+#    - vim
+#    - ntp
+#    - ntpdate
+#    - curl
+#    - libselinux-python
+#    - python-pip
+#    - s3cmd
+#    - lsof
+#    - mlocate
+#    - strace
+#    - xfsprogs
+#
+#- name: install aws cli
+#  pip: name=awscli
+#
+#- name: replace ntp.conf with AWS timeservers
+#  copy: src=centos6x.ntp.conf
+#        dest=/etc/ntp.conf
+#        owner=root
+#        mode=0644
+#
+#- name: restart ntp for changes to take effect
+#  service: name=ntpd
+#           enabled=yes
+#           state=restarted
+#
+#- name: copy custom .bashrc
+#  copy: src=.bashrc
+#        dest=/root/.bashrc
+#        owner=root
+#        mode=0644
+#
+#- name: copy custom .vimrc
+#  copy: src=.vimrc
+#        dest=/root/.vimrc
+#        owner=root
+#        mode=0644
+#
+#- name: copy .bash_profile
+#  copy: src=.bash_profile
+#        dest=/root/.bash_profile
+#        owner=root
+#        mode=0644
+
+#  This causes issues for rabbitmq
+#
+#- name: copy aws_hostname_by_id.sh
+#  copy: src=aws_hostname_by_id.sh
+#        dest=/usr/local/sbin/aws_hostname_by_id.sh
+#        owner=root
+#        mode=0755
+
+#- name: replace the centos 6x selinux config
+#  copy: src=centos6x.config
+#        dest=/etc/selinux/config
+#        owner=root
+#        mode=0644
+#
+#- name: disable selinux before reboot
+#  shell: setenforce 0
+#
+#- name: disable services
+#  service: name={{ item }} enabled=no
+#  with_items:
+#    - acpid
+#    - iptables
+#    - ip6tables
+#
+#- name: copy yum-s3-iam
+#  copy: src=yum-s3-iam-1.0-1.noarch.rpm
+#        dest=/root/yum-s3-iam-1.0-1.noarch.rpm
+#        owner=root
+#
+#- name: install yum-s3-iam
+#  shell: yum install /root/yum-s3-iam-1.0-1.noarch.rpm -y
+#
+#- name: delete yum-s3-iam rpm to be tidy
+#  shell: rm /root/yum-s3-iam-1.0-1.noarch.rpm
+#
+#- name: copy DDI.repo
+#  copy: src=DDI.repo
+#        dest=/etc/yum.repos.d/DDI.repo
+#        owner=root
+#        mode=0644
+
+- name: need to disable the aws hostname for rabbitmq
+  file: path=/etc/cloud/cloud.cfg.d/99_bootcmd.cfg
+        state=absent
+
+- name: need to disable the aws hostname for rabbitmq
+  file: path=/etc/cloud/cloud.cfg.d/98_hostname.cfg
+        state=absent
+
+- name: need to disable the aws hostname for rabbitmq
+  file: path=/etc/cloud/cloud.cfg.d/50_runcmd.cfg
+        state=absent
+
+- name: clear manage hostname
+  lineinfile: "dest=/etc/cloud/cloud.cfg
+              state=absent
+              line='preserve_hostname: True'"
+
+- name:
+  lineinfile: "dest=/etc/cloud/cloud.cfg 
+               line='mounts:'"
+
+- name:
+  lineinfile: "dest=/etc/cloud/cloud.cfg 
+               line=' - [ ephemeral0, null ]'"
+
+- name: download the files into the ami because yum sux so bad
+  get_url: url=https://www.rabbitmq.com/releases/rabbitmq-server/v3.3.5/rabbitmq-server-3.3.5-1.noarch.rpm
+           dest=/root/rabbitmq-server-3.3.5-1.noarch.rpm
+
+
+## rabbit 3.6.1-1 install option
+- name: download the files into the ami because yum sux so bad, still
+  get_url: url=https://www.rabbitmq.com/releases/rabbitmq-server/v3.6.1/rabbitmq-server-3.6.1-1.noarch.rpm
+           dest=/root/rabbitmq-server-3.6.1-1.noarch.rpm
+
+- name: install the erlang repo because what's in CentOS is too jurassic for rabbit 3.6
+  yum: name=http://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
+       state=present
+       disablerepo=DDI
+
+- name: install latest erlang for 3.6
+  yum: name=erlang
+       state=present
+       disablerepo=DDI
+
+#- name: Backup rc.local and set the value in rc.local to survive reboot
+#  shell: "cp -p /etc/rc.d/rc.local /etc/rc.d/rc.local.`date +%Y%m%d-%H:%M`"
+#
+#- name: replace /etc/rc.local so the above changes keep on reboot
+#  copy: src=rc.local
+#        dest=/etc/rc.d/rc.local
+#        owner=root
+#        group=root
+#        mode=0755

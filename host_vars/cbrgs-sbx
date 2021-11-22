@@ -1,0 +1,25 @@
+---
+# cbrgs-sbx vars file
+
+sg: SG_LAN_SBX
+key_name: dev-ops-config
+profile_name: cbrgs-sbx
+fqdn_prefix: cbrgs
+fqdn_suffix: ddc.io
+rt53_zone: sbx.ddc.io
+prefix: CBRGS
+env: SBX
+dd_env: sbx
+app_tag: rgs
+instance_type: m3.xlarge
+icinga_profile: Couchbase
+
+#memory_quota: 12829
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: rgs
+bucket1_num_replicas: 1
+bucket1_ram_quota: 12829
+
+

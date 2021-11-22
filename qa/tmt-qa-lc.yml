@@ -1,0 +1,75 @@
+# ansible-playbook -vvvv tmt-qa-lc.yml
+
+- name: create "{{ name_tag }}" launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/tmt-qa
+  tasks:
+    - name: create "{{ sg }}" security group
+      include: ../sec_groups/{{ sg }}_INC.yml
+
+    - name: find latest lc
+      ec2_lc_find:
+        name_regex: "{{ name_tag }}-*"
+        region: "{{ region }}"
+        sort_order: descending
+        limit: 1
+      register: search
+
+    - name: new version
+      set_fact: byone="{{ ((search.results.0.name.split('-')[2] | int) + 1) }}"
+      when: search.results|length > 0
+
+    - name: if there is no prior version
+      set_fact: ver='001'
+      when: search.results|length == 0
+
+    - name: new version string
+      set_fact: ver="{{ byone.zfill(3) }}"
+      when: search.results|length > 0
+
+    - name: launch configuration
+      ec2_lc:
+        name: "{{ name_tag }}-{{ ver }}"
+        image_id: "{{ app_ami }}"
+        key_name: "{{ key_name }}"
+        security_groups: [ "{{ ec2_group.group_id }}" ]
+        instance_profile_name: "{{ profile_name }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+        #spot_price: "{{ spot_price }}"
+        volumes:
+        - device_name: /dev/sda1
+          volume_size: 8
+          device_type: gp2
+          delete_on_termination: true
+        - device_name: /dev/xvdb
+          ephemeral: ephemeral0
+          delete_on_termination: true
+        - device_name: /dev/xvdc
+          ephemeral: ephemeral1
+          delete_on_termination: true
+        region: "{{ region }}"
+        assign_public_ip: false
+        user_data: |
+                    #cloud-config
+                    mounts:
+                      - [ ephemeral0, null ]
+                      - [ ephemeral1, null ]
+                    runcmd:
+                      - mdadm --create /dev/md0 --name=0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc -R
+                      - mdadm --detail --brief /dev/md0 > /etc/mdadm.conf
+                      - parted /dev/md0 mklabel gpt
+                      - parted /dev/md0 mkpart primary xfs 0% 100%
+                      - mkfs -t xfs /dev/md0p1
+                      - mount /dev/md0p1 /mnt/ephemeral
+                      - echo '/dev/md0p1 /mnt/ephemeral xfs defaults 0 2' >> /etc/fstab
+                      - /bin/echo -e '\nappend domain-search "ec2.internal", "{{ this_env }}.doubledowncasino.com", "{{ this_env }}.ddc.io";' >> /etc/dhcp/dhclient-eth0.conf
+                      - service network restart
+                      - cd /usr/local/share/DDI/ddi-ops && git pull
+                      - /root/bin/aws_hostname_by_iam.sh
+                      - /root/bin/sysconfig
+                      - rm /ddi/services/tournaments/role.config
+                      - echo cluster > /ddi/services/tournaments/role.config

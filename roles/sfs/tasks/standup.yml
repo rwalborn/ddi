@@ -1,0 +1,103 @@
+- name: get regional subdomain
+  set_fact: reg_domain="{{ fqdn.split('.')[1] }}"
+
+- name: get envronment subdomain
+  set_fact: env_domain="{{ fqdn.split('.')[2] }}"
+
+- name: zone value used by route53 module
+  set_fact:
+    r53_mgmt_zone="{{ mgmt_zone }}"
+
+- name: if sbx
+  set_fact:
+    r53_mgmt_zone="sbx.{{ mgmt_zone }}"
+  when: env_domain == 'sbx'
+
+- name: get service code
+  set_fact: svc="{{ fqdn.split('.')[0] | regex_replace('^([a-z]+)\\d+$', '\\1') }}"
+
+- name: get host sequence
+  set_fact: seq="{{ fqdn.split('.')[0] | regex_replace('^[a-z]+(\\d+)$', '\\1') }}"
+
+- name: get name_tag
+  set_fact: name_tag="{{ (svc + '-' + env_domain)|upper }} {{ seq }}"
+
+- name: set default in the loop
+  set_fact:
+    azone='1'
+    net='1'
+
+- name: set net assignment to 2 when host sequence is an even number
+  set_fact:
+    azone='2'
+    net='2'
+  when: ((seq|int)%2) == 0
+
+- name: allow hostvars[inventory_hostname] to retrieve values beyond group_vars/all
+  include_vars: ../../../group_vars/{{ env_domain }}.yml
+
+# cloud-init swap has a racing condition, not using it
+- name: launch instance
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    region: "{{ region }}"
+    vpc_subnet_id: "{{ hostvars[inventory_hostname]['subnet_pub_' + net] }}"
+    assign_public_ip: true
+    zone: "{{ hostvars[inventory_hostname]['az' + azone] }}"
+    group: "{{ vpc_sg }}"
+    image: "{{ app_ami }}"
+    volumes:
+      - device_name: /dev/xvdb
+        ephemeral: ephemeral0
+        delete_on_termination: true
+      - device_name: /dev/xvdc
+        ephemeral: ephemeral1
+        delete_on_termination: true
+    instance_profile_name: "{{ iamrole }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env }}"
+      service: "{{ service_tag }}"
+      icinga-profile: "{{ icinga }}"
+    user_data: |
+      #cloud-config
+      hostname: {{ fqdn }}
+      mounts:
+        - [ ephemeral0, null ]
+        - [ ephemeral1, null ]
+      runcmd:
+        - mdadm --create /dev/md0 --name=0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc -R
+        - mdadm --detail --brief /dev/md0 > /etc/mdadm.conf
+        - parted /dev/md0 mklabel gpt
+        - parted /dev/md0 mkpart primary xfs 0% 100%
+        - mkfs -t xfs /dev/md0p1
+        - mount /dev/md0p1 /mnt/ephemeral
+        - echo '/dev/md0p1 /mnt/ephemeral xfs defaults 0 2' >> /etc/fstab
+        - echo '/mnt/ephemeral/swapfile none swap none 0 0' >> /etc/fstab
+        - mkdir -p /mnt/ephemeral/sfsheapdumps
+        - mkdir -p /mnt/ephemeral/sfs/logs && rm -rf /home/SFS_PRO_1.6.6/Server/logs && ln -s /mnt/ephemeral/sfs/logs /home/SFS_PRO_1.6.6/Server/logs
+        - dd if=/dev/zero of=/mnt/ephemeral/swapfile bs=4096 count=131072 && mkswap /mnt/ephemeral/swapfile && chmod 0600 /mnt/ephemeral/swapfile && swapon -a
+        - /bin/echo -e '\nappend domain-search "ec2.internal", "use1.{{ env_domain }}.doubledowncasino.com", "use1.{{ env_domain }}.ddc.io";' >> /etc/dhcp/dhclient-eth0.conf
+        - systemctl restart network
+        - /bin/echo serverName={{ fqdn }} > /home/SFS_PRO_1.6.6/Server/server.config
+        - cd /usr/local/share/DDI/ddi-ops && git pull
+        - ln -s /usr/local/share/DDI/ddi-ops/collectd.d/sfs.conf /etc/collectd.d/sfs.conf
+        - /root/bin/sysconfig
+        - sed -i 's/^AllowGroups .*/AllowGroups root ldap_all centos dev jump/' /etc/ssh/sshd_config
+        - systemctl restart sshd
+    wait: yes
+  register: ec2
+
+- name: sfs mgmt record
+  route53:
+    command: create
+    zone: "{{ r53_mgmt_zone }}"
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ ec2.instances.0.private_ip }}"
+    overwrite: true
+
+# we don't set sfsddc or smartfox name in the playbook

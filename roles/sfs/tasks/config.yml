@@ -1,0 +1,9 @@
+# s3-pull-sfs-config.sh is now a single env-aware script
+# it has been moved to the ops repo
+
+- name: cron to pull config
+  cron:
+    name="SYNC SFS Config" 
+    minute="*/1" 
+    job="/root/bin/s3-pull-sfs-config.sh >> /ddi/logs/sfs-config-sync.log"
+    state=present

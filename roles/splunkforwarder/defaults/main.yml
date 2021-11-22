@@ -1,0 +1,6 @@
+splunk_home: /opt/splunkforwarder
+relative_conf_dir: etc/system/local
+ds_fqdn: splunkdeploy.doubledowncasino.com
+ds_port: 8089
+baking: false
+vpc: false

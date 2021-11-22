@@ -1,0 +1,107 @@
+## todo:  missing plugins
+#additional identities
+#any build step
+#javadoc
+#run condition
+#flexible publish
+#maven integrator
+#conditional buildstep
+#Pipeline: Job	 Success
+#Pipeline Graph Analysis Plugin
+#Pipeline: REST API Plugin
+#Pipeline: Stage View Plugin
+#Pipeline: Declarative Extension Points API
+#Pipeline: Multibranch
+#Pipeline: Declarative Agent API
+#Pipeline: Model Definition
+#Pipeline
+#bitbucket
+#cobertura
+#extensible choice
+#config file provider
+#maven release plug-in plug-in
+#publish over ssh
+#rpmsign-plugin
+#green balls
+#parameterized-trigger
+
+- name: Install Jenkins plugins
+  action: get_url url=http://updates.jenkins-ci.org/latest/{{ item }}.hpi dest=/var/lib/jenkins/plugins/{{ item }}.hpi mode=0644 owner=jenkins group=jenkins
+  with_items:
+    - ace-editor
+    - ant
+    - antisamy-markup-formatter
+    - authentication-tokens
+    - aws-credentials
+    - aws-java-sdk
+    - bouncycastle-api
+    - branch-api
+    - build-timeout
+    - cloudbees-folder
+    - credentials
+    - credentials-binding
+    - crowd2
+    - display-url-api
+    - docker-commons
+    - docker-workflow
+    - durable-task
+    - ec2
+    - email-ext
+    - external-monitor-job
+    - git
+    - git-client
+    - github
+    - github-api
+    - github-branch-source
+    - github-organization-folder
+    - git-server
+    - gradle
+    - handlebars
+    - icon-shim
+    - jackson2-api
+    - jquery-detached
+    - junit
+    - ldap
+    - mailer
+    - mapdb-api
+    - matrix-auth
+    - matrix-project
+    - momentjs
+    - node-iterator-api
+    - pam-auth
+    - pipeline-build-step
+    - pipeline-github-lib
+    - pipeline-graph-analysis
+    - pipeline-input-step
+    - pipeline-milestone-step
+    - pipeline-model-api
+    - pipeline-model-definition
+    - pipeline-model-extensions
+    - pipeline-rest-api
+    - pipeline-stage-step
+    - pipeline-stage-tags-metadata
+    - pipeline-stage-view
+    - plain-credentials
+    - resource-disposer
+    - scm-api
+    - script-security
+    - ssh-credentials
+    - ssh-slaves
+    - structs
+    - subversion
+    - timestamper
+    - token-macro
+    - windows-slaves
+    - workflow-aggregator
+    - workflow-api
+    - workflow-basic-steps
+    - workflow-cps
+    - workflow-cps-global-lib
+    - workflow-durable-task-step
+    - workflow-job
+    - workflow-multibranch
+    - workflow-scm-step
+    - workflow-step-api
+    - workflow-support
+    - ws-cleanup
+  register: plugins_installed

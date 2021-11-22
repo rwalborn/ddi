@@ -1,0 +1,56 @@
+# useful command
+# aws cloudwatch describe-alarms --alarm-names foo
+
+- name: get current account ratelimit
+  command: aws apigateway get-account --region "{{ region }}" --query 'throttleSettings.rateLimit' --output text
+  when: state != 'absent'
+  register: ratelimit
+
+- name: traffic warning
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "ApiGateway-Traffic-Warning"
+    namespace: "AWS/ApiGateway"
+    metric: Count
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((ratelimit.stdout|float)*apigateway_warn_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ apigateway_periods }}"
+    description: "Traffic exceeds Warning threshold"
+    dimensions: '{ "ApiName": "{{ api }}" }'
+    alarm_actions: "{{ ops_topic_arn }}"
+  when: state != 'absent'
+
+- name: removal if so defined
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "ApiGateway-Traffic-Warning"
+  when: state == 'absent'
+
+- name: traffic critical
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "ApiGateway-Traffic-Critical"
+    namespace: "AWS/ApiGateway"
+    metric: Count
+    statistic: Sum
+    comparison: ">"
+    threshold: "{{ ((ratelimit.stdout|float)*apigateway_crit_pct*60) }}"
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ apigateway_periods }}"
+    description: "Traffic exceeds Critical threshold"
+    dimensions: '{ "ApiName": "{{ api }}" }'
+    alarm_actions: ["{{ ops_topic_arn }}", "{{ pagerduty_topic_arn }}"]
+  when: state != 'absent'
+
+- name: removal if so defined
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "ApiGateway-Traffic-Critical"
+  when: state == 'absent'
+

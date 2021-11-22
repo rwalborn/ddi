@@ -1,0 +1,22 @@
+LoadPlugin write_graphite
+<Plugin write_graphite>
+  <Node "carbon">
+{% if collectd_endpoint %}
+    Host "localhost"
+{% else %}
+    Host "carbon.{{ reg_domain }}.{{ env }}.ddc.io"
+{% endif %}
+    Port "2003"
+    Protocol "tcp"
+    LogSendErrors true
+{% if collectd_endpoint %}
+    Prefix "{{ region }}.rs."
+{% else %}
+    Prefix "{{ region }}.{{ env }}."
+{% endif %}
+    Postfix ""
+    StoreRates false
+    AlwaysAppendDS false
+    EscapeCharacter "_"
+  </Node>
+</Plugin>

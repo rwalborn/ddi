@@ -1,0 +1,20 @@
+- name: install via yum
+  yum: name={{ item }} state=installed
+  with_items:
+    - "haproxy-{{ version }}"
+    - hatop
+    - lynx
+    - mailx
+    - nc
+    - postfix
+    - socat
+
+- name: avoid
+  yum: name={{ item }} state=absent
+  with_items:
+    - irqbalance
+
+- name: enable services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - postfix

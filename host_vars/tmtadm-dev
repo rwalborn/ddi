@@ -1,0 +1,24 @@
+# TMTADM-DEV VARS FILE
+
+name_tag: TMTADM-DEV
+service_tag: TMTADM
+icinga_profile: TMTADM
+# hzcastdev: hzdev_tmnt
+
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmtadm.use1.dev.doubledowncasino.com
+spot_price: 0.225
+sg: SG_TMTADM_DEV
+env: development
+profile_name: tmtadm-dev
+
+key_name: ops-config
+role: tmtadm-dev
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

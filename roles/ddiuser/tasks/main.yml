@@ -1,0 +1,50 @@
+# this role should run before ldap
+# ldap uidNumber 3199 is ddiadmin
+
+- file:
+    path=/ddi/home
+    state=directory 
+
+- group:
+    name=ddiuser
+    gid=3199
+
+- user:
+    name=ddiuser
+    uid=3199
+    group=ddiuser
+    createhome=true
+    home=/ddi/home/ddiuser
+    force=yes
+
+- file:
+    path=/ddi/home/ddiuser/.ssh
+    state=directory 
+    mode=0700
+    owner=ddiuser
+    group=ddiuser
+
+- file:
+    path=/ddi/home/ddiuser/.ssh/authorized_keys
+    state=touch
+    mode=0444
+    owner=root
+    group=root
+
+- file:
+    path=/ddi/etc
+    state=directory 
+    owner=ddiuser
+    group=ddiuser
+
+- file:
+    path=/ddi/services
+    state=directory
+    owner=ddiuser
+    group=ddiuser
+
+- file:
+    path=/ddi/logs
+    state=directory
+    owner=ddiuser
+    group=ddiuser

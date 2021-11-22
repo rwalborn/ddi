@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# chkconfig: 2345 90 99
+# description: manage appdynamics controller info
+#              need to run before any appdynamics agent
+#              needs ec2:DescribeTags in 'AmazonEC2ReadOnlyAccess' policy
+
+case $1 in
+start)
+  AZ=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+  REGION=${AZ%?}
+  ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+  TIER=`curl -s http://169.254.169.254/latest/meta-data/iam/info |grep instance-profile | cut -f 2 -d'/' | cut -f 1 -d'-'`
+  ENV=`aws ec2 describe-tags --region $REGION --filter "Name=resource-id,Values=$ID" --query "Tags[?Key=='env'].Value" --output text`
+  HN=`hostname --short`
+  JAVACONF=/opt/appdynamics/conf/controller-info.xml
+  MACHINECONF=/opt/appdynamics/machine-agent/conf/controller-info.xml
+
+  case $ENV in
+  production)
+    ACNT=doubledown
+    KEY=35910acc4acc
+    ;;
+  load_test)
+    ACNT=doubledown-dev
+    KEY=e9a2f61acf65
+    ;;
+  *)
+    # leave values in AMI unchanged so agent will report to nowhere
+    exit
+  esac
+
+  if [ -f $JAVACONF ]; then
+    sed -i "s/<controller-host>\(.*\)<\/controller-host>/<controller-host>$ACNT.saas.appdynamics.com<\/controller-host>/" $JAVACONF
+    sed -i "s/<tier-name>\(.*\)<\/tier-name>/<tier-name>$TIER<\/tier-name>/" $JAVACONF
+    sed -i "s/<node-name>\(.*\)<\/node-name>/<node-name>$HN<\/node-name>/" $JAVACONF
+    sed -i "s/<account-name>\(.*\)<\/account-name>/<account-name>$ACNT<\/account-name>/" $JAVACONF
+    sed -i "s/<account-access-key>\(.*\)<\/account-access-key>/<account-access-key>$KEY<\/account-access-key>/" $JAVACONF
+  fi
+
+  if [ -f $MACHINECONF ]; then
+    sed -i "s/<controller-host>\(.*\)<\/controller-host>/<controller-host>$ACNT.saas.appdynamics.com<\/controller-host>/" $MACHINECONF
+    sed -i "s/<tier-name>\(.*\)<\/tier-name>/<tier-name>$TIER<\/tier-name>/" $MACHINECONF
+    sed -i "s/<node-name>\(.*\)<\/node-name>/<node-name>$HN<\/node-name>/" $MACHINECONF
+    sed -i "s/<account-name>\(.*\)<\/account-name>/<account-name>$ACNT<\/account-name>/" $MACHINECONF
+    sed -i "s/<account-access-key>\(.*\)<\/account-access-key>/<account-access-key>$KEY<\/account-access-key>/" $MACHINECONF
+  fi
+
+  ;;
+stop)
+  ;;
+*)
+  $0 start
+esac

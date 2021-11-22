@@ -1,0 +1,40 @@
+- name: Add grafana repo
+  yum_repository:
+    name: grafana
+    description: grafana
+    baseurl: https://packagecloud.io/grafana/stable/el/7/$basearch
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: "https://packagecloud.io/gpg.key https://grafanarel.s3.amazonaws.com/RPM-GPG-KEY-grafana"
+    sslverify: yes
+
+- name: install
+  yum: name={{ item }} state=installed
+  with_items:
+    - initscripts
+    - fontconfig
+    - grafana
+
+- name: grafana.ini
+  template:
+    src=grafana.ini.yml
+    dest=/etc/grafana/grafana.ini
+    owner=grafana
+    group=grafana
+    mode=0640
+  notify: grafana_restart
+
+- name: ldap.toml
+  template:
+    src=ldap.toml.yml
+    dest=/etc/grafana/ldap.toml 
+    owner=grafana
+    group=grafana
+    mode=0640
+  notify: grafana_restart
+
+- name: start services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - grafana-server
+

@@ -1,0 +1,15 @@
+#cloud-config
+hostname: {{ fqdn }}
+write_files:
+  - path: /etc/ansible/facts.d/local.fact
+    owner: root
+    permissions: 0644
+    content: |
+      [svcproxy]
+      svc_fqdn={{ svc_fqdn }}
+      svc_code={{ svc_code }}
+runcmd:
+  - cd /usr/local/share/DDI/ddi-ops && git pull
+  - /root/bin/sysconfig
+  - git clone ssh://git@bitbucket/doubledownops/ddi-vpc.git /usr/local/share/DDI/ddi-vpc
+  - ansible-playbook -i localhost, -c local /usr/local/share/DDI/ddi-vpc/playbooks/svcproxy.yml

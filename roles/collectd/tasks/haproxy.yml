@@ -1,0 +1,23 @@
+# repo is already cloned by haproxy role
+
+- name: link haproxy.conf
+  file:
+    src=/usr/local/share/DDI/ddi-ops/collectd.d/haproxy.conf
+    dest=/etc/collectd.d/haproxy.conf
+    state=link
+    force=true
+
+- name: link haproxy.py
+  file:
+    src=/usr/local/share/DDI/ddi-ops/collectd_plugins/haproxy.py
+    dest=/usr/lib64/collectd/haproxy.py
+    state=link
+    force=true
+
+- name: link haproxy.sh
+  file:
+    src=/usr/local/share/DDI/ddi-ops/collectd_plugins/haproxy.sh
+    dest=/usr/lib64/collectd/haproxy.sh
+    state=link
+    force=true
+

@@ -1,0 +1,6 @@
+---
+# Handler for the webtier
+- name: apache restart
+  service:
+    name: httpd
+    state: restarted

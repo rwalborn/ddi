@@ -1,0 +1,20 @@
+---
+- name: CentOS 7 build
+  include: CentOS_7.yml
+  when: distro == 'centos7'
+
+- name: CentOS 6 build
+  include: CentOS_6.yml
+  when: distro == 'centos6'
+
+- name: grow partition
+  include: growpart.yml
+  when: growpart
+
+- name: cleanup as last step of AMI prep
+  include: cleanup.yml
+  when: not bake
+
+- name: bake the AMI
+  include: bake.yml
+  when: bake

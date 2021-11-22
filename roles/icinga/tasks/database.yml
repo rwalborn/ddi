@@ -1,0 +1,25 @@
+- name: Create Icinga DB & User
+  shell: mysql -h {{ icinga_db_host }} -u {{ dba_user }} --password={{ dba_pass }} -e "CREATE DATABASE {{ icinga_db_db }} CHARACTER SET 'utf8'; GRANT ALL ON {{ icinga_db_db }}.* TO {{ icinga_db_user }}@'%' IDENTIFIED BY '{{ icinga_db_pass }}';"
+  when: packages|success and icinga_db_host != 'localhost'
+  register: dbcreated
+
+- name: Create Icinga DB & User (localhost)
+  shell: mysql -e "CREATE DATABASE {{ icinga_db_db }} CHARACTER SET 'utf8'; GRANT ALL ON {{ icinga_db_db }}.* TO {{ icinga_db_user }}@localhost IDENTIFIED BY '{{ icinga_db_pass }}';"
+  when: packages|success and icinga_db_host == 'localhost'
+  register: ldbcreated
+
+- name: Import Icinga Schema
+  shell: mysql -h {{ icinga_db_host }} -u {{ icinga_db_user }} --password={{ icinga_db_pass }} {{ icinga_db_db }} < /usr/share/icinga2-ido-mysql/schema/mysql.sql
+  when: dbcreated|success and icinga_db_host != 'localhost'
+
+- name: Import Icinga Schema (localhost)
+  shell: mysql {{ icinga_db_db }} < /usr/share/icinga2-ido-mysql/schema/mysql.sql
+  when: ldbcreated|success and icinga_db_host == 'localhost'
+
+- name: Create Director DB & User
+  shell: mysql -h {{ icinga_db_host }} -u {{ dba_user }} --password={{ dba_pass }} -e "CREATE DATABASE {{ director_db_db }} CHARACTER SET 'utf8'; GRANT ALL ON {{ director_db_db }}.* TO {{ director_db_user }}@'%' IDENTIFIED BY '{{ director_db_pass }}';"
+  when: packages|success and director_db_host != 'localhost'
+
+- name: Create Director DB & User (localhost)
+  shell: mysql -e "CREATE DATABASE {{ director_db_db }} CHARACTER SET 'utf8'; GRANT ALL ON {{ director_db_db }}.* TO {{ director_db_user }}@localhost IDENTIFIED BY '{{ director_db_pass }}';"
+  when: packages|success and director_db_host == 'localhost'

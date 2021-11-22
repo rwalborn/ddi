@@ -1,0 +1,33 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# The real sg in prod account, sg-67502501, has a typo
+# in case we want to clean it up, this playbook can recreate it cleanly
+
+- name: security group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    sg: SG_ClassicLink_QA
+  tasks:
+    - name: create security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ region }}"
+        rules:
+          - proto: all
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 10.0.0.0/8
+        rules_egress:
+          - proto: all
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 0.0.0.0/0
+      register: group
+
+    - name: name the security group
+      command: aws ec2 create-tags --region "{{ region }}" --resources "{{ group.group_id }}" --tags Key=Name,Value="{{ sg }}"

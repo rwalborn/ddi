@@ -1,0 +1,8 @@
+- name: install mongo
+  yum: name=mongo-10gen-server
+
+- name: /etc/mongod.conf permission
+  file: path=/etc/mongod.conf owner=ddiuser group=ddiuser mode=0644
+
+- name: enable mongo
+  service: name=mongod enabled=yes

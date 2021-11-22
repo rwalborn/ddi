@@ -1,0 +1,55 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' mysql_deb_migration.yml
+---
+- name: Creation of a Debian MySql HVM instance
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Launch instances
+      local_action:
+        module: ec2
+        region: us-east-1
+        zone: us-east-1d
+        keypair: ops-config
+        group: Prod
+# smaller instance type for testing
+# must comment out the my.cnf upload
+# as that uses more ram than this has
+#        image: ami-819a63ea
+#        instance_type: m1.small
+# larger for actual use
+        instance_type: r3.2xlarge
+        image: ami-8b9a63e0
+        instance_profile_name: dbddc_migration_deb
+        volumes:
+          - device_name: /dev/sdf
+            volume_size: 1000
+            device_type: io1
+            iops: 3000
+            delete_on_termination: true
+        count: 1
+        wait: yes
+      register: ec2
+
+
+    - name: Add EP2 instances to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=myami
+      with_items: ec2.instances
+
+    - name: Add tag to instances
+      local_action: ec2_tag resource={{ item.id }} region=us-east-1 state=present
+      with_items: ec2.instances
+      args:
+        tags:
+          Name: dbjpgw_migration_deb_PROD_1
+
+    - name: Wait for SSH to be available
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: ec2.instances
+
+
+- name: Configure provisioned servers
+  hosts: myami
+  user: admin
+  sudo: True
+  roles:
+    - mysql_deb

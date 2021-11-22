@@ -1,0 +1,45 @@
+- name: get regional subdomain
+  set_fact: reg_domain="{{ fqdn.split('.')[1] }}"
+
+- name: get envronment subdomain
+  set_fact: env_domain="{{ fqdn.split('.')[2] }}"
+
+- name: get service code
+  set_fact: svc="{{ fqdn.split('.')[0] | regex_replace('^([a-z]+)\\d+$', '\\1') }}"
+
+- name: get host sequence
+  set_fact: seq="{{ fqdn.split('.')[0] | regex_replace('^[a-z]+(\\d+)$', '\\1') }}"
+
+- name: get name_tag
+  set_fact: name_tag="{{ (svc + '-' + env_domain)|upper }} {{ seq }}"
+
+- name: set net assignment to 2 when host sequence is an even number
+  set_fact:
+    azone='2'
+    net='2'
+  when: ((seq|int)%2) == 0
+
+- name: user_data base
+  set_fact:
+    user_data: "{{ lookup('file', 'files/user_data') }}"
+
+- name: allow hostvars[inventory_hostname] to retrieve values beyond group_vars/all
+  include_vars: ../../../group_vars/{{ env_domain }}.yml
+
+- name: launch instance in VPC
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    region: "{{ region }}"
+    vpc_subnet_id: "{{ hostvars[inventory_hostname]['subnet_pri_' + net] }}"
+    zone: "{{ hostvars[inventory_hostname]['az' + azone] }}"
+    group: "{{ vpc_sg }}"
+    image: "{{ app_ami }}"
+    instance_profile_name: "{{ iamrole }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      env: "{{ env }}"
+      service: "{{ service_tag }}"
+      icinga-profile: "{{ icinga_profile }}"
+    user_data: "{{ user_data }}"
+    wait: yes

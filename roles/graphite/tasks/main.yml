@@ -1,0 +1,12 @@
+- name: instance
+  include: build.yml
+  when: rebuild and not config
+
+- name: storage
+  include: volume.yml
+  when: blkdev is defined
+
+- name: config
+  include: config.yml
+  when: config
+

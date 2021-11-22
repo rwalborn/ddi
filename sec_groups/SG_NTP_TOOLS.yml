@@ -1,0 +1,33 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    sg: SG_NTP_TOOLS
+  tasks:
+    - name: security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ region }}"
+        rules:
+            # ntp
+          - proto: udp
+            from_port: 123
+            to_port: 123
+            cidr_ip: 0.0.0.0/0
+            # jumpbox
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: "{{ vpc_cidr }}"
+
+          # ping from icinga slave in vpc
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"

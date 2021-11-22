@@ -1,0 +1,109 @@
+
+- include_vars: roles/buildbot/vars/common.yml
+- include_vars: roles/buildbot/vars/secrets.yml
+- include_vars: roles/buildbot/vars/buildslave.yml
+
+#### TODO? ADD/CORRECT LINK FOR DEV DIR? -BOBW
+#
+#- name: link snapshot assets dir
+#  file:
+#    path: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}"
+#    owner:  "{{ autobldr_username }}"
+#    group:  "{{ autobldr_username }}"
+#    mode: 0755
+#    state: directory
+#
+#- name: link snapshot assets dir
+#  file:
+#    src: /mnt/mobile
+#    dest: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}"
+#    owner:  "{{ autobldr_username }}"
+#    group:  "{{ autobldr_username }}"
+#    mode: 0755
+#    state: link
+#
+####
+
+- name: link /mnt/edc to 
+  file:
+    src: /mnt/mobile
+    dest: "{{ autobldr_home }}/desktop-slave"
+    owner:  "{{ autobldr_username }}"
+    group:  "{{ autobldr_username }}"
+    mode: 0755
+    state: link
+
+# CREATED BY BUILDBOT SLAVE ROLE/TASK - BOBW
+#- name: Set marker for the environment
+#  shell: 'echo {{ buildslave_name }} > {{ autobldr_home }}/slave_hostname.txt'
+#  sudo_user: "{{ autobldr_username }}"
+#
+#- name: update buildslave name
+#  replace:
+#    dest: "{{ autobldr_home }}/{{ buildslave_dir }}/buildbot.tac"
+#    regexp: 'slavename =.*$' replace="slavename = '{{ buildslave_name }}-slave'
+
+# TODO THIS FAILS DUE TO PYTHON GRIEF
+- name: where the hell is buildslave
+  shell: which buildslave
+  register: buildslave_path
+  ignore_errors: true
+
+# TODO: Make handler
+- name: restart buildbot slave for paths
+  shell: 'python {{ buildslave_path.stdout }} stop {{ autobldr_home }}/{{ buildslave_dir }}'
+  become: yes
+  become_user: "{{ autobldr_username }}"
+  ignore_errors: true
+
+- name: restart buildbot slave for paths
+  shell: 'python {{ buildslave_path.stdout }} start {{ autobldr_home }}/{{ buildslave_dir }}'
+  become: yes
+  become_user: "{{ autobldr_username }}"
+  ignore_errors: true
+
+- name: Start apache
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+  ignore_errors: true
+
+- name: Start memcached
+  service:
+    name: memcached
+    state: started
+    enabled: yes
+  ignore_errors: true
+
+## NO LONGER NEEDED AS MAVEN HAS PUBLIC DNS TO ELB
+##
+## TODO THIS WILL STEP ON THE INSTANCE RECORD, WHY WOULD WE DO THIS?
+#- name: Create app DNS record
+#  route53:
+#    command: "create"
+#    zone: sbx.doubledowncasino.com
+#    record: "{{ www_prefix }}.use1.sbx.doubledowncasino.com"
+#    type: "CNAME"
+##    value: "desktop.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}"
+#    value: "desktop.use1.sbx.doubledowncasino.com"
+#    ttl: 30
+#    overwrite: yes
+#  delegate_to: localhost
+#  ignore_errors: true
+#
+#- name: Edit hosts for maven tunnel for buildslave
+#  lineinfile:
+#    dest: /etc/hosts
+#    line: "127.0.0.1 mvn.doubledowninteractive.com"
+#    state: present
+#  ignore_errors: true
+#
+## TODO WHAT USER?
+#- name: Create ssh tunnel to maven for buildslave
+#  become: no
+#  shell: 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -f -N -L 8081:mvn.doubledowninteractive.com:8081 {{ ansible_ssh_user }}@jmpddc.use1.prod.doubledowncasino.com'
+#  ignore_errors: true
+
+# TODO: Run svn repo download & symlink script...but that relies on a buildbot
+# task being run first...

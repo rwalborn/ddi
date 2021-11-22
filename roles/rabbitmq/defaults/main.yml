@@ -1,0 +1,7 @@
+do: nothing
+instance_type: c3.xlarge
+reg_domain: use1
+net: '1'
+azone: '1'
+key_name: ops-config
+app_ami: ami-7ca5a307

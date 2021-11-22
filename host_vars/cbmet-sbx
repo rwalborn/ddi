@@ -1,0 +1,27 @@
+---
+# cbmet-sbx vars file
+
+sg: SG_LAN_SBX
+key_name: dev-ops-config
+profile_name: cbmet-sbx
+service_tag: cbmet
+fqdn_prefix: cbmet
+fqdn_suffix: ddc.io
+rt53_zone: sbx.ddc.io
+prefix: CBMET
+env: SBX
+dd_env: sbx
+app_tag: sfs
+icinga_profile: Couchbase
+
+instance_type: m3.xlarge
+
+#memory_quota: 12829
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: meta
+bucket1_num_replicas: 1
+bucket1_ram_quota: 12829
+
+

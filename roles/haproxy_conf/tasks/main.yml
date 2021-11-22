@@ -1,0 +1,12 @@
+---
+- template: src=haproxy.{{ svc }}.cfg.j2
+            dest=/etc/haproxy/haproxy.cfg
+            mode=0644
+            owner=root
+            group=root
+  ignore_errors: yes
+
+- name: restart haproxy
+  service: name=haproxy
+           state=restarted
+

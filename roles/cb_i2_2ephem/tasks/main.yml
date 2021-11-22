@@ -1,0 +1,35 @@
+---
+
+- name: partition
+  shell: 'echo \; | sfdisk /dev/xvdb'
+
+- name: format /dev/xvdb1 as xfs
+  filesystem: fstype=xfs dev=/dev/xvdb1
+
+- name: mount /opt/couchbase
+  mount: name=/opt/couchbase
+         src=/dev/xvdb1
+         fstype=xfs
+         opts=noatime,relatime
+         state=mounted
+
+- name: partition
+  shell: 'echo \; | sfdisk /dev/xvdc'
+
+- name: format /dev/xvdc1 as xfs
+  filesystem: fstype=xfs dev=/dev/xvdc1
+
+#- name: sep mount for index/data 
+#  mount: name=/opt/couchbase/var/lib/couchbase/data
+#         src=/dev/xvdc1
+#         fstype=xfs
+#         opts=noatime,relatime
+#         state=mounted
+
+## COUCHBASE 4.1 FOR CENTOS 6
+#- name: download couchbase
+#  yum: name=http://packages.couchbase.com/releases/4.1.0/couchbase-server-enterprise-4.1.0-centos6.x86_64.rpm
+#       state=present
+- name: install the pre-downloaded couchbase
+  yum: name=/root/couchbase-server-enterprise-4.1.0-centos6.x86_64.rpm
+       state=present

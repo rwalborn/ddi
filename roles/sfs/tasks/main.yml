@@ -1,0 +1,12 @@
+---
+- name: bake an SFS AMI
+  include: ami.yml
+  when: do == 'ami'
+
+- name: stand up an instance
+  include: standup.yml
+  when: do == 'standup'
+
+- name: questionable setup steps, usefulness is never confirmed
+  include: setup.yml
+  when: do == 'setup'

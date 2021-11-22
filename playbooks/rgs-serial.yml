@@ -1,0 +1,6 @@
+- hosts: RGS
+  sudo: yes
+  serial: 1
+  tasks:
+   - command: /etc/init.d/rgs-tomcat
+   - pause: seconds=15

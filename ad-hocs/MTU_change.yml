@@ -1,0 +1,13 @@
+# run as ansible-playbook ssh_auth_keys_lockdown.yml --limit=tag_Name_CBTEST8*_DEV
+
+---
+- name: change the MTU for reasons
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name:
+      sysctl: name="net.ipv4.tcp_mtu_probing" value=1 sysctl_set=yes state=present reload=yes
+
+

@@ -1,0 +1,28 @@
+# Runs as ansible-playbook -vvvv ks3ddc-dev-asg.yml
+---
+- name: create "{{ name_tag }}" autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/ks3ddc-dev
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: "{{ region }}"
+      availability_zones: [ "{{ az1 }}", "{{ az2 }}" ]
+      vpc_zone_identifier: [ "{{ subnet_pri_1 }}", "{{ subnet_pri_2 }}" ]
+      launch_config_name: "{{ lc }}"
+      desired_capacity: 2
+      min_size: 2
+      max_size: 2
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          service_tag: "{{ service_tag }}"
+          rpm: "{{ rpm_tag }}"
+          app: "{{ app_tag }}"
+          icinga-profile: "{{ icinga-profile }}"

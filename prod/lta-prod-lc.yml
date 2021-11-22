@@ -1,0 +1,27 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/lta
+  vars:
+    role: lta-prod
+  tasks:
+  - name: launch configuration
+    ec2_lc:
+      name: "{{ prod_lc }}"
+      image_id: "{{ app_ami }}"
+      key_name: ops-config
+      security_groups: [ "{{ prod_sg_id }}" ]
+      instance_profile_name: "{{ role }}"
+      instance_type: "{{ instance_type }}"
+      instance_monitoring: false
+      volumes:
+      - device_name: /dev/sda1
+        volume_size: 8
+        device_type: gp2
+        delete_on_termination: true
+      region: us-east-1
+      assign_public_ip: false

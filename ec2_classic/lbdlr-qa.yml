@@ -1,0 +1,20 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    name_tag: LBDLR-QA
+    fqdn: lbdlr01.use1.qa.ddc.io
+    app_tag: php-dealer
+    env_tag: qa
+    sg: QA-Dealer
+    az: us-east-1c
+    resource_path: /debug
+    service_port: 80
+    service_fqdn: dlrddc.use1.qa.doubledowncasino.com
+  roles:
+    - lb

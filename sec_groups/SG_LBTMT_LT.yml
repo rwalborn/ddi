@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBTMT_LT.yml
+---
+- name: LBTMT_LT security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+    - ../host_vars/tmt-lt
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

@@ -1,0 +1,28 @@
+# env
+lb: MTX-TOOLS
+lb_sg: SG_LBMTX_TOOLS
+lb_sg_id: sg-03467b78
+sg: SG_MTX_TOOLS
+sg_id: sg-1aac9e61
+az: us-east-1d
+svc_fqdn: metrics.ddc.io
+svc_cert: arn:aws:acm:us-east-1:143177584759:certificate/15698e65-491a-455c-9d1d-08a050100479
+
+# app
+ami: ami-23df5b34
+role: ddc-nagios-prod
+instance_type: m4.large
+instance_port: 8080
+ping_path: /login
+
+# db
+aurora_cluster: dbmtx-tools
+aurora_instance: dbmtx01-tools
+db_endpoint: dbmtx-tools.cluster-cmgtqqi0jns8.us-east-1.rds.amazonaws.com
+db_subnet_group: default-vpc-440d8e20
+db_instance_type: db.r3.large
+db: grafana
+db_user: root
+db_user_pw: ddi4ever
+db_grant_hosts: '192.168.%'
+db_grant_privs: 'ALL'

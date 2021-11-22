@@ -1,0 +1,24 @@
+# RGS-SBX VARS FILE
+
+name_tag: RGA-SBX
+
+app_tag: rgs-game-configuration
+app_ami: ami-b74b8da1
+instance_type: t2.medium
+spot_price: .105
+sg: SG_RGS_SBX
+fqdn: rgsadmin.sbx.doubledowncasino.com
+env: sbx
+key_name: dev-ops-config
+profile_name: rgs-sbx
+service_tag: RGS
+
+# prefix needed for role tag for this to service to work
+prefix: RGSDDC
+
+ud_env: sbx
+
+instance_port_1: 8080
+webapp_port: 8080
+config_port: 80
+

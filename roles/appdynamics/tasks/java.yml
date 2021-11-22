@@ -1,0 +1,55 @@
+# this task merely installs necessary files without bouncing jvm
+
+- include_vars: dev.yml
+  when: prod is defined and prod == false
+
+- include_vars: prod.yml
+  when: prod is defined and prod == true
+
+- yum: name=appdynamics-java-agent state=present
+
+- name: controller-info.xml
+  template:
+    src=java-controller-info.xml.j2
+    dest=/opt/appdynamics/conf/controller-info.xml
+    mode=0644
+
+- name: copy appdynamics_config
+  copy: src=appdynamics_config
+        dest=/etc/init.d/appdynamics_config
+        owner=root
+        mode=0755
+
+- name: move appdynamics_config into init sequence
+  service:
+    name=appdynamics_config
+    enabled=yes
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '6'
+
+- name: link appdynamics_config for CentOS 7
+  file:
+    path=/etc/rc.d/rc3.d/S90appdynamics_config
+    src=/etc/init.d/appdynamics_config
+    state=link
+  when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '7'
+
+# ddiuser owns directory on bal, xpt, jpt, not
+# tomcat owns directory on rgs
+- name: chown to appuid
+  file:
+    path=/opt/appdynamics
+    state=directory
+    owner="{{ appuid }}"
+    group="{{ appuid }}"
+    recurse=true
+  when: appuid is defined
+
+- name: uncomment appdynamics line in run_rgs.xml
+  lineinfile:
+    dest=/usr/local/tomcat6/conf/run_rgs.xml
+    state=present
+    backrefs=yes
+    regexp='^(\s+)<!-- (jvmarg value=\"-javaagent:/opt/appdynamics/javaagent.jar\") -->$'
+    line='\1<\2 />'
+  when: tier == 'rgs'
+

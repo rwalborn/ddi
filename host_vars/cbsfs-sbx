@@ -1,0 +1,27 @@
+---
+# cbsfs-sbx vars file
+
+sg: SG_LAN_SBX
+key_name: dev-ops-config
+service_tag: sfs
+profile_name: cbsfs-sbx
+fqdn_prefix: cbsfs
+fqdn_suffix: ddc.io
+rt53_zone: sbx.ddc.io
+prefix: CBSFS
+env: SBX
+dd_env: sbx
+app_tag: sfs
+icinga_profile: Couchbase
+
+instance_type: m3.xlarge
+
+#memory_quota: 12829
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 12829
+
+

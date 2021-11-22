@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_XPA_DEV.yml
+
+- name: XPA_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/xpa-dev
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

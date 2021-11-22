@@ -1,0 +1,13 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv not-sbx-dynamodb.yml
+
+# NOT uses couchbase but not dynamodb, it is LYT that uses NOTDDC dynamodb
+
+- name: create dynamodb table
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+  vars:
+    service_tag: LYT
+  roles:
+    - { role: dynamodb, name: NOTDDC-USE1-SBX }

@@ -1,0 +1,31 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# to use multi-cnames and healthcheck for service, define service_fqdn and set policy_routing to true
+# it is discouraged because it affects live dns record
+# step-by-step is in https://confluence.doubledowninteractive.com/display/OPS/HAProxy
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    app_tag: rgs-server-filtered
+    env_tag: production
+    sg: SG_LBRGS_PROD
+    service_tag: RGS
+    resource_path: /rgslite/rgs-running
+    service_port: 8080
+    service_fqdn: rgs.prod.doubledowncasino.com
+    update_service_fqdn: true
+    private_lb: true
+    policy_routing: true
+  roles:
+    - { role: lb, name_tag: 'LBRGSVPC-PROD 04', az: az1, fqdn: lbrgs04.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs04.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBRGSVPC-PROD 05', az: az1, fqdn: lbrgs05.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs05.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBRGSVPC-PROD 06', az: az1, fqdn: lbrgs06.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs06.use1.prod.ddc.io }
+

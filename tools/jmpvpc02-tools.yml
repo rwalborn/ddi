@@ -1,0 +1,71 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: jmpvpc
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - group_vars/tools
+  vars:
+    name_tag: 'JMPVPC-TOOLS 02'
+    fqdn: jmpvpc02.ddc.io
+    sg: SG_JMP_TOOLS
+  tasks:
+    - name: launch instance
+      ec2:
+        key_name: ops-config
+        instance_type: m3.large
+        image: "{{ centos_7_ebs_hvm }}"
+        group: "{{ sg }}"
+        private_ip: "{{ jump_int_1d }}"
+        vpc_subnet_id: "{{ subnet_pub_2 }}"
+        assign_public_ip: yes
+        zone: "{{ az2 }}"
+        region: "{{ region }}"
+        instance_profile_name: jmpvpc
+        instance_tags:
+          Name: "{{ name_tag }}"
+          app: TOOLS
+          env: tools
+          icinga-profile: JMP
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn }}"
+        wait: yes
+      register: ec2
+#    - name: register dns
+#      route53:
+#        command: create
+#        overwrite: true
+#        zone: ddc.io
+#        record: "{{ fqdn }}"
+#        type: A
+#        ttl: 300
+#        value: "{{ jump_eip_1d }}"
+    - name: add new instance to host group
+      add_host: hostname="{{ jump_eip_1d }}" groupname=launched
+    - name: assign elastic ip after instance is in running state
+      ec2_eip:
+        device_id: "{{ ec2.instances.0.id }}"
+        in_vpc: true
+        public_ip: "{{ jump_eip_1d }}"
+        region: "{{ region }}"
+    - name: extra wait because eip may not be effective yet
+      wait_for: host={{ jump_eip_1d }} port=22 delay=30 timeout=300 state=started
+
+- name: Configure instances
+  hosts: launched
+  remote_user: centos 
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: true
+  vars_files:
+    - group_vars/tools
+  roles:
+    - { role: spacewalk }
+    - { role: icinga }
+    # put only 'ldap_all' in /etc/ssh/sshd_config AllowGroups line but not activated
+    - { role: ldap_client, baking: true, sshd_default_groups: 'ldap_all', sshd_additional_groups: 'jump' }
+    # more lockdown before restarting sshd
+    - jumpbox

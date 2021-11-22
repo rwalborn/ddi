@@ -1,0 +1,35 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv dws-sbx.yml
+
+# ansible 2.0 iam_policy creates inline policy, not stand-alone policy
+
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+  vars:
+    role: dws-sbx
+  tasks:
+  - name: create role
+    iam:
+      name: "{{ role }}"
+      iam_type: role
+      state: present
+
+  - name: create policy
+    command: "aws --profile {{ aws_profile }} iam create-policy --policy-name {{ item }} --policy-document file://policy_docs/{{ item }}.json"
+    with_items:
+      - DynamoDB-DWS-SBX
+    ignore_errors: yes
+  
+  - name: attach aws policy
+    command: "aws --profile {{ aws_profile }} iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/{{ item }} --role-name {{ role }}"
+    with_items:
+      - AmazonEC2ReadOnlyAccess
+
+  - name: attach our policy
+    command: "aws --profile {{ aws_profile }} iam attach-role-policy --policy-arn arn:aws:iam::{{ aws_acct }}:policy/{{ item }} --role-name {{ role }}"
+    with_items:
+      - NP-prod-s3-yum-ops-repos-ro
+      - S3-ddc-artifacts-ro
+      - DynamoDB-DWS-SBX

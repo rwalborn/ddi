@@ -1,0 +1,4 @@
+- name: /etc/ansible/facts.d
+  file:
+    path=/etc/ansible/facts.d
+    state=directory

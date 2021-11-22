@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_DCA_LT.yml
+
+- name: "{{ name_tag }} security group"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+    - ../host_vars/dca-lt
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

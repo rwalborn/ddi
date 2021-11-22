@@ -1,0 +1,93 @@
+---
+- name: remove DDI-S3-Releases repo
+  yum_repository:
+    name: DDI-S3-Releases
+    state: absent
+
+- name: add DDI ops repo
+  yum_repository:
+    name: DDI
+    description: DDI-OPS
+    baseurl: http://ddi-ops-repo.s3.amazonaws.com/x86_64/
+    gpgcheck: no
+    enabled: yes
+    s3_enabled: yes
+    priority: 1
+    state: present
+
+- name: install need/want
+  yum: name={{ item }} state=installed
+  with_items:
+    - haproxy
+    - hatop
+    - nc
+    - lynx
+
+- name: copy rsyslog.conf
+  copy: src=rsyslog.conf
+        dest=/etc/rsyslog.conf
+        mode=0644
+        owner=root
+        group=root
+
+- name: copy haproxy.conf for rsyslog.d
+  copy: src=haproxy.conf
+        dest=/etc/rsyslog.d/haproxy.conf
+        mode=0644
+        owner=root
+        group=root
+
+- name: template out /etc/haproxy/haproxy.cfg
+  template: src=haproxy.{{ svc }}.cfg.j2
+            dest=/etc/haproxy/haproxy.cfg
+            mode=0644
+            owner=root
+            group=root
+
+- name: restart rsyslog
+  service: name=rsyslog
+           enabled=yes
+           state=restarted
+
+- name: restart haproxy
+  service: name=haproxy
+           enabled=yes
+           state=restarted
+
+
+- name: Remove erroneous sysctl entries when bridge module is not loaded
+  sysctl: name="{{item}}" state=absent reload=no
+  with_items:
+  - net.bridge.bridge-nf-call-ip6tables
+  - net.bridge.bridge-nf-call-iptables
+  - net.bridge.bridge-nf-call-arptables
+
+# tune the os for haproxy
+- name: set ip_local_port_range
+  sysctl: name="net.ipv4.ip_local_port_range"
+          value="1024 65024"
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+- name: set tcp_max_syn_backlog
+  sysctl: name="net.ipv4.tcp_max_syn_backlog"
+          value=60000
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+- name: set tcp_tw_reuse
+  sysctl: name="net.ipv4.tcp_tw_reuse"
+          value=1
+          sysctl_set=yes
+          state=present
+          reload=yes
+
+- name: set somaxconn
+  sysctl: name="net.core.somaxconn"
+          value=1024
+          sysctl_set=yes
+          state=present
+          reload=yes
+

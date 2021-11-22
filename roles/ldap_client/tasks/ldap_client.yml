@@ -1,0 +1,113 @@
+---
+# ldap_client: Tasks entry point. Called by main.yml
+
+- name: install sssd and dependencies 1
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - openssl
+    - sssd
+
+- name: work around yum corruption
+  command: yum clean all
+
+- name: install sssd and dependencies 2
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - nss-pam-ldapd
+    - openldap-clients
+
+- name: create sssd_conf.ca_cert_path if not present
+  file:
+    path: "{{ sssd_conf.ca_cert_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  register: path_created
+
+#- name: download "{{ ldapvpc }}" ldap ca cert
+#  shell: echo | timeout 3 openssl s_client -host {{ item }} -port 636 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > {{ sssd_conf.ca_cert_path  }}/ca.asc
+#  with_items: "{{ sssd_conf.ldap_servers.0 }}"
+- name: create ca cert file
+  copy:
+    dest: "{{ sssd_conf.ca_cert_path }}/ca.asc"
+    src: tools-ca.asc
+    owner: root
+    group: root
+    mode: 0644
+  when: path_created
+
+- name: create ldap.conf
+  template:
+    src: ldap.conf.j2
+    dest: /etc/openldap/ldap.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: line in file PermitRootLogin without-password
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: 'PermitRootLogin without-password'
+    state: present
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: line in file AuthorizedKeysCommandUser nobody
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: 'AuthorizedKeysCommandUser nobody'
+    state: present
+  when: (ansible_distribution == 'CentOS' and ansible_distribution_major_version == '7') or
+        (ansible_distribution == 'Amazon')
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: line in file AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: 'AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys'
+    state: present
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: line in file AllowGroups 
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: 'AllowGroups {{ sshd_default_groups }} {{ sshd_additional_groups }}'
+    state: present
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: line in file nsswitch.conf
+  lineinfile:
+    dest: /etc/nsswitch.conf
+    line: 'sudoers:    files sss'
+    state: present
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: run authconfig to enable sssd
+  shell: /usr/sbin/authconfig --enablesssd --enablesssdauth --enableshadow --enablemkhomedir --enablelocauthorize --update
+
+- name: generate "{{ ldapvpc }}" sssd.conf
+  template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: 0600
+  notify: restart sssd
+
+- name: enable sssd service
+  service: name=sssd 
+           enabled=yes
+           state=started
+  when: not baking
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: restart sshd service
+  service: name=sshd
+           state=restarted
+  when: not baking
+  ignore_errors: "{{ ansible_check_mode }}"
+

@@ -1,0 +1,38 @@
+# I have tried cloudformation for elasticsearch
+# I ditched it because cloudformantion demands 3 masters
+# and its naming scheme is unnecessary
+
+- name: get awscli version
+  command: aws --version
+  register: aws
+
+- name: awscli 1.10.51 starts to support --elasticsearch-version
+  fail: msg='you need awscli 1.10.51 to use this role'
+  when: aws.stderr.split(' ')[0].split('/')[1]|version_compare('1.10.51','<')
+
+- name: nonprod vars
+  include_vars: nonprod.yml
+  when: nonprod
+
+- name: find existing es domain
+  command: "aws --profile {{ aws_profile }} es describe-elasticsearch-domain --region {{ region }} --domain-name {{ name }}"
+  ignore_errors: true
+  register: result
+
+- name: create domain without dedicated master
+  command: "aws --profile {{ aws_profile }} es create-elasticsearch-domain --region {{ region }} --domain-name {{ name }} --elasticsearch-version '{{ version }}' --elasticsearch-cluster-config InstanceType={{ instance_type }},InstanceCount={{ instance_count }},DedicatedMasterEnabled=false,ZoneAwarenessEnabled=false --ebs-options EBSEnabled=true,VolumeType=gp2,VolumeSize=512 --snapshot-options AutomatedSnapshotStartHour={{ snaphour }} --access-policies file://roles/elasticsearch/files/{{ policy_doc }}"
+  when: result|failed and (not dedicated_master or dedicated_master is undefined)
+
+- name: create domain with dedicated master
+  command: "aws --profile {{ aws_profile }} es create-elasticsearch-domain --region {{ region }} --domain-name {{ name }} --elasticsearch-version '{{ version }}' --elasticsearch-cluster-config InstanceType={{ instance_type }},InstanceCount={{ instance_count }},DedicatedMasterEnabled=true,DedicatedMasterType={{ master_type }},DedicatedMasterCount={{ master_count }},ZoneAwarenessEnabled=false --ebs-options EBSEnabled=true,VolumeType=gp2,VolumeSize=512 --snapshot-options AutomatedSnapshotStartHour={{ snaphour }} --access-policies file://roles/elasticsearch/files/{{ policy_doc }}"
+  when: result|failed and dedicated_master
+
+- name: find the arn
+  command: aws --profile "{{ aws_profile }}" es describe-elasticsearch-domains --region "{{ region }}" --domain-names "{{ name }}" --query "DomainStatusList[].ARN" --output text
+  register: arn
+
+- name: set costcenter tag
+  command: aws --profile "{{ aws_profile }}" es add-tags --region "{{ region }}" --arn "{{ arn.stdout }}" --tag-list Key='costcenter',Value="elasticsearch_{{ name }}"
+
+- name: set service tag
+  command: aws --profile "{{ aws_profile }}" es add-tags --region "{{ region }}" --arn "{{ arn.stdout }}" --tag-list Key='service',Value="{{ service_tag }}"

@@ -1,0 +1,3 @@
+{% if item.disable_requiretty is defined %}Defaults:{{ item.username }} !requiretty
+{% endif %}
+{{ item.username }} ALL = {{ (', ').join(item.cmd_list) }}

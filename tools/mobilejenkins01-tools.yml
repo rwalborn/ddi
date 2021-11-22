@@ -1,0 +1,10 @@
+# ansible-playbook -vvvv -i "localhost," foo.yml
+---
+- name: mobile jenkins
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  roles:
+    - { role: jenkins_master, var: mobile, fqdn: mobilejenkins01.use1.tools.ddc.io }

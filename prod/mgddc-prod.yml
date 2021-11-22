@@ -1,0 +1,246 @@
+---
+# Runs as ansible-playbook -vvvv -i 'localhost,' mgddc-prod.yml --vault-password-file ~/.vault_pass.txt
+
+###############################################################################
+#                                                                             #
+#  YOU MUST UNCOMMENT THIS LINE IN ORDER FOR THIS TO RUN                      #
+#   - ../group_vars/prod                                                     #
+#  IN ORDER FOR THIS TO RUN                                                   #
+#  THIS WAS DONE TO PREVENT ACCIDENTALLY RUNNING THIS AGAINST A LIVE CLUSTER  #
+#                                                                             #
+#  RECOMMENT THE LINE AFTER RUNNING SO IT DOES NOT ACCIDENTALLY GET CHECKED   #
+#  BACK INTO SOURCE CONTROL                                                   #
+#                        *** YOU HAVE BEEN WARNED ***                         #
+#                                                                             #
+###############################################################################
+#
+###############################################################################
+#
+# TODO: On MGDDC805, uncomment the tasks below to modify the crontab.
+#       there are scripts checked into the eventlog-scripts projects
+#       (https://bitbucket.org/ddi/eventlog-scripts)
+#       that need to go into root's home directory (or somewhere more 
+#       appropriate) and get run on a cron so that BI can get their data.
+#
+#       The cron job is:
+#       11 0 * * * sh /root/eventlog_scripts/current/scripts/misc/apiSessionActivity.sh > /var/tmp/cron_load.log 2>&1
+#       31 0 * * * sh /root/eventlog_scripts/current/scripts/misc/inviteFriendCreditActivity.sh > /var/tmp/cron_load.log 2>&1
+#
+#       See deploy.sh in the bitbucket project for details.
+#
+#       This is terrible and should be fixed at some point.
+#
+###############################################################################
+
+- name: Creation of "{{ prefix }}-{{ env }}" MongoDB instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    region: "{{ region }}"
+    key_name: ops-config
+    sg: SG_LAN_PROD
+    ami: "{{ mg_ami }}"
+    instance_type: i2.4xlarge
+    profile_name: mgddc-prod
+    prefix: MGDDC
+    env: PROD
+    dd_env: prod
+    az: "{{ az1 }}"
+    subnet: "{{ subnet_pri_1 }}"
+    number: 801
+  tasks:
+    - name: Launch instances
+      local_action:
+        module: ec2
+        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        group: "{{ sg }}"
+        instance_type: "{{ instance_type }}"
+        instance_profile_name: "{{ profile_name }}"
+        image: "{{ ami }}"
+        vpc_subnet_id: "{{ subnet }}"
+        zone: "{{ az }}"
+        count: 1
+        volumes:
+          - device_name: /dev/xvdb
+            volume_size: 800
+            ephemeral: ephemeral0
+            delete_on_termination: true
+          - device_name: /dev/xvdc
+            volume_size: 800
+            ephemeral: ephemeral1
+            delete_on_termination: true
+          - device_name: /dev/xvdd
+            volume_size: 800
+            ephemeral: ephemeral2
+            delete_on_termination: true
+          - device_name: /dev/xvde
+            volume_size: 800
+            ephemeral: ephemeral3
+            delete_on_termination: true
+        instance_tags:
+          Name: "{{ prefix }}{{ number }}-{{ env }}"
+          env: "{{ dd_env }}"
+        wait: yes
+      register: ec2
+
+    - name: Add EC2 instances to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=mongo-node
+      with_items: "{{ ec2.instances }}"
+
+    - name: Wait for SSH to be available
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: "{{ ec2.instances }}"
+
+- name: add raid and install mongo
+  vars_files:
+    - ../group_vars/prod
+    - ../group_vars/vaults/prod
+  hosts: mongo-node
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - ops
+    - mg_raid0
+  tasks:
+    
+    - name: create /var/lib/mongo
+      file: path=/opt/mongo/var/lib/mongo
+            state=directory
+            mode=0755
+    
+    - name: create symlink /var/lib/mongo
+      file: src=/opt/mongo/var/lib/mongo
+            dest=/var/lib/mongo
+            state=link
+            force=yes
+    
+    - name: create /var/log/mongo
+      file: path=/opt/mongo/var/log/mongo
+            state=directory
+            mode=0755
+    
+    - name: create symlink /var/log/mongo
+      file: src=/opt/mongo/var/log/mongo
+            dest=/var/log/mongo
+            state=link
+            force=yes
+    
+    - name: install mongodb 2.4.1
+      yum: name={{ item }}
+           state=present
+           exclude=mongodb-org,mongodb-org-server
+           disablerepo=*
+      with_items:
+        - /root/mongo-10gen-2.4.1-mongodb_1.x86_64.rpm
+        - /root/mongo-10gen-server-2.4.1-mongodb_1.x86_64.rpm
+    
+    - name: chown /opt/mongo/var
+      file: path=/opt/mongo/var
+            owner=mongod
+            group=mongod
+            recurse=yes
+    
+    - name: chown symlink /var/lib/mongo
+      file: src=/opt/mongo/var/lib/mongo
+            dest=/var/lib/mongo
+            state=link
+            owner=mongod
+            group=mongod
+            force=yes
+    
+    - name: chown symlink /var/log/mongo
+      file: src=/opt/mongo/var/log/mongo
+            dest=/var/log/mongo
+            state=link
+            owner=mongod
+            group=mongod
+            force=yes
+    
+    - name: set ulimit -n
+      shell: sed -i "s/^ulimit.*/ulimit -n 60000/" /etc/init.d/mongod && sed -i "/ulimit -n/a\ulimit -u 32000" /etc/init.d/mongod
+    
+    - name: insure mongod is running and setup in chkconfig
+      service: name=mongod
+               state=restarted
+               enabled=yes
+
+    - name: enable rest
+      lineinfile: dest=/etc/mongod.conf
+                  line="rest=true"
+                  state=present
+
+    - name: enable rest
+      lineinfile: dest=/etc/mongod.conf
+                  line="replSet = DDCShard1"
+                  state=present
+
+    - name: stop mongo
+      service: name=mongod state=stopped
+
+    - name: restart mongo
+      command: mongod --config /etc/mongod.conf
+
+    - name: pin mongdb version in yum.conf to prevent yum upgrade of mongo
+      lineinfile: dest=/etc/yum.conf
+                  state=present
+                  line='exclude=mongo-10gen,mongo-10gen-server,mongodb-org,mongodb-org-server,mongodb-org-shell,mongodb-org-mongos,mongodb-org-tools'
+
+# THIS IS FOR MGDDC805 ONLY
+
+#    - name: create eventlog_scripts directory
+#      file:
+#        path=/root/eventlog_scripts/current/scripts/misc
+#        state=directory
+#        owner=root
+#        group=root
+#        mode=0775
+
+#    - name: create script destination dir
+#      file:
+#        path=/mnt/mongodb/tmp
+#        state=directory
+#        owner=root
+#        group=root
+#        mode=775
+
+#    - name: read-only access to bitbucket
+#      copy:
+#        content="{{ ddiunixteam_rsa_key }}"
+#        dest=/root/.ssh/hg_rsa
+#        owner=root
+#        group=root
+#        mode=0600
+
+#    - name: eventlog-scripts repo
+#      hg:
+#        repo=ssh://hg@bitbucket.org/ddi/eventlog-scripts
+#        dest=/home/talend/eventlog-scripts 
+
+#    - name: add BI apiSessionActivity script to crontab
+#      cron: name="BI apiSessionActivity script" hour="0" minute="11" job="sh /root/eventlog_scripts/current/scripts/misc/apiSessionActivity.sh > /var/tmp/cron_load.log 2>&1" 
+
+#    - name: add BI inviteFriendCreditActivity script to crontab
+#      cron: name="BI inviteFriendCreditActivity script" hour="0" minute="31" job="sh /root/eventlog_scripts/current/scripts/misc/inviteFriendCreditActivity.sh > /var/tmp/cron_load.log 2>&1"
+
+#    - name: mongo log rotate
+#      cron: name="mongo log rotate" hour="2,4,6,8,10,12,14,16,18,20,22,00" minute="30" job="/usr/local/share/DDI/ops/scripts/mongo_rotate.sh > /dev/null"
+
+#    - name: copy scripts to correct location
+#      shell: cp /home/talend/eventlog-scripts/src/main/scripts/misc/* /root/eventlog_scripts/current/scripts/misc/
+
+    - name: insert/update "Match User" configuation block in /etc/ssh/sshd_config
+      blockinfile:
+        dest: /etc/security/limits.d/91-mongod.conf
+        create: yes
+        state: present
+        block: |
+          #
+          mongod          soft    nproc     30000
+          mongod          hard    nproc     30000
+          mongod          soft    nofile     60000
+          mongod          hard    nofile     60000

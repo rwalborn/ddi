@@ -1,0 +1,10 @@
+ansible_private_key_file: ~/.ssh/kp_ddc2_prod
+locator_hostname: lct.doubledowncasino2.com
+rgs_hostname: rgs.doubledowncasino2.com
+lic_hostname: licprod.use1.tools.ddc.io
+licenses:
+  ec2_ddc2_prod_sfs_bingo_0: '043'
+  ec2_ddc2_prod_sfs_bingo_1: '044'
+  ec2_ddc2_prod_sfs_poker_0: '045'
+  ec2_ddc2_prod_sfs_poker_1: '046'
+  ec2_ddc2_prod_sfs_poker_2: '047'

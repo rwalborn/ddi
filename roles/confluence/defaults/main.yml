@@ -1,0 +1,14 @@
+build: false
+config: true
+rebuild: false
+mountpoint: /mnt/atlassian
+# this is the package you will update to later
+conf_package: atlassian-confluence-6.1.2-x64.bin
+conf_domain: confluence.doubledowninteractive.com
+conf_mgt: confluence.use1.tools.ddc.io
+ssl_cert_arn: arn:aws:iam::143177584759:server-certificate/doubledowninteractive.com-20200708
+
+# this is the package you will install
+old_conf_package: atlassian-confluence-6.1.2-x64.bin
+http_port: 8080
+control_port: 8005

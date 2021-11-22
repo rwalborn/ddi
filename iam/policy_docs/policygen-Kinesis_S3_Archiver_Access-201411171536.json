@@ -1,0 +1,51 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Stmt1416267184000",
+      "Effect": "Allow",
+      "Action": [
+        "kinesis:DescribeStream",
+        "kinesis:ListStreams",
+        "kinesis:PutRecord",
+        "kinesis:GetShardIterator",
+        "kinesis:GetRecords",
+        "kinesis:MergeShards",
+        "kinesis:SplitShard"
+      ],
+      "Resource": [
+        "arn:aws:kinesis:us-east-1:143177584759:stream/Server-Dev-R-and-D",
+        "arn:aws:kinesis:us-east-1:143177584759:stream/SFS_QA",
+        "arn:aws:kinesis:us-east-1:143177584759:stream/BALDDC_LT",
+        "arn:aws:kinesis:us-east-1:143177584759:stream/DALDDC_QA",
+        "arn:aws:kinesis:us-east-1:143177584759:stream/SFS_LT"
+      ]
+    },
+    {
+      "Sid": "Stmt1416267229000",
+      "Effect": "Allow",
+      "Action": [
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::DDI-Business-Intelligence",
+        "arn:aws:s3:::DDI-Business-Intelligence/*"
+      ]
+    },
+    {
+      "Sid": "Stmt1416267361000",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::ddi-ops-repo/*",
+        "arn:aws:s3:::ddi-ops-repo"
+      ]
+    }
+  ]
+}

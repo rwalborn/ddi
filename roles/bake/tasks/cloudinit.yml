@@ -1,0 +1,35 @@
+- name: re-enable root direct ssh
+  lineinfile:
+    dest=/root/.ssh/authorized_keys
+    state=present
+    regexp='^.*(ssh-rsa.*$)'
+    line='\1'
+    backrefs=yes
+
+- name: /etc/cloud/cloud.cfg
+  copy: src=cloud.cfg
+        dest=/etc/cloud/cloud.cfg
+        owner=root
+        owner=root
+        mode=0644
+
+- name: cloud-init bootcmd 99
+  copy: src=99_bootcmd.cfg
+        dest=/etc/cloud/cloud.cfg.d/99_bootcmd.cfg
+        owner=root
+        owner=root
+        mode=0644
+
+- name: cloud-init needs a fix to set hostname
+  copy: src=fixhostname
+        dest=/usr/local/sbin/fixhostname
+        owner=root
+        owner=root
+        mode=0744
+
+- name: fetchkey
+  copy: src=fetchkey
+        dest=/usr/local/sbin/fetchkey
+        owner=root
+        owner=root
+        mode=0744

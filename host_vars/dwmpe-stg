@@ -1,0 +1,42 @@
+# DWMPE-STG VARS FILE
+
+name_tag: DWMPE-STG
+lb: DWMPE-STG
+service_tag: DWMPE
+
+app_tag: DDC
+rpm_tag: ddc-player-engine-service-sa
+app_ami: ami-4630e950
+instance_type: m3.xlarge
+sg: SG_DWMPE_STG
+elb_sg: SG_LBDWMPE_STG
+elb_fqdn: dwmpe.use1.stg.doubledowncasino.com
+env: staging
+key_name: ops-config
+profile_name: dwmpe-stg
+
+lc: DWMPE-STG-001
+
+ud_env: stg
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11432
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /HealthCheck
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+

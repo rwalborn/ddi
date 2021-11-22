@@ -1,0 +1,37 @@
+- name: Remove Sendmail, because we don't live in 1984
+  yum: name=sendmail state=absent
+
+- name: Install couchbase server from DDI repo
+  yum: name=couchbase-server state=present
+
+- name: Remove DDI subversion
+  yum: name=subversion state=absent
+
+- name: Install Nagios RPM Packages
+  yum: name={{item}} state=present disablerepo=DDI
+  with_items: nagios.yum_pkgs
+
+- pip: name={{item}} state=present
+  with_items: python.pip_pkgs
+
+- service: name=couchbase-server enabled=no
+- service: name=couchbase-server state=stopped
+
+- git: repo=git://github.com/mzupan/nagios-plugin-mongodb.git dest=/usr/lib64/nagios/plugins/nagios-plugin-mongodb accept_hostkey=True
+
+- name: Install Nagiosgraph
+  yum: name=http://downloads.sourceforge.net/project/nagiosgraph/nagiosgraph/1.4.4/nagiosgraph-1.4.4-1.el6.noarch.rpm state=present disablerepo=DDI
+
+- name: Install apache crowd authentication module
+  yum: name=http://downloads.atlassian.com/software/crowd/downloads/cwdapache/packages/rhel6/mod_authnz_crowd-2.2.2-1.el6.x86_64.rpm state=present disablerepo=DDI
+
+- name: Install our nrpe package
+  yum: name=ddi-nrpe state=present disable_gpg_check=yes
+
+## This is ugly, but get rid of the subversion module the above RPM installed because it's busted, and will prevent apache from starting
+
+- name: Delete mod_authz_svn_crowd.so
+  file: path=/etc/httpd/modules/mod_authz_svn_crowd.so state=absent
+
+- name: Delete subversion.conf
+  file: path=/etc/httpd/conf.d/subversion.conf state=absent

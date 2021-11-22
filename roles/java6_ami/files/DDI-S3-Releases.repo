@@ -1,0 +1,7 @@
+[DDI-S3-Releases]
+Name = DDI-S3-Releases
+baseurl=http://ddi-releases-repo.s3.amazonaws.com/x86_64/
+gpgcheck=0
+enabled=1
+s3_enabled=1
+priority=1

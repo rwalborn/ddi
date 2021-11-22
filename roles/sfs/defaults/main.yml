@@ -1,0 +1,30 @@
+do: nothing
+instance_type: c3.2xlarge
+app_tag: DDC
+service_tag: SFS
+reg_domain: use1
+net: '1'
+azone: '1'
+traffic_zone: doubledowncasino.com
+mgmt_zone: ddc.io
+key_name: ops-config
+app_ami: ami-90bde386
+
+# flatten dict so that it is not redefined by another include
+
+sfs_base_config_path: /home/SFS_PRO_1.6.6/Server
+
+# comma-separated string (but only 'slots' is valid value now)
+sfs_externals_room_list: 'slots'
+
+sfs_externals_casino_config_db_user: casino
+sfs_externals_casino_config_db_pass: "{{ vault_mysql_casino_pw }}"
+
+sfs_deploy_bucket_name: ddc-artifacts
+sfs_deploy_deploy_path: /ddi/services/sfs-bundles
+sfs_deploy_artifact_path: sfs
+sfs_deploy_artifact_name: ddi-sfs-bundles
+sfs_deploy_artifact_version: 1.0.25
+sfs_deploy_sfs_root: /home/SFS_PRO_1.6.6/Server
+sfs_deploy_sfs_rollback: false
+sfs_deploy_licenses_server_ip: lic.use1.tools.ddc.io

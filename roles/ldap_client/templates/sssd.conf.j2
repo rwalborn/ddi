@@ -1,0 +1,33 @@
+[sssd]
+services = nss, pam, sudo, ssh
+config_file_version = 2
+domains = default
+
+[domain/default]
+ldap_tls_reqcert = Allow
+ldap_id_use_start_tls = True
+cache_credentials = True
+ldap_search_base = dc=doubledowncasino,dc=com
+id_provider = ldap
+auth_provider = ldap
+chpass_provider = ldap
+ldap_uri = ldap://{{ sssd_conf.ldap_servers|join(',ldap://') }}
+ldap_tls_cacertdir = {{ sssd_conf.ca_cert_path }}
+sudo_provider = ldap
+ldap_sudo_search_base = ou=SUDOers,dc=doubledowncasino,dc=com
+
+[pam]
+reconnection_retries = 3
+offline_credentials_expiration = 2
+offline_failed_login_attempts = 3
+offline_failed_login_delay = 5
+
+[nss]
+
+[sudo]
+
+[autofs]
+
+[ssh]
+
+[pac]

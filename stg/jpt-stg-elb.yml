@@ -1,0 +1,59 @@
+# Runs as ansible-playbook -vvvv jpt-stg-elb.yml
+---
+- name: elb for "{{ name_tag }}" service
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/jpt-stg
+  tasks:
+    - name: create "{{ elb_sg }}" security group
+      include: sec_groups/{{ elb_sg }}_INC.yml
+
+    - name: launch elb
+      ec2_elb_lb:
+        name: "{{ name_tag }}"
+        state: present
+        scheme: internal
+        security_group_ids: "{{ ec2_group.group_id }}"
+        region: "{{ region }}"
+        connection_draining_timeout: "{{ ec2_elb_lb.connection_draining_timeout }}"
+        cross_az_load_balancing: true
+        subnets:
+          - "{{ subnet_pri_1 }}"
+          - "{{ subnet_pri_2 }}"
+        listeners:
+          - protocol: "{{ ec2_elb_lb.listeners.protocol }}"
+            load_balancer_port: "{{ instance_port_1 }}"
+            instance_port: "{{ instance_port_1 }}"
+        health_check:
+          ping_protocol: "{{ ec2_elb_lb.health_check.ping_protocol }}"
+          ping_port: "{{ instance_port_1 }}"
+          ping_path: "{{ ec2_elb_lb.health_check.ping_path_1 }}"
+          response_timeout: "{{ ec2_elb_lb.health_check.response_timeout }}"
+          interval: "{{ ec2_elb_lb.health_check.interval }}"
+          unhealthy_threshold: "{{ ec2_elb_lb.health_check.unhealthy_threshold }}"
+          healthy_threshold: "{{ ec2_elb_lb.health_check.healthy_threshold }}"
+        stickiness:
+          type: loadbalancer
+          enabled: yes
+          expiration: 600
+        tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+          app: "{{ app_tag }}"
+          env: "{{ env }}"
+      register: ec2_elb_lb
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: "{{ zone }}"
+        record: "{{ elb_fqdn }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ ec2_elb_lb.elb.dns_name }}"
+      tags:
+        - route53

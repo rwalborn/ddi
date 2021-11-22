@@ -1,0 +1,6 @@
+---
+# ldap_client: entry point for defaults
+ldapvpc: tools
+sshd_default_groups: 'root ldap_all'
+sshd_additional_groups: 'centos'
+baking: false

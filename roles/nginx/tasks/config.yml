@@ -1,0 +1,11 @@
+# install but disable nginx
+
+- name: install
+  yum: name={{ item }} state=installed
+  with_items:
+    - nginx
+
+- name: ensure disable
+  service: name={{ item }} enabled=no
+  with_items:
+    - nginx

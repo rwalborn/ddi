@@ -1,0 +1,21 @@
+- name: authorized_keys
+  copy:
+    src=authorized_keys
+    dest=/var/lib/jenkins/.ssh/authorized_keys
+    mode=0600
+    owner=jenkins
+    group=jenkins
+
+- name: add jenkins into AllowGroups
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^(AllowGroups root ldap_all dev)$'
+    line: '\1 jenkins'
+    backrefs: yes
+  register: sshdconf
+
+- name: bounce sshd if sshd_config changed
+  service:
+    name=sshd
+    state=reloaded
+  when: sshdconf.changed

@@ -1,0 +1,12 @@
+---
+# These tasks install memcached modules
+#
+- name: Install memcached
+  yum:
+    name: memcached
+    state: present
+
+- name: Restart memcached
+  service:
+    name: memcached
+    state: restarted

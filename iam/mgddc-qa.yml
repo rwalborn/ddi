@@ -1,0 +1,27 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' mgddc-qa.yml
+
+# ansible 2.0 iam_policy creates inline policy, not stand-alone policy
+
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  vars:
+    role: mgddc-qa
+  tasks:
+  - name: create role
+    iam:
+      name: "{{ role }}"
+      iam_type: role
+      state: present
+
+  
+  - name: attach aws policy
+    command: "aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/{{ item }} --role-name {{ role }}"
+    with_items:
+      - AmazonEC2ReadOnlyAccess
+
+  - name: attach our policy
+    command: "aws iam attach-role-policy --policy-arn arn:aws:iam::143177584759:policy/{{ item }} --role-name {{ role }}"
+    with_items:
+      - S3YumOpsRepo
+      

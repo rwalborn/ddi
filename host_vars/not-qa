@@ -1,0 +1,41 @@
+# NOT-QA VARS FILE
+
+name_tag: NOT-QA
+service_tag: NOT
+icinga_profile: NOT
+lb: NOT-QA
+
+app_tag: DDC
+rpm_tag: casino-notification-service
+app_ami: ami-d60f6dc0
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_NOT_QA
+elb_sg: SG_LBNOT_QA
+elb_fqdn: not.qa.doubledowncasino.com
+env: qa
+profile_name: not-qa
+
+lc: NOT-QA-002
+
+ud_env: qa
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11030
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /notifications/status
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2

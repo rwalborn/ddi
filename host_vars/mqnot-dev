@@ -1,0 +1,23 @@
+---
+# MQNOT-DEV VARS FILE
+
+sg: SG_LAN_DEV
+key_name: ops-config
+profile_name: mqnot
+prefix: MQNOT
+env: DEV
+service_tag: mqnot
+dd_env: development
+
+fqdn_prefix: mqnot
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.dev.doubledowncasino.com
+
+instance_type: m3.xlarge
+
+lbname: LBMQNOT-TEST
+
+rt53_zone: doubledowncasino.com
+

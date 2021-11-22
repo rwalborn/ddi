@@ -1,0 +1,5 @@
+---
+- name: install needful
+  yum: name={{ item }} state=installed
+  with_items:
+    - jdk-1.7.0_72

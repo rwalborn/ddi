@@ -1,0 +1,28 @@
+auth: ldap
+crowd_pw: "{{ vault_crowd_pw }}"
+crowd_host: crowd2.doubledowninteractive.com
+crowd_url: "https://{{ crowd_host }}/crowd"
+crowd_app: jenkins
+crowd_group: jira-users
+slave_ami: ami-5b90b04d
+ldap_pw: "{{ vault_ldap_pw }}"
+java_keystore_pw: "{{ vault_java_keystore_pw }}"
+cloud_private_key: "{{ vault_cloud_private_key }}"
+cloud_instance_profile: arn:aws:iam::143177584759:instance-profile/jenkins_slave
+cloud_instance_cap: 30
+setup_clouds: false
+
+cloud_zones:
+  - DEV
+  - QA
+  - LT
+  - STG
+  - PROD
+
+# should be all 1c subnets just for ease
+cloud_subnets:
+  DEV: subnet-a67099d0
+  QA: subnet-1d907d6b
+  LT: subnet-dbfd17ad
+  STG: subnet-31fd1747
+  PROD: subnet-ff57a989

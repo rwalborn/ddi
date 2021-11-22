@@ -1,0 +1,35 @@
+- name: get regional subdomain
+  set_fact: shorthostname="{{ fqdn.split('.')[0] }}"
+
+- name: get regional subdomain
+  set_fact: reg_domain="{{ fqdn.split('.')[1] }}"
+
+- name: get envronment subdomain
+  set_fact: env_domain="{{ fqdn.split('.')[2] }}"
+
+- name: get host sequence
+  set_fact: seq="{{ fqdn.split('.')[0] | regex_replace('^sfs(\\d+)$', '\\1') }}"
+
+- name: get smartfox fqdn
+  set_fact: foxfqdn="smartfox{{ seq }}.{{ reg_domain }}.{{ env_domain }}.{{ traffic_zone }}"
+
+- sfs_casino_config: > 
+                     casino_config_host={{ sfs_externals_casino_config_host }}
+                     shorthostname={{ shorthostname }}
+                     hostname={{ foxfqdn }}
+                     internalhostname={{ fqdn }}
+                     admin_url="http://{{ fqdn }}:88/ddcadmin"
+                     state=present
+  delegate_to: 127.0.0.1
+
+- sfs_casino_config_db: >
+                        db_host={{ sfs_externals_casino_config_db_host }}
+                        db_user={{ sfs_externals_casino_config_db_user }}
+                        db_passwd={{ sfs_externals_casino_config_db_pass }}
+                        room_list={{ sfs_externals_room_list }}
+                        name={{ shorthostname }}
+                        hostname={{ foxfqdn }}
+                        internalHostname={{ fqdn }}
+                        adminURL="http://{{ fqdn }}:88/ddcadmin"
+                        state=present
+  delegate_to: 127.0.0.1

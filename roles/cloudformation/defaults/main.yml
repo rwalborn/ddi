@@ -1,0 +1,5 @@
+s3outputloc: ddc-dynamodb-backup
+readratio: 0.25
+timeout: '2 hours'
+region: us-east-1
+state: present

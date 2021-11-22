@@ -1,0 +1,14 @@
+---
+# Common buildbot vars
+autobldr_username: autobldr
+autobldr_home: /mnt/ephemeral/home/autobldr
+setup_src_dir: /tmp/buildbot
+setup_install_dir: /usr/local
+dev_dir: dev
+merc_working_dir: hg
+large_volume_storage_path: /mnt/ephemeral
+buildbot_scripts_repo_name: ssh://hg@bitbucket.org/ddimobiledev/mobile-buildbot-scripts
+# one of these ain't right
+buildbot_master_port: 9989
+bb_slave_port: 9989
+

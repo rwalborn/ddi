@@ -1,0 +1,28 @@
+# ansible-playbook -vvvv -i 'localhost,' --vault-password-file ~/.vaultpass mob-dev.yml
+
+# run this from ansible host in tools vpc
+
+# change 'fqdn' to build/replace one host at a time
+# for instance, mob02.use1.dev.doubledowncasino.com
+
+---
+- name: Mobile dev/build slave based on MOB AMI
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    fqdn: mob02.use1.dev.doubledowncasino.com
+  roles:
+    - { role: mob, do: builder_standup }
+
+- name: Configure provisioned servers
+  hosts: launched
+  remote_user: root
+  become: no
+  gather_facts: True
+  roles:
+    - { role: jenkins_slave, extra: mob-dev }
+    - { role: mob, do: builder_config }
+    - { role: mob, do: builder_code }

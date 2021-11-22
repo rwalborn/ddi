@@ -1,0 +1,87 @@
+icinga_master_fqdn: "icinga-master01.ddc.io"
+icinga_mount: "/mnt/icinga-mount"
+
+dba_user: "DBA"
+dba_pass: "{{ vault_dba_pass }}"
+dba_db: "DBD"
+
+icinga_db_user: "icinga"
+icinga_db_db: "icinga"
+icinga_db_host: "localhost"
+icinga_db_port: "3306"
+icinga_db_pass: "{{ vault_icinga_db_pass }}"
+pki_dir: "/etc/icinga2/pki"
+icinga_ticket_salt: "{{ vault_icinga_ticket_salt }}"
+
+icinga_max_checks: 300
+
+director_db_host: "localhost"
+director_db_port: "3306"
+director_db_user: "director"
+director_db_db: "director"
+director_db_pass: "{{ vault_director_db_pass }}"
+director_api_user: "director"
+director_api_pass: "{{ vault_director_api_pass }}"
+
+pagerduty_key: "{{ vault_pagerduty_key }}"
+
+# aws key w/ read-only access to EC2
+# private key in vault
+icinga_prod_access_key_id: "AKIAI7PQFFI5SNZSHH4Q"
+icinga_prod_secret_access_key: "{{ vault_icinga_prod_secret_access_key }}"
+icinga_nonprod_access_key_id: "AKIAI247324NVNCMFY7Q"
+icinga_nonprod_secret_access_key: "{{ vault_icinga_nonprod_secret_access_key }}"
+master: false
+satellite: false
+agent: true
+update: false
+baking: false
+do_kickstart: true
+master_timezone: "UTC"
+
+agent_pip_pkgs:
+  - j2
+
+pip_pkgs:
+  - numpy
+  - pymongo
+  - awscli
+  - nagios-cloudwatch-plugin
+  - j2
+
+# list of zones
+# this is for programatic master config generation
+
+zones:
+  - sbx
+  - dev
+  - qa
+  - stg
+  - prod
+  - tools
+
+# list of icinga2 satellites.
+# this is needed to build the endpoints and cluster communication
+# used FQDN so replacing nodes only requires updating dns.
+
+satellites:
+  sbx:
+    - icinga-slave01.use1.sbx.ddc.io
+    - icinga-slave02.use1.sbx.ddc.io
+  dev:
+    - icinga-slave01.use1.dev.ddc.io
+    - icinga-slave02.use1.dev.ddc.io
+  qa:
+    - icinga-slave01.use1.qa.ddc.io
+    - icinga-slave02.use1.qa.ddc.io
+  stg:
+    - icinga-slave01.use1.stg.ddc.io
+    - icinga-slave02.use1.stg.ddc.io
+  prod:
+    - icinga-slave01.use1.prod.ddc.io
+    - icinga-slave02.use1.prod.ddc.io
+  tools:
+    - icinga-slave01.use1.tools.ddc.io
+    - icinga-slave02.use1.tools.ddc.io
+
+

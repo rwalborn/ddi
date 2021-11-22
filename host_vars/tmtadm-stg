@@ -1,0 +1,24 @@
+# TMTADM-STG VARS FILE
+
+name_tag: TMTADM-STG
+service_tag: TMTADM
+icinga_profile: TMTADM
+# hzcaststg: hzstg_tmnt
+
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmtadm.use1.stg.doubledowncasino.com
+spot_price: 0.225
+sg: SG_TMTADM_STG
+env: staging
+profile_name: tmtadm-stg
+
+key_name: ops-config
+role: tmtadm-stg
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

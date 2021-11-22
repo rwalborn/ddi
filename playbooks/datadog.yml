@@ -1,0 +1,23 @@
+- hosts: LYT
+  remote_user: root
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: false
+# in order to test Bob's original invocation
+#  vars_files:
+#    - ../group_vars/dev
+#    - ../group_vars/vaults/dev
+#    - ../host_vars/cbdlr-dev
+  vars:
+    cb_ro_user: foo
+    cb_ro_pw: var
+  roles:
+# no config, just install
+#    - datadog
+# if there is a generic http_check.yaml
+#    - { role: datadog, install: false, template: http_check }
+# if there is http_check.yaml.lyt
+#    - { role: datadog, install: false, template: http_check, svc: dws }
+# Bob's original invocation also works
+#    - { role: datadog, template: couchbase, cb_user: "{{ cb_ro_user }}", cb_pw: "{{ cb_ro_pw }}" }

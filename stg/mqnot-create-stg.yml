@@ -1,0 +1,368 @@
+---
+# Runs as ansible-playbook -vvvv mqnot-create-stg.yml --vault-password-file ~/.vault_pass.txt
+
+###############################################################################
+#  4 NODE 2 AZ CLUSTER                                                        #
+#                                                                             #
+#  YOU MUST UNCOMMENT THIS LINE IN ORDER FOR THIS TO RUN                      #
+#   - ../host_vars/mqnot-dev                                                     #
+#  IN ORDER FOR THIS TO RUN                                                   #
+#  THIS WAS DONE TO PREVENT ACCIDENTALLY RUNNING THIS AGAINST A LIVE CLUSTER  #
+#                                                                             #
+#  RECOMMENT THE LINE AFTER RUNNING SO IT DOES NOT ACCIDENTALLY GET CHECKED   #
+#  BACK INTO SOURCE CONTROL                                                   #
+#                        *** YOU HAVE BEEN WARNED ***                         #
+#                                                                             #
+###############################################################################
+
+- name: Creation of "{{ prefix }}-{{ env }}" RabbitMQ cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+    - ../group_vars/vaults/stg
+    - ../host_vars/mqnot-stg
+  vars:
+    region: "{{ region }}"
+    ami: "{{ mq_ami }}"
+  tasks:
+#    - name: ELB deletion to delete node/healthchecks for clean new cluster
+#      local_action:
+#        module: ec2_elb_lb
+#        name: "{{ lbname }}"
+#        region: "{{ region }}"
+#        state: absent
+#
+#    - name: ELB recreation with max healthcheck timeouts, what a hack
+#      local_action:
+#        module: ec2_elb_lb
+#        name: "{{ lbname }}"
+#        scheme: internal
+#        state: present
+#        region: "{{ region }}"
+#        security_group_names: "{{ sg }}"
+#        cross_az_load_balancing: yes
+#        subnets:
+#          - "{{ subnet_pri_1 }}"
+#          - "{{ subnet_pri_2 }}"
+#        listeners:
+#          - protocol: tcp # options are http, https, ssl, tcp
+#            load_balancer_port: 5672
+#            instance_port: 5672
+#        health_check:
+#            ping_protocol: tcp # options are http, https, ssl, tcp
+#            ping_port: 5672
+#            response_timeout: 60 # seconds
+#            interval: 300 # seconds
+#            unhealthy_threshold: 10
+#            healthy_threshold: 2
+
+    - name: Launch instance 1
+      local_action:
+        module: ec2
+        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        group: "{{ sg }}"
+        instance_type: "{{ instance_type }}"
+        instance_profile_name: "{{ profile_name }}"
+        image: "{{ ami }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        count: 1
+        volumes:
+          - device_name: /dev/xvdb
+            volume_size: 40
+            ephemeral: ephemeral0
+            delete_on_termination: true
+          - device_name: /dev/xvdc
+            volume_size: 40
+            ephemeral: ephemeral1
+            delete_on_termination: true
+        instance_tags:
+          Name: "{{ prefix }}-{{ env }}-{{ host1 }}"
+          env: "{{ dd_env }}"
+        user_data: |
+                   #cloud-config
+                   mounts:
+                    - [ ephemeral0, null ]
+                   manage_etc_hosts: false
+        wait: yes
+      register: ec2
+
+    - name: Add instance 1 to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=rabbit1
+      with_items: "{{ ec2.instances }}"
+
+#    - name: register dns
+#      route53:
+#        command: create
+#        overwrite: true
+#        zone: ddc.io
+#        record: "{{ fqdn_prefix }}{{ host1 }}.{{ fqdn_suffix }}"
+#        type: A
+#        ttl: 60
+#        value: "{{ item.private_ip }}"
+#      with_items: "{{ ec2.instances }}"
+
+#    - name: register instance 2 to ELB
+#      local_action:
+#        module: ec2_elb
+#        region: "{{ region }}"
+#        instance_id: "{{ item.id }}"
+#        ec2_elbs: "{{ lbname }}"
+#        state: present
+#      with_items: "{{ ec2.instances }}"
+#      ignore_errors: yes
+
+#    - name: Launch instance 2
+#      local_action:
+#        module: ec2
+#        region: "{{ region }}"
+#        key_name: "{{ key_name }}"
+#        group: "{{ sg }}"
+#        instance_type: "{{ instance_type }}"
+#        instance_profile_name: "{{ profile_name }}"
+#        image: "{{ ami }}"
+#        vpc_subnet_id: "{{ subnet_pri_1 }}"
+#        zone: "{{ az1 }}"
+#        count: 1
+#        volumes:
+#          - device_name: /dev/xvdb
+#            volume_size: 40
+#            ephemeral: ephemeral0
+#            delete_on_termination: true
+#          - device_name: /dev/xvdc
+#            volume_size: 40
+#            ephemeral: ephemeral1
+#            delete_on_termination: true
+#        instance_tags:
+#          Name: "{{ prefix }}-{{ env }}-{{ host2 }}"
+#          env: "{{ dd_env }}"
+#        wait: yes
+#      register: ec2
+#
+#    - name: Add instance 2 to host group
+#      local_action: add_host hostname={{ item.private_ip }} groupname=rabbit2
+#      with_items: "{{ec2.instances}}"
+#
+#    - name: register dns
+#      route53:
+#        command: create
+#        overwrite: true
+#        zone: ddc.io
+#        record: "{{ fqdn_prefix }}{{ host2 }}.{{ fqdn_suffix }}"
+#        type: A
+#        ttl: 60
+#        value: "{{ item.private_ip }}"
+#      with_items: "{{ ec2.instances }}"
+#
+#    - name: register instance 2 to ELB
+#      local_action:
+#        module: ec2_elb
+#        region: "{{ region }}"
+#        instance_id: "{{ item.id }}"
+#        ec2_elbs: "{{ lbname }}"
+#        state: present
+#      with_items: "{{ ec2.instances }}"
+#      ignore_errors: yes
+#
+#    - name: Launch instance 3
+#      local_action:
+#        module: ec2
+#        region: "{{ region }}"
+#        key_name: "{{ key_name }}"
+#        group: "{{ sg }}"
+#        instance_type: "{{ instance_type }}"
+#        instance_profile_name: "{{ profile_name }}"
+#        image: "{{ ami }}"
+#        vpc_subnet_id: "{{ subnet_pri_1 }}"
+#        zone: "{{ az1 }}"
+#        count: 1
+#        volumes:
+#          - device_name: /dev/xvdb
+#            volume_size: 40
+#            ephemeral: ephemeral0
+#            delete_on_termination: true
+#          - device_name: /dev/xvdc
+#            volume_size: 40
+#            ephemeral: ephemeral1
+#            delete_on_termination: true
+#        instance_tags:
+#          Name: "{{ prefix }}{{ host3 }}-{{ env }}"
+#          env: "{{ dd_env }}"
+#        wait: yes
+#      register: ec2
+#
+#    - name: Add instance 3 to host group
+#      local_action: add_host hostname={{ item.private_ip }} groupname=rabbit3
+#      with_items: "{{ec2.instances}}"
+#
+#    - name: register dns
+#      route53:
+#        command: create
+#        overwrite: true
+#        zone: ddc.io
+#        record: "{{ prefix }}-{{ env }}-{{ host3 }}"
+#        type: A
+#        ttl: 60
+#        value: "{{ item.private_ip }}"
+#      with_items: "{{ ec2.instances }}"
+#
+#    - name: register instance 3 to ELB
+#      local_action:
+#        module: ec2_elb
+#        region: "{{ region }}"
+#        instance_id: "{{ item.id }}"
+#        ec2_elbs: "{{ lbname }}"
+#        state: present
+#      with_items: "{{ ec2.instances }}"
+#      ignore_errors: yes
+#
+#
+    - name: Wait for SSH to be available
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: "{{ec2.instances}}"
+
+
+- name: get facts
+  hosts: rabbit*
+  tasks: []
+
+- name: hostname fix 1
+  vars_files:
+    - ../host_vars/mqnot-dev
+  hosts: rabbit1
+  tasks:
+    - name: hostname fix 1
+      lineinfile: "dest=/etc/sysconfig/network
+                  regexp=^HOSTNAME=
+                  line=HOSTNAME={{ fqdn_prefix }}{{ host1 }}.{{ fqdn_suffix }}"
+    - name: set hostname 1
+      hostname: "name={{ fqdn_prefix }}{{ host1 }}.{{ fqdn_suffix }}"
+
+#- name: hostname fix 2
+#  vars_files:
+#    - ../host_vars/mqnot-dev
+#  hosts: rabbit2
+#  tasks:
+#    - name: hostname fix 2
+#      lineinfile: "dest=/etc/sysconfig/network
+#                  regexp=^HOSTNAME=
+#                  line=HOSTNAME={{ fqdn_prefix }}{{ host2 }}.{{ fqdn_suffix }}"
+#    - name: set hostname 2
+#      hostname: "name={{ fqdn_prefix }}{{ host2 }}.{{ fqdn_suffix }}"
+#
+#- name: hostname fix 3
+#  vars_files:
+#    - ../host_vars/mqnot-dev
+#  hosts: rabbit3
+#  tasks:
+#    - name: hostname fix 3
+#      lineinfile: "dest=/etc/sysconfig/network
+#                  regexp=^HOSTNAME=
+#                  line=HOSTNAME={{ fqdn_prefix }}{{ host3 }}.{{ fqdn_suffix }}"
+#    - name: set hostname 3
+#      hostname: "name={{ fqdn_prefix }}{{ host3 }}.{{ fqdn_suffix }}"
+
+
+- name: add raid and install rabbit
+  vars_files:
+    - ../group_vars/dev
+    - ../group_vars/vaults/dev
+    - ../host_vars/mqnot-dev
+  hosts: rabbit*
+  gather_facts: yes
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - rabbit_node
+
+- name: wait to be sure all rabbits are listening on 5672
+  hosts: rabbit*
+  gather_facts: yes
+  tasks:
+    - name: ensure healthy rabbit service
+      wait_for:
+        port: 5672
+
+#- name: add node 2 to node 1
+#  vars_files:
+#    - ../host_vars/mqnot-dev
+#  hosts: rabbit2
+#  tasks:
+#    - name: stop rabbit2
+#      shell: rabbitmqctl stop_app
+#    - name: reset rabbit2
+#      shell: rabbitmqctl reset
+#    - name: join to rabbit2
+#      shell: "rabbitmqctl join_cluster rabbit@{{ fqdn_prefix }}{{ host1 }}"
+#    - name: start rabbit2
+#      shell: rabbitmqctl start_app
+#
+#- name: add node 3 to node 1
+#  vars_files:
+#    - ../host_vars/mqnot-dev
+#  hosts: rabbit3
+#  tasks:
+#    - name: stop rabbit3
+#      shell: rabbitmqctl stop_app
+#    - name: reset rabbit3
+#      shell: rabbitmqctl reset
+#    - name: join to rabbit3
+#      shell: "rabbitmqctl join_cluster rabbit@{{ fqdn_prefix }}{{ host1 }}"
+#    - name: start rabbit3
+#      shell: rabbitmqctl start_app
+
+
+
+#- name: Creation of RabbitMQ cluster ELB again for health checks
+#  hosts: localhost
+#  connection: local
+#  gather_facts: false
+#  vars_files:
+#    - ../group_vars/dev
+#    - ../host_vars/mqnot-dev
+#  tasks:
+#    - name: ELB creation again for health checks
+#      local_action:
+#        module: ec2_elb_lb
+#        name: "{{ lbname }}"
+#        scheme: internal
+#        state: present
+#        region: "{{ region }}"
+#        security_group_names: "{{ sg }}"
+#        cross_az_load_balancing: yes
+#        subnets:
+#          - "{{ subnet_pri_1 }}"
+#          - "{{ subnet_pri_2 }}"
+#        listeners:
+#          - protocol: tcp # options are http, https, ssl, tcp
+#            load_balancer_port: 5672
+#            instance_port: 5672
+#        health_check:
+#            ping_protocol: tcp # options are http, https, ssl, tcp
+#            ping_port: 5672
+#            response_timeout: 5 # seconds
+#            interval: 30 # seconds
+#            unhealthy_threshold: 2
+#            healthy_threshold: 10
+#
+#    - name: gather facts from ELB
+#      action:
+#        module: ec2_elb_facts
+#        region: "{{ region }}"
+#        names: "{{ lbname }}"
+#      register: elb_facts
+#      ignore_errors: yes
+#
+#    - route53:
+#        command=create
+#        overwrite=yes
+#        zone={{ rt53_zone }}
+#        record={{ lbname }}.{{ fqdn_suffix }}
+#        type=CNAME
+#        ttl=60
+#        value={{ elb_facts.elbs.0.dns_name }}
+

@@ -1,0 +1,52 @@
+# RGS-QA VARS FILE
+
+name_tag: RGS-QA
+lb: RGS-QA
+
+app_tag: rgs-server-unfiltered
+app_ami: ami-d3e3bfc4
+instance_type: c3.large
+sg: SG_RGS_QA
+elb_sg: SG_LBRGS_QA
+elb_fqdn: rgs.qa.doubledowncasino.com
+env: qa
+key_name: ops-config
+profile_name: rgs-qa
+service_tag: RGS
+
+# prefix needed for role tag for this to service to work
+prefix: RGSDDC
+
+lc: RGS-QA-001
+
+ud_env: qa
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 8080
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /rgslite/rgs-running
+    response_timeout: 2
+    interval: 5
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+
+
+
+
+
+
+webapp_port: 8080
+config_port: 80
+

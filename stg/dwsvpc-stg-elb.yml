@@ -1,0 +1,46 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# ELB has immutable name, so I have to use a different name for vpc migration
+# Later, one can deco the old ELB in ec2 and recreate the ELB in VPC
+
+# no route53 action here
+
+- name: elb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/dws
+  vars:
+    name_tag: DWSVPC-STG
+    security_group_names: SG_LAN_STG
+  tasks:
+    - name: launch elb
+      ec2_elb_lb:
+        name: "{{ name_tag }}"
+        state: present
+        security_group_names: "{{ security_group_names }}"
+        region: "{{ region }}"
+        connection_draining_timeout: 30
+        cross_az_load_balancing: true
+        subnets:
+          - "{{ subnet_pub_1 }}"
+          - "{{ subnet_pub_2 }}"
+        listeners:
+          - protocol: http
+            load_balancer_port: 80
+            instance_port: "{{ instance_port }}"
+        health_check:
+          ping_protocol: http
+          ping_port: "{{ instance_port }}"
+          ping_path: "{{ ping_path }}"
+          response_timeout: 5
+          interval: 10
+          unhealthy_threshold: 2
+          healthy_threshold: 2
+        tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+          app: "{{ app_tag }}"
+          env: "{{ env }}"

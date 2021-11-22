@@ -1,0 +1,19 @@
+# ansible-playbook -vv -i 'localhost,' dynamodb_backup.yml
+# or
+# ansible-playbook -vv -i 'localhost,' dynamodb_backup.yml -e table=foo
+
+# to create backup with default retention (30 days)
+# { role: dynamodb_backup, do: backup, table: db }
+
+# random filter is used in default schedule_expression to allow randomized minute
+
+# to update/create rule backup with custom schedule and retention
+# (all custom values should all be specified)
+# { role: dynamodb_backup, do: backup, table: db, retention: 3, schedule_expression: "cron(1 6 * * ? *)" }
+
+- name: dynamodb on-demand backup
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - { role: dynamodb_backup, do: backup, table: LYTCONFIG-USE1-PROD }

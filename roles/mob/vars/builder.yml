@@ -1,0 +1,9 @@
+app_ami: ami-68f8e213
+sg: SG_LAN_DEV
+instance_type: c3.xlarge
+role: mob-dev
+key_name: ops-config
+app_tag: DDC
+env_tag: development
+rpm_tag: mobileweb
+service_tag: MOB

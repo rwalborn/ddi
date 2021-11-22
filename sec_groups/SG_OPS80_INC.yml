@@ -1,0 +1,30 @@
+---
+- name: create security group
+  ec2_group:
+    name: "{{ sg }}"
+    description: "{{ sg }} via SG_OPS80_INC"
+    vpc_id: "{{ vpc_id }}"
+    region: us-east-1
+    rules:
+      - proto: tcp
+        from_port: 80 
+        to_port: 80 
+        cidr_ip: "{{ vpc_cidr }}"
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 192.168.0.0/22
+      - proto: icmp
+        from_port: -1
+        to_port: -1
+        cidr_ip: "{{ vpc_cidr }}"
+      - proto: tcp 
+        from_port: 5665 
+        to_port: 5665
+        cidr_ip: "{{ icinga_master_1 }}/32"
+      - proto: tcp 
+        from_port: 5665 
+        to_port: 5665
+        group_id: "{{ icinga_sg }}" 
+  register: ec2_group
+

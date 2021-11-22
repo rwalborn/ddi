@@ -1,0 +1,169 @@
+---
+- name: set hostname via kernel
+  shell: "echo {{ fqdn }} > /proc/sys/kernel/hostname"
+
+- name: set hostname in /etc/hostname
+  shell: "echo {{ fqdn }} > /etc/hostname"
+
+- name: set HOSTNAME variable
+  shell: "export HOSTNAME={{ fqdn }}"
+
+- name: install spacewalk repo file
+  yum: state=installed name=http://yum.spacewalkproject.org/2.6/RHEL/7/x86_64/spacewalk-repo-2.6-0.el7.noarch.rpm
+
+- name: download jpackage repo file
+  shell: wget http://www.jpackage.org/jpackage50.repo -O /etc/yum.repos.d/jpackage50.repo
+
+- name: Install spacewalk packages
+  yum: name={{ item }} state=installed
+  with_items:
+    # specific version of c3p0 to override epel c3p0 version  https://bugzilla.redhat.com/show_bug.cgi?id=1442140
+    - c3p0-0.9.1.2-2.jpp5
+    - httpd
+    - spacewalk-setup-postgresql
+    - spacewalk-postgresql
+    - spacewalk-utils
+    - spacecmd
+    - perl-Frontier-RPC
+    - perl-Text-Unidecode
+    - sendmail
+    - mailx
+
+# downgrade version of httpd because https://www.redhat.com/archives/spacewalk-list/2017-April/msg00110.html
+- name: yum downgrade
+  shell: "yum downgrade -y httpd httpd-tools mod_ssl"
+
+## RDS database schema is not acceptable for postgresql spacewalk schema
+## I attempted to use the aws schema migration tool but ran into multiple issues
+## use embedded postgresql instead
+
+- name: setup answer file
+  blockinfile:
+    dest: /root/answers.txt
+    create: yes
+    block: |
+      admin-email = DDI-UNIXTeam@IGT.com
+      ssl-set-org = Doubledown Interactive
+      ssl-set-org-unit = Operations
+      ssl-set-city = Seattle
+      ssl-set-state = WA
+      ssl-set-country = US
+      ssl-password = {{ vault_ssl_pw }}
+      ssl-set-email = DDI-UNIXTeam@IGT.com
+      ssl-config-sslvhost = Y
+      db-backend = postgresql
+      enable-tftp=N
+
+- name: setup channels.ini for spacewalk-common-channels script
+  blockinfile:
+    dest: /etc/rhn/spacewalk-common-channels.ini
+    block: |
+      [centos7-icinga]
+      label    = %(base_channel)s-icinga
+      archs    = %(_x86_archs)s
+      name     = CentOS 7 Icinga (%(arch)s)
+      base_channels = centos7-%(arch)s
+      yumrepo_url = https://packages.icinga.org/epel/7/release/
+
+      [centos6-icinga]
+      label    = %(base_channel)s-icinga
+      archs    = %(_x86_archs)s
+      name     = CentOS 6 Icinga (%(arch)s)
+      base_channels = centos6-%(arch)s
+      yumrepo_url = https://packages.icinga.org/epel/6/release/
+
+      [centos6-scl]
+      label    = %(base_channel)s-scl
+      archs    = %(_x86_archs)s
+      name     = CentOS 6 Software Collection (%(arch)s)
+      base_channels = centos6-%(arch)s
+      yumrepo_url = http://centos.eecs.wsu.edu/6/sclo/%(arch)s/rh/
+
+      [centos7-scl]
+      label    = %(base_channel)s-scl
+      archs    = %(_x86_archs)s
+      name     = CentOS 7 Software Collection (%(arch)s)
+      base_channels = centos7-%(arch)s
+      yumrepo_url = http://centos.eecs.wsu.edu/7/sclo/%(arch)s/rh/
+
+      [jenkins]
+      label    = %(base_channel)s-jenkins
+      archs    = %(_x86_archs)s
+      name     = Jenkins for %(base_channel_name)s
+      base_channels = centos6-%(arch)s centos7-%(arch)s
+      yumrepo_url = http://pkg.jenkins.io/redhat-stable/
+
+      [elasticsearch]
+      label    = %(base_channel)s-elasticsearch
+      archs    = %(_x86_archs)s
+      name     = Elasticsearch packages for %(base_channel_name)s
+      base_channels = centos6-%(arch)s centos7-%(arch)s
+      yumrepo_url = https://artifacts.elastic.co/packages/5.x/yum
+
+- name: setup spacewalk
+  shell: spacewalk-setup --answer-file=/root/answers.txt --non-interactive
+
+- name: "create admin user in webui https://{{ fqdn }}  {{ spacewalk_admin_user }}/{{ spacewalk_admin_pw }}"
+  pause: seconds=500
+
+- name: create channels
+  shell: "/usr/bin/spacewalk-common-channels -u {{ spacewalk_admin_user }} -p {{ spacewalk_admin_pw }} -k unlimited -a x86_64 '{{item}}*' -d"
+  with_items:
+    - centos6
+    - centos7
+
+- name: create other channels
+  shell: "/usr/bin/spacewalk-common-channels -u {{ spacewalk_admin_user }} -p {{ spacewalk_admin_pw }} -a x86_64 '{{item}}*'"
+  with_items:
+    - epel6
+    - epel7
+    - jenkins
+    - elasticsearch
+
+- name: create system groups
+  shell: "/bin/spacecmd --username={{ spacewalk_admin_user }} --password={{ spacewalk_admin_pw }} group_create {{ item }} {{ item }}"
+  with_items: "{{ zones }}"
+
+- name: create activation keys cent6
+  shell: "/bin/spacecmd --username={{ spacewalk_admin_user }} --password={{ spacewalk_admin_pw }} activationkey_create -- -n centos6-x86_64-{{ item|lower }} -d 'centos6-x86_64-{{ item|lower }}' -b centos6-x86_64 && /bin/spacecmd --username={{ spacewalk_admin_user }} --password={{ spacewalk_admin_pw }} activationkey_addgroups 1-centos6-x86_64-{{ item|lower }} -d '{{ item}}'"
+  with_items: "{{ zones }}"
+
+- name: create activation keys cent7
+  shell: "/bin/spacecmd --username={{ spacewalk_admin_user }} --password={{ spacewalk_admin_pw }} activationkey_create -- -n centos7-x86_64-{{ item|lower }} -d 'centos7-x86_64-{{ item|lower }}' -b centos7-x86_64 && /bin/spacecmd --username={{ spacewalk_admin_user }} --password={{ spacewalk_admin_pw }} activationkey_addgroups 1-centos7-x86_64-{{ item|lower }} -d '{{ item}}'"
+  with_items: "{{ zones }}"
+
+- name: subscribe child channels cent6
+  shell: "/bin/spacecmd --username={{ spacewalk_admin_user }} --password={{ spacewalk_admin_pw }} activationkey_addchildchannels 1-centos6-x86_64-{{ item|lower }}  centos6-x86_64-addons centos6-x86_64-extras centos6-x86_64-icinga centos6-x86_64-centosplus centos6-x86_64-updates epel6-centos6-x86_64"
+  with_items: "{{ zones }}"
+
+- name: subscribe child channels cent7
+  shell: "/bin/spacecmd --username={{ spacewalk_admin_user }} --password={{ spacewalk_admin_pw }} activationkey_addchildchannels 1-centos7-x86_64-{{ item|lower }} centos7-x86_64-addons centos7-x86_64-extras centos7-x86_64-icinga centos7-x86_64-centosplus centos7-x86_64-updates epel7-centos7-x86_64"
+  with_items: "{{ zones }}"
+
+- name: cron job for repo sync
+  blockinfile:
+    dest: /etc/cron.daily/reposync
+    mode: 777
+    create: yes
+    block: |
+      #/bin/sh
+      /bin/spacewalk-repo-sync --parent-channel centos6-x86_64
+      /bin/spacewalk-repo-sync --parent-channel centos7-x86_64
+      chown -R apache:root /var/cache/rhn
+
+- name: cron job for errata sync
+  blockinfile:
+    dest: /etc/cron.weekly/erratasync
+    mode: 700
+    create: yes
+    block: |
+      #/bin/sh
+      wget https://cefs.steve-meier.de/errata.latest.xml -O /root/errata.latest.xml
+      wget https://www.redhat.com/security/data/oval/com.redhat.rhsa-all.xml -O /root/rhsa-latest.xml
+      wget https://raw.githubusercontent.com/stevemeier/cefs/master/errata-import.pl -O /root/errata-import.pl
+      cd /root
+      export SPACEWALK_USER={{ spacewalk_admin_user }}
+      export SPACEWALK_PASS={{ spacewalk_admin_pw }}
+      perl errata-import.pl --server localhost --errata /root/errata.latest.xml --rhsa-oval /root/rhsa-latest.xml --publish
+      unset SPACEWALK_USER
+      unset SPACEWALK_PASS

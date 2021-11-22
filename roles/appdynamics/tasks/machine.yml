@@ -1,0 +1,29 @@
+# this task merely installs necessary files without bouncing jvm
+
+- include_vars: dev.yml
+  when: prod is defined and prod == false
+
+- include_vars: prod.yml
+  when: prod is defined and prod == true
+
+- yum: name=appdynamics-machine-agent state=present
+
+- name: controller-info.xml
+  template:
+    src=machine-controller-info.xml.j2
+    dest=/opt/appdynamics/machine-agent/conf/controller-info.xml
+    mode=0644
+
+- name: copy appdynamics_config
+  copy: src=appdynamics_config
+        dest=/etc/init.d/appdynamics_config
+        owner=root
+        mode=0755
+
+- name: move appdynamics_config into init sequence
+  service: name=appdynamics_config
+           enabled=yes
+
+# only activate machine agent when app agent is licensed
+- service: name=appdynamics-machine-agent enabled=no
+  when: licensed is undefined or licensed == false

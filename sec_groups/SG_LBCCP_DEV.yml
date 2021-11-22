@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBCCP_DEV.yml
+---
+- name: LBCCP_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/ccp-dev.yml
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

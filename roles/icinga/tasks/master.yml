@@ -1,0 +1,198 @@
+---
+- name: Install icinga packages for master
+  yum: name={{ item }} state=installed
+  with_items:
+    - mariadb
+    - icingaweb2
+    - icingacli
+    - icinga2-ido-mysql
+    - pnp4nagios
+    - php-ldap
+    - php-pdo
+    - php-mysql
+    - unzip
+    - perl-libwww-perl
+    - perl-Crypt-SSLeay
+    - perl-Sys-Syslog
+    - perl-LWP-Protocol-https
+    - perl-CGI
+    - perl-JSON
+  register: packages
+
+- name: Set timezone in php.ini
+  lineinfile: dest=/etc/php.ini regexp='^;date.timezone =' line='date.timezone = "{{ master_timezone}}"'
+
+- name: set timezone on system
+  shell: "timedatectl set-timezone {{ master_timezone }}"
+
+- name: Enable HTTPD service
+  service: name=httpd enabled=yes state=started
+  when: packages|success
+
+- name: Drop pnp4nagios/npcd.cfg
+  template: src=npcd-cfg.j2 dest=/etc/pnp4nagios/npcd.cfg mode=644 owner=root group=root
+
+- name: Drop pnp4nagios/config.pnp
+  template: src=pnp4nagios-conf.j2 dest=/etc/pnp4nagios/config.php mode=644 owner=root group=root
+
+- name: Setup pnp4nagios apache config
+  template: src=pnp4nagios-apache.j2 dest=/etc/httpd/conf.d/pnp4nagios.conf mode=644 owner=root group=root
+
+- name: Chown pnp4nagios to icinga user
+  shell: chown -R icinga:icinga /var/lib/pnp4nagios
+
+- name: install mariadb if local database
+  yum: name=mariadb-server state=installed
+  when: icinga_db_host == 'localhost' or director_db_host == 'localhost'
+
+- name: include database creation
+  include: database.yml
+  when: not update
+
+- name: Set Pagerduty integration
+  template: src=pagerduty-integration.j2 dest=/etc/icinga2/conf.d/pagerduty.conf mode=0640 owner=icinga group=icinga
+
+- name: Get Pagerduty script
+  get_url:
+    url: https://raw.github.com/PagerDuty/pagerduty-icinga-pl/master/pagerduty_icinga.pl
+    dest: /usr/local/bin/pagerduty_icinga.pl
+    mode: 0755
+    owner: icinga
+    group: icinga
+
+- name: Write pagerduty ackback integration
+  template: src=pagerduty.cgi.j2 dest=/usr/lib64/nagios/cgi-bin/pagerduty.cgi mode=0755
+
+- name: Set pagerduty cron job
+  template: src=pagerduty.cron.j2 dest=/etc/cron.d/pagerduty mode=0640 owner=root group=root
+
+- name: Set DB Creds ido-mysql
+  template: src=ido-mysql.j2 dest=/etc/icinga2/features-available/ido-mysql.conf mode=0640 owner=icinga group=icinga
+  register: icingaconfig
+
+- name: Setup icinga authentication
+  template: src=icingaweb-authentication-ini.j2 dest=/etc/icingaweb2/authentication.ini owner=apache group=icingaweb2
+
+- name: Setup icinga authentication roles
+  template: src=icingaweb-roles-ini.j2 dest=/etc/icingaweb2/roles.ini owner=apache group=icingaweb2
+
+- name: Setup icinga groups ldap
+  template: src=icingaweb-groups-ini.j2 dest=/etc/icingaweb2/groups.ini owner=apache group=icingaweb2
+
+- name: Setup icinga config.ini
+  template: src=icingaweb-config-ini.j2 dest=/etc/icingaweb2/config.ini owner=apache group=icingaweb2
+
+- name: Setup director resources.ini
+  template: src=icingaweb-resources-ini.j2 dest=/etc/icingaweb2/resources.ini mode=0660 owner=apache group=icingaweb2
+
+- name: Create director plugin dir
+  file: path=/etc/icingaweb2/modules/director state=directory owner=apache group=icingaweb2
+  register: plugin_dir_created
+
+- name: Create monitoring plugin dir
+  file: path=/etc/icingaweb2/modules/monitoring state=directory owner=apache group=icingaweb2
+  register: mon_dir_created
+
+- name: Create aws plugin dir
+  file: path=/etc/icingaweb2/modules/aws state=directory owner=apache group=icingaweb2
+  register: aws_dir_created
+
+- name: Setup backends.ini
+  template: src=mon-backends.j2 dest=/etc/icingaweb2/modules/monitoring/backends.ini owner=apache group=icingaweb2
+  when: mon_dir_created|success
+
+- name: Setup monitoring config.ini
+  template: src=mon-config.j2 dest=/etc/icingaweb2/modules/monitoring/config.ini owner=apache group=icingaweb2
+  when: mon_dir_created|success
+
+- name: Setup command transports
+  template: src=mon-transports.j2 dest=/etc/icingaweb2/modules/monitoring/commandtransports.ini owner=apache group=icingaweb2
+  when: mon_dir_created|success
+
+- name: Setup director config.ini
+  template: src=director-config.j2 dest=/etc/icingaweb2/modules/director/config.ini mode=0660 owner=apache group=icingaweb2
+  when: plugin_dir_created|success
+
+- name: Get latest director
+  git: repo=https://github.com/Icinga/icingaweb2-module-director.git dest=/usr/share/icingaweb2/modules/director
+
+- name: Get latest director-aws
+  git: repo=https://github.com/mbassett/icingaweb2-module-aws.git dest=/usr/share/icingaweb2/modules/aws force=yes
+  register: director_aws
+
+- name: Get latest pnp
+  git: repo=https://github.com/Icinga/icingaweb2-module-pnp.git dest=/usr/share/icingaweb2/modules/pnp
+
+- name: Get latest aws-sdk
+  action: get_url url=https://github.com/aws/aws-sdk-php/releases/download/2.8.31/aws.zip dest=/tmp/aws-sdk.zip
+  register: sdk_dl
+
+- name: Unpack aws-sdk
+  unarchive:
+    src: /tmp/aws-sdk.zip
+    dest: /usr/share/icingaweb2/modules/aws/library/vendor/aws
+    remote_src: true
+    keep_newer: true
+  when: (sdk_dl|success and director_aws|success)
+
+- name: Enable icinga2 features
+  shell: icinga2 feature enable {{ item }}
+  with_items:
+    - ido-mysql
+    - command
+    - perfdata
+
+- name: Enable icingaweb2 modules
+  shell: icingacli module enable {{ item }}
+  with_items:
+    - aws
+    - director
+    - monitoring
+    - pnp
+
+- name: Write keys.ini
+  template: src=keys.j2 dest=/etc/icingaweb2/modules/aws/keys.ini owner=root group=icingaweb2 mode=0640
+  when: aws_dir_created|success
+
+- name: Write API User
+  template: src=api_users.j2 dest=/etc/icinga2/conf.d/api-users.conf owner=icinga group=icinga mode=0640
+  register: api_user
+
+- name: Initiate Cluster Master
+  shell: icinga2 node setup --master
+  when: api_user|success and not update
+
+- name: setup zones.conf
+  template: src=zones.j2 dest=/etc/icinga2/zones.conf mode=0640 owner=root group=icinga
+
+- name: re-setup constants.conf
+  template: src=constants.j2 dest=/etc/icinga2/constants.conf mode=0640 owner=root group=icinga
+
+- name: Director migration
+  shell: icingacli director migration run --verbose
+  when: api_user|success
+  register: migration
+
+- name: Write Kickstart.ini
+  template: src=director-kickstart.j2 dest=/etc/icingaweb2/modules/director/kickstart.ini owner=apache group=icingaweb2 mode=0640
+  when: migration|success
+  register: kickstart
+
+- name: Enable pnp4nagios Service
+  service: name=npcd enabled=yes state=started
+
+- name: Enable Postfix Service
+  service: name=postfix enabled=yes state=restarted
+
+- name: Enable Icinga Service
+  service: name=icinga2 enabled=yes state=restarted
+  when: (packages|success and icingaconfig|success)
+  register: start_icinga
+
+- name: Director Kickstart
+  shell: icingacli director kickstart run
+  async: 300
+  when: kickstart|success and start_icinga|success and do_kickstart
+
+- name: echo pong to /var/www/html/ping.html
+  shell: echo 'pong' > /var/www/html/ping.html

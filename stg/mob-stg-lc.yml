@@ -1,0 +1,83 @@
+# ansible-playbook -vv -i 'localhost,' foo.yml
+
+- name: create launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/mob
+  vars:
+    name_tag: MOB-STG
+    role: mob-stg
+    sg_id: sg-95bc7eed
+    env_domain: stg
+    env: staging
+  tasks:
+    - name: find latest lc
+      ec2_lc_find:
+        name_regex: "{{ name_tag }}-*"
+        region: "{{ region }}"
+        sort_order: descending
+        limit: 1
+      register: search
+
+    - name: new version
+      set_fact: byone="{{ ((search.results.0.name.split('-')[2] | int) + 1) }}"
+      when: search.results|length > 0
+
+    - name: if there is no prior version
+      set_fact: ver='001'
+      when: search.results|length == 0
+
+    - name: new version string
+      set_fact: ver="{{ byone.zfill(3) }}"
+      when: search.results|length > 0
+
+    - name: launch configuration
+      ec2_lc:
+        name: "{{ name_tag }}-{{ ver }}"
+        image_id: "{{ app_ami }}"
+        key_name: "{{ key_name }}"
+        security_groups: "{{ sg_id }}"
+        instance_profile_name: "{{ role }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+        region: "{{ region }}"
+        assign_public_ip: false
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 8
+            device_type: gp2
+            delete_on_termination: true
+          - device_name: /dev/sdf
+            volume_size: 80
+            device_type: gp2
+            delete_on_termination: true
+        user_data: |
+                   #cloud-config
+                   disk_setup:
+                     /dev/xvdf:
+                       table_type: mbr
+                       layout: True
+                       overwrite: True
+                   fs_setup:
+                     - label: ebs1
+                       filesystem: xfs
+                       device: /dev/xvdf1
+                   mounts:
+                     - [ /dev/xvdf1, /mnt/ebs1, xfs, defaults, '0', '2' ]
+                   runcmd:
+                     - mkdir -p /mnt/ebs1/log
+                     - touch /mnt/ebs1/log//mobileClientLog.txt
+                     - chown apache:apache /mnt/ebs1/log/mobileClientLog.txt
+                     - /bin/echo -e '\nappend domain-search "ec2.internal", "use1.{{ env_domain }}.doubledowncasino.com", "use1.{{ env_domain }}.ddc.io";' >> /etc/dhcp/dhclient-eth0.conf
+                     - sed -i 's/^search ec2.internal$/search ec2.internal use1.{{ env_domain }}.doubledowncasino.com use1.{{ env_domain }}.ddc.io/' /etc/resolv.conf
+                     - cd /usr/local/share/DDI/ddi-ops && git pull
+                     - /root/bin/sysconfig
+                     - ln -s /usr/local/share/DDI/ddi-ops/{{ env_domain }}/mobile/conf/httpd.conf /etc/httpd/conf/httpd.conf
+                     - ln -s /usr/local/share/DDI/ddi-ops/{{ env_domain }}/mobile/conf.d/m.doubledowncasino.com.conf /etc/httpd/conf.d/m.doubledowncasino.com.conf
+                     - echo "SetEnv APPLICATION_ENV {{ env }}" > /etc/httpd/conf.d/env.conf
+                     - /usr/bin/geoipupdate
+                     - /root/bin/code_deploy.sh
+                     - systemctl restart httpd
+

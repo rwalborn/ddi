@@ -1,0 +1,44 @@
+# XPA-PROD VARS FILE
+
+name_tag: XPA-PROD
+service_tag: XPT
+icinga_profile: XPA-Paged
+lb: XPA-PROD
+
+app_tag: DDC
+rpm_tag: ddi-experiment-config-service ddi-experiment-config-webapp
+app_ami: ami-4c5a835a
+instance_type: m3.xlarge
+sg: SG_XPA_PROD
+elb_sg: SG_LBXPA_PROD
+elb_fqdn: xpa.prod.doubledowncasino.com
+env: production
+profile_name: xpa-prod
+prefix: XPADDC
+deployment: PROD
+
+lc: XPA-PROD-004
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 1
+  min_size: 1
+  max_size: 1
+  hc_type: EC2
+
+instance_port_1: 11520
+instance_port_2: 11525
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /admin/ping
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+

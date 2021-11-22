@@ -1,0 +1,4 @@
+cat: groupmeow
+# {{ vault_cat }} is stored in encrypted group_vars/vaults/lab
+# vars_files in your playbook should reference group_vars/vaults/lab
+secret_cat: "{{ vault_cat }}"

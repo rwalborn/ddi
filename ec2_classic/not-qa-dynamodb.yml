@@ -1,0 +1,18 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create dynamodb table
+  hosts: localhost
+  connection: local
+  vars:
+    key: key
+    read: 5
+    write: 5
+  tasks:
+    - name: create dynamodb table
+      dynamodb_table:
+        name: NOTDDC-USE1-QA
+        region: us-east-1
+        hash_key_name: "{{ key }}"
+        hash_key_type: STRING
+        read_capacity: "{{ read }}"
+        write_capacity: "{{ write }}"

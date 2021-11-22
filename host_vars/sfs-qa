@@ -1,0 +1,9 @@
+vpc_sg: SG_LAN_QA
+ec2_sg: QA
+env: qa
+iamrole: sfs-qa
+icinga: SFS
+
+sfs_externals_casino_config_host: cp.qa.doubledowncasino.com
+sfs_externals_casino_config_db_host: master1.qa.doubledowncasino.com
+sfs_externals_admin_config_host: qa.doubledowncasino.com

@@ -1,0 +1,61 @@
+#cloud-init
+#runcmd:
+#  - cd /usr/local/share/DDI/ddi-ops && git pull
+#  - /root/bin/sysconfig
+---
+- include_vars: spacewalk.yml
+
+- name: set registerme false if baking true
+  set_fact: registerme=false
+  when: baking
+
+- name: see if epel installed
+  stat: path=/etc/yum.repos.d/epel.repo
+  register: epel
+
+- name: download and install epel
+  yum: state=installed name='http://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm'
+  when: not epel.stat.exists
+
+- name: see if spacewalk-client installed
+  stat: path=/etc/yum.repos.d/spacewalk-client.repo
+  register: spacewalk
+
+- name: install spacewalk-client repo
+  yum: state=installed name='http://yum.spacewalkproject.org/2.6-client/RHEL/{{ ansible_distribution_major_version }}/x86_64/spacewalk-client-repo-2.6-0.el{{ ansible_distribution_major_version}}.noarch.rpm'
+  when: not spacewalk.stat.exists
+
+- name: get gpg keys for channels
+  rpm_key: state=present key={{ item }}
+  with_items:
+    - "http://packages.icinga.com/icinga.key"
+    - "https://raw.githubusercontent.com/sclorg/centos-release-scl/master/centos-release-scl/RPM-GPG-KEY-CentOS-SIG-SCLo"
+    - "https://copr-be.cloud.fedoraproject.org/results/openscapmaint/openscap-latest/pubkey.gpg"
+    - "https://packages.elastic.co/GPG-KEY-elasticsearch"
+    - "https://pkg.jenkins.io/redhat-stable/jenkins.io.key"
+
+- name: clean yum
+  shell: yum clean all
+
+- name: do things for master
+  include: master.yml
+  when: master
+
+- name: do things for proxy
+  include: proxy.yml
+  when: proxy
+
+- name: do things for client
+  include: client.yml
+  when: not proxy
+
+- name: install openscap scanning packages
+  yum: state=installed name={{ item }}
+  with_items:
+    - scap-security-guide
+    - spacewalk-oscap
+  when: oscap
+
+- name: do things for baking
+  include: baking.yml
+  when: baking

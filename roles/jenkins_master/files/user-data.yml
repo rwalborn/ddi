@@ -1,0 +1,152 @@
+#cloud-config
+
+cloud_init_modules:
+  - bootcmd
+  - growpart
+  - resizefs
+  - set_hostname
+  - update_hostname
+  - update_etc_hosts
+  - rsyslog
+  - users-groups
+  - ssh
+
+cloud_config_modules:
+  - mounts
+  - locale
+  - set-passwords
+  - yum-add-repo
+  - disable-ec2-metadata
+  - package-update-upgrade-install
+  - write-files
+  - timezone
+  - runcmd
+
+cloud_final_modules:
+  - scripts-per-once
+  - scripts-per-boot
+  - scripts-per-instance
+  - [ scripts-user, always ]
+  - ssh-authkey-fingerprints
+  - keys-to-console
+  - phone-home
+  - final-message
+  - power_state_change
+
+bootcmd:
+  - setenforce 0
+
+growpart:
+  mode: auto
+  devices: ['/']
+  ignore_growroot_disabled: false
+
+hostname: {{ fqdn }}
+
+write_files:
+  - path: "/etc/gitconfig"
+    owner: "root"
+    permissions: "0640"
+    content: |
+      [credential]    
+          helper = !aws codecommit credential-helper $@
+          UseHttpPath = true
+  - path: "/var/lib/cloud/instance/scripts/firstboot.sh"
+    owner: "root"
+    permissions: "0750"
+    content: |
+      #!/bin/bash
+      salt-call --log-file-level=debug --local state.top mob-jenkins/top.sls
+  - path: "/etc/salt/minion.d/masterless.conf"
+    owner: "root"
+    permissions: "0640"
+    content: |
+      file_client: local
+      fileserver_backend:
+        - git
+      gitfs_provider: GitPython
+      gitfs_base: {{ branch }}
+      gitfs_root: salt
+      gitfs_remotes:
+        - https://git-codecommit.us-east-1.amazonaws.com/v1/repos/salt-cfg:
+          - name: all-salt-states
+          - root: salt/states
+          - base: {{ branch }}
+        - https://git-codecommit.us-east-1.amazonaws.com/v1/repos/salt-cfg:
+          - name: highlevel-states
+          - root: salt/highstates
+          - base: {{ branch }}
+      git_pillar_provider: GitPython
+      git_pillar_base: {{ branch }}
+      git_pillar_root: salt/roles
+      ext_pillar:
+        - git:
+          - {{ branch }} https://git-codecommit.us-east-1.amazonaws.com/v1/repos/salt-cfg
+      file_ignore_regex:
+        - '/\.git($|/)'
+      grains_dirs:
+        - /etc/salt/grains
+  - path: "/etc/salt/grains"
+    owner: "root"
+    permissions: "0640"
+    content: |
+      roles:
+        - chrony.amazon-ntp
+        - sssd.tools-sssd
+        - openldap.tools-ldap
+        - sudoers.ops-sudoers
+        - sudoers.wheel-sudoers
+        - oracle-java.jdk8
+        - jenkins.default
+
+users:
+  - name: centos
+    groups: wheel
+    gecos: Cloud User
+    shell: /bin/bash
+    homedir: /home/centos
+    lock_passwd: true
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDmqL+ZTrjU9qdlDcG1bHakQ4wXnv9TV8f8SRTWMxFKNgkIVWqtLwQIDct11/dpIY5VvmwLhXz3ZDoydbu5uNp2omjvTjmMBJYiJuP34kAU/Sr6WGyoxVyo8n4tlJNzb3Q2xaRHJPk0Juq0VRwsMFsuKszBVwOXyiy6u1hNGAKArYdF8d/zyabk+nso4dpcAFEt7KCV9nFYTJphncOz27LaFRp2sKdk1nm8MmIhX25jWU0rQOhfaWx6kl6qM9t4H8TyubUsvpQkiQ7f/3xL7ylzhme6f9or5HcESmBkx+e5sbb/JeRZADg9g7/9HNWqLOrEWsdYxAKwsRVFb3reDkfP
+
+disable_root: 1
+
+locale_configfile: /etc/sysconfig/i18n
+
+mount_default_fields: [~, ~, 'auto', 'defaults,nofail', '0', '2']
+resize_rootfs_tmp: /dev
+
+ssh_deletekeys:   0
+ssh_genkeytypes:  ~
+ssh_pwauth:   0
+
+syslog_fix_perms: ~
+
+yum_repos:
+  epel:
+      name: Extra Packages for Enterprise Linux 7 - $basearch
+      baseurl: http://download.fedoraproject.org/pub/epel/7/$basearch
+      failovermethod: priority
+      enabled: true
+      gpgcheck: true
+      gpgkey: http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+  saltstack-repo:
+      name: SaltStack repo for RHEL/Centos $releasever
+      baseurl: https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
+      enabled: true
+      failovermethod: priority
+      gpgcheck: true
+      gpgkey: https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-GPG-KEY.pub
+
+packages:
+  - epel-release
+  - awscli
+  - python2-boto3
+  - GitPython
+  - libmetalink
+  - m2crypto
+  - salt
+  - salt-minion
+
+package_upgrade: true

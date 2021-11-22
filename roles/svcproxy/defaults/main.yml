@@ -1,0 +1,11 @@
+key_name: ops-config
+app_ami: ami-2327ac35
+instance_type: c3.large
+dnszone: ddc.io
+az: az1
+subnet: private
+role: lb
+vpc: true
+ssl: false
+dig: false
+do: nothing

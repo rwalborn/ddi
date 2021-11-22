@@ -1,0 +1,16 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# ansible 2.0 iam_policy creates inline policy, not stand-alone policy
+
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  tasks:
+  # ansible 2.0 iam_policy creates inline policy, not stand-alone policy
+  - name: create policy
+    command: "aws iam create-policy --policy-name {{ item }} --policy-document file://policy_docs/{{ item }}.json"
+    with_items:
+      - S3JWT-public-DEV
+      - S3JWT-private-DEV
+      - S3JWT-public-PROD
+      - S3JWT-private-PROD

@@ -1,0 +1,7 @@
+/var/log/jenkins-slave/jenkins-slave.log {
+    missingok
+    notifempty
+    rotate 2
+    compress
+    create 0644 jenkins jenkins
+}

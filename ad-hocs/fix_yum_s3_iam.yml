@@ -1,0 +1,29 @@
+# run as ansible-playbook -vvvv -i "someip," fix_yum_s3_iam.yml --tags "fixrepo"
+---
+- name: update yum-plugin-s3-iam
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+
+  - name: copy yum-s3-iam
+    copy: src=../roles/bake/files/yum-plugin-s3-iam-1.1.0-1.noarch.rpm
+        dest=/root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm
+        owner=root
+    register: copied
+
+  - name: remove old yum plugin
+    command: rpm -e yum-s3-iam
+    when: copied|success
+    register: uninstalled
+    ignore_errors: yes
+
+  - name: install yum-s3-iam
+    command: rpm -ivh /root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm
+    when: uninstalled|success or uninstalled|failed
+    register: installed
+
+  - name: delete yum-s3-iam rpm to be tidy
+    file: name=/root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm state=absent
+    when: installed|success

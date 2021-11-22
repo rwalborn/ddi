@@ -1,0 +1,9 @@
+[DDI-RELEASES]
+Name=none
+baseurl=http://repo01.use1.prod.ddc.io/releases/6/x86_64/
+        http://repo02.use1.prod.ddc.io/releases/6/x86_64/
+        http://repo03.use1.prod.ddc.io/releases/6/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=http://repo.ddc.io/RPM-GPG-KEY-DDI-RELEASES
+

@@ -1,0 +1,272 @@
+# ansible route53_health_check module cannot define name, notification, regions of health checker
+
+# useful commands
+# aws route53 list-tags-for-resource
+# aws route53 list-health-checks
+# aws route53 get-health-check --health-check-id
+
+- name: Check if fqdn is defined
+  fail: msg="Please provide fqdn"
+  when: fqdn is not defined
+
+- name: Check if service_fqdn is defined
+  fail: msg="Please provide service_fqdn"
+  when: service_fqdn is not defined
+
+- name: Check if service_port is defined
+  fail: msg="Please provide service_port"
+  when: policy_routing and service_port is undefined
+
+- name: Check if resource_path is defined
+  fail: msg="Please provide resource_path"
+  when: policy_routing and resource_path is undefined
+
+- name: Pause to review output.  Continuing further will initiate DNS changes
+  pause:
+    seconds: 30
+
+- name: set traffic_ip to public first
+  set_fact: traffic_ip="{{ ec2.instances.0.public_ip }}"
+  when: ec2.instances.0.public_ip is defined
+
+- name: set traffic_ip to private if private_lb is true
+  set_fact: traffic_ip="{{ ec2.instances.0.private_ip }}"
+  when: private_lb and ec2.instances.0.private_ip is defined
+
+- name: set traffic_ip to private if private_lb is true
+  set_fact: traffic_ip="{{ private_ip }}"
+  when: private_lb and ec2.instances.0.private_ip is undefined and private_ip is defined
+
+- name: get hostname
+  set_fact: hostname="{{ fqdn.split('.')[0] }}"
+
+- name: get subdomain for env
+  set_fact: subdomain="{{ fqdn.split('.')[2] }}"
+
+- name: compose traffic_fqdn
+  set_fact: traffic_fqdn="{{ hostname }}.use1.{{ subdomain }}.doubledowncasino.com"
+
+- name: set route53 zone
+  set_fact:
+    traffic_zone="sbx.doubledowncasino.com"
+    mgt_zone="sbx.ddc.io"
+  when: subdomain == 'sbx'
+
+- name: check if old CNAME exists for the load balancer
+  route53:
+    command: get
+    zone: "{{ traffic_zone }}"
+    record: "{{ traffic_fqdn }}"
+    type: CNAME
+  register: rec
+
+- name: remove old CNAME because new A record can't overwrite it
+  route53:
+    command: delete
+    zone: "{{ traffic_zone }}"
+    record: "{{ rec.set.record }}"
+    ttl: "{{ rec.set.ttl }}"
+    type: "{{ rec.set.type }}"
+    value: "{{ rec.set.value }}"
+  when: rec.set.value is defined
+
+- name: register A record for traffic
+  route53:
+    command: create
+    overwrite: true
+    zone: "{{ traffic_zone }}"
+    record: "{{ traffic_fqdn }}"
+    type: A
+    ttl: 60
+    value: "{{ traffic_ip }}"
+
+# abort all plays from this point on if production
+- fail: msg="service_fqdn change to production needs a maintenance window!"
+  when: subdomain == 'prod'
+
+# following scenarios cannot overwrite each other:
+# 1. Old A record exists
+# 2. Simple CNAME exists
+# 3. Policy CNAME exists
+
+- name: check if A record for service exists
+  route53:
+    command: get
+    zone: "{{ traffic_zone }}"
+    record: "{{ service_fqdn }}"
+    type: A
+  register: arec
+
+- name: check if simple CNAME for service exists
+  route53:
+    command: get
+    zone: "{{ traffic_zone }}"
+    record: "{{ service_fqdn }}"
+    type: CNAME
+  register: srec
+
+# policy record lookup needs both weight and identifier
+# health_check is not used for matching
+- name: check if weighted CNAME for service exists
+  route53:
+    command: get
+    zone: "{{ traffic_zone }}"
+    record: "{{ service_fqdn }}"
+    type: CNAME
+    weight: 1
+    identifier: "{{ fqdn }}"
+  register: prec
+
+- name: if old A record exists, we need to remove it before creating CNAME
+  route53:
+    command: delete
+    zone: "{{ traffic_zone }}"
+    record: "{{ arec.set.record }}"
+    ttl: "{{ arec.set.ttl }}"
+    type: "{{ arec.set.type }}"
+    value: "{{ arec.set.value }}"
+  when: arec.set.value is defined
+
+- name: if simple CNAME exists and we need to write policy CNAME
+  route53:
+    command: delete
+    zone: "{{ traffic_zone }}"
+    record: "{{ srec.set.record }}"
+    ttl: "{{ srec.set.ttl }}"
+    type: "{{ srec.set.type }}"
+    value: "{{ srec.set.value }}"
+  when: policy_routing and srec.set.value is defined
+
+# two delete scenarios, the difference is with or without healthcheck
+- name: if policy CNAME w/o healthcheck exists and we need to write simple CNAME
+  route53:
+    command: delete
+    zone: "{{ traffic_zone }}"
+    record: "{{ prec.set.record }}"
+    ttl: "{{ prec.set.ttl }}"
+    type: "{{ prec.set.type }}"
+    value: "{{ prec.set.value }}"
+    weight: "{{ prec.set.weight }}"
+    identifier: "{{ prec.set.identifier }}"
+  when: not policy_routing and prec.set.value is defined and prec.set.health_check == none
+
+- name: if policy CNAME exists with healthcheck and we need to write simple CNAME
+  route53:
+    command: delete
+    zone: "{{ traffic_zone }}"
+    record: "{{ prec.set.record }}"
+    ttl: "{{ prec.set.ttl }}"
+    type: "{{ prec.set.type }}"
+    value: "{{ prec.set.value }}"
+    weight: "{{ prec.set.weight }}"
+    identifier: "{{ prec.set.identifier }}"
+    health_check: "{{ prec.set.health_check }}"
+  when: not policy_routing and prec.set.value is defined and prec.set.health_check != none
+
+# if it is already a simple CNAME and we should be able to overwrite
+- name: create simple CNAME
+  route53:
+    command: create
+    overwrite: true
+    zone: "{{ traffic_zone }}"
+    record: "{{ service_fqdn }}"
+    type: CNAME
+    ttl: 30
+    value: "{{ traffic_fqdn }}"
+  when: not policy_routing and service_fqdn is defined
+  register: ccreate
+
+- name: alert if creation failed
+  fail: msg="Failed to create {{ service_fqdn }} record"
+  when: ccreate|failed
+
+# we don't want to create policy CNAME without healthcheck
+- name: create route53 health check
+  route53_health_check:
+    region: "{{ region }}"
+    state: present
+    ip_address: "{{ ec2.instances.0.public_ip }}"
+    port: "{{ service_port }}"
+    type: HTTP
+    resource_path: "{{ resource_path }}"
+    request_interval: 10
+    failure_threshold: 2
+  register: hc
+  when: policy_routing and ec2.instances.0.public_ip is defined and service_port is defined and resource_path is defined
+
+- name: name healthcheck by name tag
+  command: aws --profile "{{ aws_profile }}" route53 change-tags-for-resource --region "{{ region }}" --resource-type healthcheck --resource-id "{{ hc.health_check.id }}" --add-tags Key=Name,Value="{{ fqdn }}"
+  when: policy_routing and hc.health_check.id is defined
+
+- name: limit health checkers to US regions, minimum 3 regions
+  command: aws --profile "{{ aws_profile }}" route53 update-health-check --region "{{ region }}" --health-check-id "{{ hc.health_check.id }}" --regions us-east-1 us-west-1 us-west-2
+  when: policy_routing and hc.health_check.id is defined
+
+- name: create policy CNAME with healthcheck
+  route53:
+    command: create
+    overwrite: true
+    zone: "{{ traffic_zone }}"
+    record: "{{ service_fqdn }}"
+    type: CNAME
+    ttl: 30
+    value: "{{ traffic_fqdn }}"
+    weight: 1
+    identifier: "{{ fqdn }}"
+    health_check: "{{ hc.health_check.id }}"
+  when: policy_routing and service_fqdn is defined and hc.health_check.id is defined and traffic_fqdn is defined
+  register: pcreate
+
+- name: alert if creation failed
+  fail: msg="Failed to create {{ service_fqdn }} record"
+  when: pcreate|failed
+
+# management record creation
+
+- name: check if A record for management exists
+  route53:
+    command: get
+    zone: "{{ mgt_zone }}"
+    record: "{{ fqdn }}"
+    type: A
+  register: mgtarec
+
+- name: check if simple CNAME for management exists
+  route53:
+    command: get
+    zone: "{{ mgt_zone }}"
+    record: "{{ service_fqdn }}"
+    type: CNAME
+  register: mgtsrec
+
+- name: if old A record exists, we need to remove it before creating new
+  route53:
+    command: delete
+    zone: "{{ mgt_zone }}"
+    record: "{{ mgtarec.set.record }}"
+    ttl: "{{ mgtarec.set.ttl }}"
+    type: "{{ mgtarec.set.type }}"
+    value: "{{ mgtarec.set.value }}"
+  when: mgtarec.set.value is defined
+  register: deleted
+
+- name: if simple CNAME exists we need to remove before creating new
+  route53:
+    command: delete
+    zone: "{{ mgt_zone }}"
+    record: "{{ mgtsrec.set.record }}"
+    ttl: "{{ mgtsrec.set.ttl }}"
+    type: "{{ mgtsrec.set.type }}"
+    value: "{{ mgtsrec.set.value }}"
+  when: mgtsrec.set.value is defined
+  register: deleted
+
+- name: create new a record
+  route53:
+    command: create
+    zone: "{{ mgt_zone }}"
+    record: "{{ fqdn }}"
+    type: "A"
+    ttl: 30
+    value: "{{ ec2.instances.0.public_ip }}"
+  when: deleted

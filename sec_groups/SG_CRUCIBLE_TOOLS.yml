@@ -1,0 +1,13 @@
+# ansible-playbook -vvvv SG_DWS_STG.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/crucible
+  vars:
+      sg: SG_CRUCIBLE_TOOLS
+  tasks:
+    - include: "{{ sg }}_INC.yml"

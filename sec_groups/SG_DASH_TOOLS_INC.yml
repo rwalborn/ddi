@@ -1,0 +1,26 @@
+---
+- name: create security group
+  ec2_group:
+    name: "{{ sg }}"
+    description: "{{ sg }}"
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 192.168.0.0/22
+      # ping from icinga slave in vpc
+      - proto: icmp
+        from_port: -1
+        to_port: -1
+        cidr_ip: "{{ vpc_cidr }}"
+  register: ec2_group
+
+- name: tag the instance
+  command: aws ec2 create-tags --region "{{ region }}" --resources "{{ ec2_group.group_id }}" --tags Key=Name,Value="{{ sg }}"
+

@@ -1,0 +1,23 @@
+# TMTADM-PROD VARS FILE
+
+name_tag: TMTADM-PROD
+service_tag: TMTADM
+icinga_profile: TMTADM-Paged
+# hzcastprod: hzprod_tmnt
+
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmtadm.prod.doubledowncasino.com
+sg: SG_TMTADM_PROD
+env: production
+profile_name: tmtadm-prod
+
+key_name: ops-config
+role: tmtadm-prod
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

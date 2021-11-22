@@ -1,0 +1,8 @@
+---
+# ldap_client: entry point for handlers
+- name: restart sssd
+  service:
+    name: sssd
+    state: restarted
+  when: not baking
+

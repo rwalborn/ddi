@@ -1,0 +1,54 @@
+# ansible-playbook -vvvv -i 'localhost,' --vault-password-file ~/.vaultpass sfs-prod.yml
+
+# Uncomment the one you plan to rebuild
+
+- name: SFS server
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/sfs-prod
+  roles:
+#    - { role: sfs, do: standup, fqdn: sfs01.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs02.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs03.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs04.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs05.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs06.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs07.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs08.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs09.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs10.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs11.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs12.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs13.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs14.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs15.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs16.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs17.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs18.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs19.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs20.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs21.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs22.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs23.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs24.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs25.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs26.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs27.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs28.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs29.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs30.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs31.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs32.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs33.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs34.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs35.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs36.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs37.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs38.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs39.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs40.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs41.use1.prod.ddc.io }
+#    - { role: sfs, do: standup, fqdn: sfs42.use1.prod.ddc.io }

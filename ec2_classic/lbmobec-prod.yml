@@ -1,0 +1,30 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    # common
+    service_tag: MOB
+    # used by lb
+    app_tag: mobileweb
+    env_tag: production
+    sg: production
+    nginx: true
+    instance_type: c3.xlarge
+    private_lb: false
+    vpc: false
+    # used by cloudwatch
+    service_port: 80
+    resource_path: /ddchealthchk.html
+    aws_profile: default
+  roles:
+    - { role: lb, name_tag: 'LBMOBEC-PROD 01', az: az1, fqdn: lbmobec01.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, name_tag: 'LBMOBEC-PROD 01', fqdn: lbmobec01.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBMOBEC-PROD 02', az: az2, fqdn: lbmobec02.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, name_tag: 'LBMOBEC-PROD 02', fqdn: lbmobec02.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBMOBEC-PROD 03', az: az1, fqdn: lbmobec03.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, name_tag: 'LBMOBEC-PROD 03', fqdn: lbmobec03.use1.prod.ddc.io }

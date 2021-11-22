@@ -1,0 +1,50 @@
+# useful command
+# aws cloudwatch list-metrics --namespace "AWS/ELB" --dimensions Name=LoadBalancerName,Value=foo
+# aws cloudwatch describe-alarms --alarm-names foo
+# aws cloudwatch describe-alarms-for-metric help
+
+- name: UnHealthyHost
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "ELB-{{ elb }}-UnHealthyHost"
+    description: "UnHealthyHost"
+    namespace: "AWS/ELB"
+    metric: UnHealthyHostCount
+    statistic: Average
+    comparison: ">"
+    threshold: '0'
+    period: "{{ period_length }}"
+    evaluation_periods: "{{ elb_unhealthyhost_periods }}"
+    dimensions: '{ "LoadBalancerName": "{{ elb }}" }'
+    alarm_actions: ["{{ elb_topic_arn }}", "{{ pagerduty_topic_arn }}"]
+#- name: Latency warning
+#  ec2_metric_alarm:
+#    state: present
+#    region: "{{ region }}"
+#    name: "ELB-{{ elb }}-Latency-Warning"
+#    description: "Latency Warning"
+#    namespace: "AWS/ELB"
+#    metric: Latency
+#    statistic: Average
+#    comparison: ">"
+#    threshold: "{{ elb_warn_latency|float }}"
+#    period: "{{ period_length }}"
+#    evaluation_periods: "{{ elb_periods }}"
+#    dimensions: '{ "LoadBalancerName": "{{ elb }}" }'
+#    alarm_actions: "{{ elb_topic_arn }}"
+#- name: Latency critical
+#  ec2_metric_alarm:
+#    state: present
+#    region: "{{ region }}"
+#    name: "ELB-{{ elb }}-Latency-Critical"
+#    description: "Latency Critical"
+#    namespace: "AWS/ELB"
+#    metric: Latency
+#    statistic: Average
+#    comparison: ">"
+#    threshold: "{{ elb_crit_latency|float }}"
+#    period: "{{ period_length }}"
+#    evaluation_periods: "{{ elb_periods }}"
+#    dimensions: '{ "LoadBalancerName": "{{ elb }}" }'
+#    alarm_actions: ["{{ elb_topic_arn }}", "{{ pagerduty_topic_arn }}"]

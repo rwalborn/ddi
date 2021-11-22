@@ -1,0 +1,42 @@
+# MPEW-PROD VARS FILE
+
+name_tag: MPEW-PROD
+lb: MPEW-PROD
+service_tag: MPEW
+
+app_tag: DDC
+rpm_tag: ddc-player-engine-service-sa
+app_ami: ami-4630e950
+instance_type: m3.xlarge
+sg: SG_MPE_PROD
+elb_sg: SG_LBMPE_PROD
+elb_fqdn: mpew.use1.prod.doubledowncasino.com
+env: production
+key_name: ops-config
+profile_name: mpew-prod
+
+lc: MPEW-PROD-001
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11432
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /HealthCheck
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+

@@ -1,0 +1,3 @@
+ddi_cpddc_config:
+  s3bucket: ddc-artifacts
+  tarball_dir: /ddi/services/casino-config/tarballs

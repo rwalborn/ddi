@@ -1,0 +1,5 @@
+- name: collectd_restart
+  service:
+    name=collectd
+    state=restarted
+  when: not baking

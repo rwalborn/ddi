@@ -1,0 +1,2 @@
+- name: original sfs_externals role
+  include: externals.yml

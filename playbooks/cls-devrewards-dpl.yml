@@ -1,0 +1,7 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create dynamodb backup data pipeline
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: cloudformation, type: dynamodb-datapipeline, table: cls-devrewards }

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# description: use pre-set hostname by cloud-init, or take the TAG-ID default
+#              needs ec2:DescribeTags in 'AmazonEC2ReadOnlyAccess' policy
+
+# cloud-init logic
+# 1. /etc/cloud/cloud.cfg.d/99_bootcmd.cfg runs /usr/local/sbin/aws_hostname very early
+# 2. /usr/local/sbin/aws_hostname plants hostname in /etc/cloud/cloud.cfg.d/98_hostname.cfg for the next step
+# 3. /usr/local/sbin/aws_hostname runs cloud-init single task to update /etc/hosts
+# 4. /etc/hostname + 'preserve_hostname: True' = keeps hostname in /etc/hostname between reboot
+
+if [ -f /var/lib/cloud/instance/cloud-config.txt ] && ( grep -s hostname /var/lib/cloud/instance/cloud-config.txt )
+then
+  HN=`grep -s hostname: /var/lib/cloud/instance/cloud-config.txt | sed 's/hostname: *\([^.]*\)\..*/\1/'`
+else
+  AZ=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+  REGION=${AZ%?}
+  ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+  IDSTR=`echo $ID | sed 's/^i-//'`
+  CURRENTNAME=`hostname --short`
+ 
+  # only makes api call when instance-id is not in current hostname
+  if [[ $CURRENTNAME != *$IDSTR* ]]
+  then
+    TAG=`aws ec2 describe-tags --region $REGION --filter "Name=resource-id,Values=$ID" --query "Tags[?Key=='Name'].Value" --output text`
+    if [ -z "$TAG" ] || [ "$TAG" == 'null' ]
+    then
+      echo 'unexpected TAG value, maybe the instance does not have a Name tag'
+      exit 1
+    fi
+    TAG1=`echo $TAG | awk '{print $1}'`
+    HN=$TAG1-$IDSTR
+  else
+    HN=$CURRENTNAME
+  fi
+fi
+
+hostname $HN
+echo $HN > /etc/hostname
+echo -e "#cloud-config\nhostname: $HN" > /etc/cloud/cloud.cfg.d/98_hostname.cfg
+cloud-init single --name update_etc_hosts

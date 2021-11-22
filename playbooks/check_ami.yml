@@ -1,0 +1,34 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: test instance for new ami
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    base_ami: ami-591daf4f
+    fqdn: checkami.ddc.io
+    name_tag: 'ictest ami'
+    service_tag: OPS
+    role: ami_base_centos
+    instance_type: m3.medium
+    sg: SG_LAN_TOOLS
+    key_name: ops-config
+  tasks:
+    - name: launch instance
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ base_ami }}"
+        group: "{{ sg }}"
+        zone: "{{ az1 }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        region: "{{ region }}"
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn }}"

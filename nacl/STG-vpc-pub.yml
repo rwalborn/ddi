@@ -1,0 +1,19 @@
+# ansible-playbook -vv -i 'localhost,' STG-vpc-pub.yml
+
+# naclversion automatically increases by 1
+# but you must specify naclversion to remove, such as:
+#    - { role: cloudformation, type: nacl, naclversion: '007', state: absent }
+
+# commit locally before running the playbook so that commit hash tracks correctly
+
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/stg
+  vars:
+    vpcname: STG
+    subnettype: vpc-pub
+    env: staging
+  roles: 
+    - { role: cloudformation, type: nacl }

@@ -1,0 +1,27 @@
+# BAL-DEV VARS FILE
+
+name_tag: BAL-DEV
+service_tag: BAL
+lb: BAL-DEV
+
+app_tag: DDC
+rpm_tag: ddc-balance-webapp
+app_ami: ami-81d56b97
+instance_type: c3.2xlarge
+spot_price: .42
+sg: SG_BAL_DEV
+elb_sg: SG_LBBAL_DEV
+elb_fqdn: bal.use1.dev.doubledowncasino.com
+env: development
+key_name: ops-config
+profile_name: bal-dev
+prefix: BAL
+deployment: DEV
+
+ud_env: dev
+
+lc: BAL-DEV-003
+hc_type: EC2
+instance_port_1: 11050
+ping_path_1: /status
+

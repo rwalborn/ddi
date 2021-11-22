@@ -1,0 +1,18 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    app_tag: mobileweb
+    env_tag: qa
+    service_tag: MOB
+    sg: SG_LAN_QA
+    nginx: true
+    instance_type: c3.xlarge
+    private_lb: false
+  roles:
+    - { role: lb, name_tag: 'LBMOB-QA', az: az1, fqdn: lbmob01.use1.qa.ddc.io }

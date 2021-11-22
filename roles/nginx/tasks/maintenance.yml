@@ -1,0 +1,29 @@
+- name: /home/webapps
+  file:
+    path=/home/webapps
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: /home/webapps/guest
+  file:
+    path=/home/webapps/guest
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: maintenance.html
+  copy:
+    src=maintenance.html
+    dest=/home/webapps/maintenance.html
+    owner=root
+    group=root
+    mode=0644
+
+- name: /home/webapps/guest/maintenance.html link
+  file:
+    src=/home/webapps/maintenance.html
+    dest=/home/webapps/guest/maintenance.html
+    state=link

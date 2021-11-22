@@ -1,0 +1,26 @@
+---
+# cbsfs-prod vars file
+
+sg: SG_LAN_PROD
+key_name: ops-config
+profile_name: cbsfs-prod
+fqdn_prefix: cbsfs
+fqdn_suffix: ddc.io
+rt53_zone: ddc.io
+prefix: CBSFS
+env: PROD
+dd_env: prod
+ic_env: production
+app_tag: DDC
+icinga_profile: Couchbase-Paged
+
+instance_type: i2.2xlarge
+
+cluster_ram_quota: 58972
+cluster_index_ramsize: 512
+cluster_fts_ramsize: 512
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 58972
+

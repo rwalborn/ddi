@@ -1,0 +1,13 @@
+# ansible-playbook -vvvv foo.yml
+---
+- name: create security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    sg: SG_CFAPXY_DEV
+    service_tag: CLS
+  tasks:
+    - include: "{{ sg }}_INC.yml"

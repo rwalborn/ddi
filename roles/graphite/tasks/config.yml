@@ -1,0 +1,74 @@
+- name: install packages with predefined version
+  package: name={{ item }} use=yum state=installed
+  with_items:
+    - httpd
+    - "graphite-web-{{ graphite_ver }}"
+    - "python-whisper-{{ whisper_ver }}"
+    - "python-carbon-{{ carbon_ver }}"
+
+- name: /d01 ownership
+  file:
+    path=/d01
+    owner=carbon
+    group=carbon
+
+- name: link /var/lib/carbon/whisper to /d01
+  file:
+    path=/var/lib/carbon/whisper
+    src=/d01
+    state=link
+    force=true
+
+- name: start services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - httpd
+    - carbon-cache
+
+- name: local_settings.py
+  template:
+    src=local_settings.py.yml
+    dest=/usr/lib/python2.7/site-packages/graphite/local_settings.py
+    owner=root
+    group=root
+    mode=0644
+
+- name: generate graphite.db
+  command: /usr/lib/python2.7/site-packages/graphite/manage.py syncdb --noinput
+
+- name: ensure apache can write to graphite.db
+  file:
+    path=/var/lib/graphite-web/graphite.db
+    owner=apache
+    group=apache
+
+- name: vhost
+  template:
+    src=graphite-web.conf.yml
+    dest=/etc/httpd/conf.d/graphite-web.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: httpd_reload
+
+- name: storage-schemas.conf
+  template:
+    src=storage-schemas.conf.yml
+    dest=/etc/carbon/storage-schemas.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: carbon_reload
+
+- name: carbon.conf
+  template:
+    src=carbon.conf.yml
+    dest=/etc/carbon/carbon.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: carbon_reload
+
+- name: first start often fails
+  command: systemctl start carbon-cache
+  ignore_errors: true

@@ -1,0 +1,11 @@
+---
+# defaults file for sudoers
+
+# some default vars
+sudoers_dir_path: "/etc/sudoers.d/"
+
+# empty arrays for sudo-definitions
+sudoers_all: []
+sudoers_user: []
+
+file_state: "{{ item.state | default('present') }}"

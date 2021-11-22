@@ -1,0 +1,16 @@
+# one-time prep for this role:
+#
+# 1. create iam role for lambda
+#    iam/dynamodbbackup.yml
+# 2. create log group with
+#    aws logs create-log-group --log-group-name /aws/lambda/dynamodbbackup --tags env=tools,app=DDC
+# 3. set log retention to 2 months
+#    aws logs put-retention-policy --log-group-name /aws/lambda/dynamodbbackup --retention-in-days 60
+
+- name: update lambda code
+  include: lambda.yml
+  when: do == 'lambda'
+
+- name: create cloudwatch rule to backup a db
+  include: backup.yml
+  when: do == 'backup'

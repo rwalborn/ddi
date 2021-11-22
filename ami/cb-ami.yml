@@ -1,0 +1,176 @@
+## Runs as ansible-playbook -vvvv cb-ami.yml --vault-password-file ~/.vault_pass.txt
+
+---
+- name: Creation of a couchbase ami
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    sg: SG_LAN_TOOLS
+    name_tag: CBAMI
+  tasks:
+    - name: Launch instances
+      local_action:
+        module: ec2
+        region: "{{ region }}"
+        key_name: ops-config
+        group: "{{ sg }}"
+        instance_type: m3.xlarge
+        instance_profile_name: ami_base_centos
+        image: "{{ centos_7_ebs_hvm }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        count: 1
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 8
+            delete_on_termination: true
+        wait: yes
+      register: ec2
+
+    - name: Add EP2 instances to host group
+      add_host:
+        name: "{{ item.private_ip }}"
+        groups: ec2launch
+      with_items: "{{ ec2.instances }}"
+
+    - name: Add tag to instances
+      ec2_tag:
+        resource: "{{ item.id }}"
+        region: "{{ region }}"
+        state: present
+      with_items: "{{ ec2.instances }}"
+      args:
+        tags:
+          Name: "{{ name_tag }}"
+
+    - name: Wait for SSH to be available
+      wait_for:
+        host: "{{ item.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+      with_items: "{{ ec2.instances }}"
+
+- name: Configure provisioned servers
+  hosts: ec2launch
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - group_vars/tools
+  pre_tasks:
+    - name: upgrade distro
+      shell: yum upgrade -y
+  roles:
+    - ddiuser
+    - { role: spacewalk, baking: true }
+    - { role: ldap_client, baking: true }
+    - { role: ops, repo: git, code_deploy: false }
+    - { role: splunkforwarder, baking: true }
+    - { role: icinga, baking: true }
+    - repo_ops
+  tasks:
+    - name: download couchbase
+      get_url:
+        url: http://packages.couchbase.com/releases/4.5.1/couchbase-server-community-4.5.1-centos7.x86_64.rpm
+        dest: /root/couchbase-server-community-4.5.1-centos7.x86_64.rpm
+
+    - name: Set the swappiness value for the running system
+      shell: echo 0 > /proc/sys/vm/swappiness
+    
+    - name: Backup sysctl.conf
+      shell: cp -p /etc/sysctl.conf /etc/sysctl.conf.bak.`date +%Y%m%d-%H:%M`
+    
+    - name: Set the value in /etc/sysctl.conf so it stays after reboot
+      shell: echo '' >> /etc/sysctl.conf
+    
+    - name: Set the value in /etc/sysctl.conf so it stays after reboot
+      shell: echo '#Set swappiness to 0 to avoid swapping' >> /etc/sysctl.conf
+    
+    - name: Set the value in /etc/sysctl.conf so it stays after reboot
+      shell: echo 'vm.swappiness = 0' >> /etc/sysctl.conf
+    
+    - name: Disable THP on a running system
+      shell: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+    
+    - name: Disable THP on a running system
+      shell: echo never > /sys/kernel/mm/transparent_hugepage/defrag
+    
+    - name: Backup rc.local 
+      shell: cp -p /etc/rc.d/rc.local /etc/rc.d/rc.local.bak.`date +%Y%m%d-%H:%M`
+
+    - name:
+      lineinfile:
+        path: /etc/rc.d/rc.local
+        line: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+    
+    - name:
+      lineinfile:
+        path: /etc/rc.d/rc.local
+        line: echo never > /sys/kernel/mm/transparent_hugepage/defrag
+    
+    - name: make /etc/rc.local executeable so the above changes keep on reboot
+      file:
+        path: /etc/rc.d/rc.local
+        owner: root
+        group: root
+        mode: 0744
+
+- name: Configure instance(s)
+  hosts: ed2launch
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: True
+  vars_files:
+    - group_vars/tools
+  roles:
+    - { role: bake, distro: nada }
+
+- name: make AMI and terminate instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ami_name: CB_CENT7-004
+    ami_desc: Couchbase Centos 7
+    name_tag: CB_CENT7-004
+    service_tag: OPS
+  tasks:
+    - name: Wait for SSH to be available
+      wait_for:
+        host: "{{ item.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+      with_items: "{{ ec2.instances }}"
+
+    - name: create image
+      ec2_ami:
+        instance_id: "{{ ec2.instances.0.id }}"
+        region: "{{ region }}"
+        name: "{{ ami_name }}"
+        description: "{{ ami_desc }}"
+        wait: yes
+        tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        launch_permissions:
+          user_ids: ['416386939808']
+      register: ec2_ami
+    - name: terminate instance
+      ec2:
+        instance_ids: "{{ ec2.instances.0.id }}"
+        region: us-east-1
+        state: absent
+      when: ec2_ami.state == 'available'
+      tags:
+        - terminate
+

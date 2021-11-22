@@ -1,0 +1,11 @@
+build: false
+config: true
+rebuild: false
+upgrade: false
+mountpoint: /mnt/atlassian
+version: 2.12.0
+package: "atlassian-crowd-{{ version }}.tar.gz"
+domain: crowd.doubledowninteractive.com
+mgt: crowd.use1.tools.ddc.io
+ssl_cert_arn: arn:aws:iam::143177584759:server-certificate/doubledowninteractive.com-20200708
+blkdev: 'xvdf'

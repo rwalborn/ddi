@@ -1,0 +1,38 @@
+- name: packages
+  yum:
+    name={{ item }}
+    state=installed
+  with_items:
+   - erlang-R14B
+   - rabbitmq-server-3.3.5
+
+# https://www.rabbitmq.com/production-checklist.html
+- name: rabbitmq config
+  copy:
+    src=rabbitmq.config.{{ version }}
+    dest=/etc/rabbitmq/rabbitmq.config
+    owner=root
+    group=root
+    mode=0644
+
+- name: rabbitmq limits, as high as 4096
+  copy:
+    src=rabbitmq.limits.{{ version }}
+    dest=/etc/security/limits.d/rabbitmq.conf
+    owner=root
+    group=root
+    mode=0644
+
+- name: icinga needs sudo to exec rabbitmqctl
+  copy:
+    src=icinga.sudoer
+    dest=/etc/sudoers.d/icinga
+    owner=root
+    group=root
+    mode=0440
+
+- name: enable service
+  service:
+    name=rabbitmq-server
+    enabled=yes
+

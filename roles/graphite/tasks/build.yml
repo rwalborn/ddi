@@ -1,0 +1,48 @@
+- name: launch instance
+  ec2:
+    key_name: ops-config
+    instance_type: "{{ instance_type }}"
+    image: "{{ centos_7_ebs_hvm }}"
+    group: "{{ sg }}"
+    region: "{{ region }}"
+    zone: "{{ az }}"
+    instance_profile_name: "{{ role }}"
+    vpc_subnet_id: "{{ subnet }}"
+    assign_public_ip: no
+    wait: yes
+    ebs_optimized: yes
+    instance_tags:
+      Name: "{{ name_tag }}"
+      app: "{{ app_tag }}"
+      service: "{{ service_tag }}"
+    user_data: |
+               #cloud-config
+               hostname: "{{ fqdn }}"
+               manage_etc_hosts: true
+  register: ec2
+
+- name: register dns
+  route53:
+    command: create
+    overwrite: true
+    zone: ddc.io
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ ec2.instances.0.private_ip }}"
+
+- name: ensure service cname
+  route53:
+    command: create
+    overwrite: true
+    zone: ddc.io
+    record: "{{ svc_fqdn }}"
+    type: CNAME
+    ttl: 300
+    value: "{{ fqdn }}"
+
+- name: wait for ssh
+  wait_for: host="{{ ec2.instances.0.private_ip }}" port=22 delay=30 timeout=420 state=started
+
+- name: allow time for cloud-init to execute
+  pause: seconds=10

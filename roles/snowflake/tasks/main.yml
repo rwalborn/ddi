@@ -1,0 +1,7 @@
+---
+- name: call out this box as a special snowflake
+  copy: src=snowflake.txt
+        dest=/etc/motd
+        owner=root
+        mode=644
+

@@ -1,0 +1,11 @@
+---
+- name: create S3 releases repo
+  yum_repository:
+    name: DDI-S3-Releases
+    description: DDI S3 releases repo
+    baseurl: http://ddi-releases-repo.s3.amazonaws.com/x86_64/
+    gpgcheck: no
+    enabled: yes
+    s3_enabled: yes
+    priority: 1
+    state: present

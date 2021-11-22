@@ -1,0 +1,13 @@
+# ansible-playbook -vvvv SG_DWS_STG.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/icinga
+  vars:
+      sg: SG_ICINGA_DEV
+  tasks:
+    - include: "{{ sg }}_INC.yml"

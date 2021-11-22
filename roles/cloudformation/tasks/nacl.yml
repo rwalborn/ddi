@@ -1,0 +1,57 @@
+# underscore is illegal in cloudformation
+
+- name: nacl vars
+  include_vars: nacl.yml
+
+- name: search NACLs by filter when naclversion is not given
+  ec2_vpc_nacl_facts:
+    region: "{{ region }}"
+    filters:
+      'vpc-id': "{{ vpc_id }}"
+      'tag:prefix': "{{ vpcname }}-{{ subnettype }}"
+  register: search
+  when: not naclversion is defined
+
+- name: make a list of versions
+  set_fact: versions="{{ search.nacls | map(attribute='tags.version') | list | sort }}"
+  when: search.nacls is defined
+
+- name: if there is no prior version
+  set_fact: naclversion='001'
+  when: versions is defined and versions|length == 0
+
+- name: increment version number
+  set_fact: byone="{{ ( versions[-1] | int ) + 1 }}"
+  when: versions is defined and versions|length > 0
+
+- name: new version string
+  set_fact: naclversion="{{ byone.zfill(3) }}"
+  when: versions is defined and versions|length > 0
+
+# abort when naclversion is undefined
+- fail: msg="Cannot determine version of the NACL to create!"
+  when: not naclversion is defined
+
+- name: git commit to match with nacl version
+  local_action: command git rev-parse --short HEAD
+  register: commit
+
+- name: launch cloudformation
+  cloudformation:
+    stack_name: "NACL-{{ vpcname }}-{{ subnettype }}-{{ naclversion }}"
+    state: "{{ state }}"
+    region: "{{ region }}"
+    disable_rollback: false
+    template: "roles/cloudformation/files/{{ subnettype }}.yml"
+    template_parameters:
+      vpcname: "{{ vpcname }}"
+      vpcid: "{{ vpc_id }}"
+      vpccidr: "{{ vpc_cidr }}"
+      subnettype: "{{ subnettype }}"
+      naclversion: "{{ naclversion }}"
+      service: "{{ service_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env }}"
+      commit: "{{ commit.stdout }}"
+      seavpn1: "{{ sea_meraki_1 }}/32"
+      seavpn2: "{{ sea_meraki_2 }}/32"

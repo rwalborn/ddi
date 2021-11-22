@@ -1,0 +1,7 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: cloudwatch alarm for elb
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: cloudwatch, alarm: elb, elb: LGN-PROD, elb_warn_latency: '0.1', elb_crit_latency: '0.3' }

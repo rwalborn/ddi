@@ -1,0 +1,38 @@
+# DASH-TOOLS VARS FILE
+
+name_tag: DASHBOARD-TOOLS
+lb: DASHBOARD-TOOLS
+service_tag: BIS
+app_tag: TOOLS
+env: tools
+
+
+
+instance_type: c3.2xlarge
+sg: SG_DASH_TOOLS
+elb_sg: SG_LBDASH_TOOLS
+elb_fqdn: dashboard.use1.tools.doubledowncasino.com
+env: tools
+key_name: ops-config
+profile_name: dashboard-tools
+prefix: DASH
+deployment: TOOLS
+service_tag: BIS
+
+lc: DASHBOARD-TOOLS-001
+hc_type: EC2
+instance_port_1: 80
+
+ud_env: tools
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /login
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 1
+    healthy_threshold: 1

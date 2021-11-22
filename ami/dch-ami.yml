@@ -1,0 +1,94 @@
+# ansible-playbook -vvvv rgs-ami.yml
+# Make AMI for service
+
+- name: DCH-based services
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    name_tag: DCH-AMI
+    service_tag: DCH
+    sg: SG_LAN_TOOLS
+    role: ami_base_centos
+    instance_type: m3.large
+    key_name: ops-config
+  tasks:
+    - name: launch instance
+      ec2:
+        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        group: "{{ sg }}"
+        instance_type: "{{ instance_type }}"
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        image: "{{ centos_68_base }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        wait: yes
+      register: ec2
+    - name: add new instance to host group
+      add_host: hostname={{ ec2.instances.0.private_ip }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=300 state=started
+
+- name: Configure instance(s) configuration
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: True
+  vars_files:
+    - ../group_vars/tools
+  roles:
+    - repo_ops
+    - ddiuser
+    - { role: ops, repo: git, code_deploy: false }
+    - { role: ldap_client, baking: true }
+    - { role: splunkforwarder, baking: true }
+    - clippie_deployer
+    - auth_autobldr
+    - { role: icinga, baking: true }
+    - repo_S3_releases
+    - daily_challenge
+    - { role: bake, distro: nada }
+
+- name: make AMI and terminate instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    ami_name: DCH-004
+    service_tag: DCH
+    ami_desc: DCH CENTOS 6.8 AMI
+  tasks:
+    - name: create image
+      ec2_ami:
+        instance_id: "{{ ec2.instances.0.id }}"
+        region: "{{ region }}"
+        name: "{{ ami_name }}"
+        description: "{{ ami_name }}"
+        wait: yes
+        tags:
+          Name: "{{ ami_name }}"
+          service: "{{ service_tag }}"
+        launch_permissions:
+           user_ids: ['416386939808']
+      register: ec2_ami
+      tags:
+        - ami
+    - name: terminate instance
+      ec2:
+        instance_ids: "{{ ec2.instances.0.id }}"
+        region: us-east-1
+        state: absent
+      when: ec2_ami.state == 'available'
+      tags:
+        - ami 
+        - terminate

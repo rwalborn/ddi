@@ -1,0 +1,5 @@
+roles:
+  - sssd.tools-sssd
+  - openldap.tools-ldap
+  - sudoers.ops-sudoers
+  - sudoers.wheel-sudoers

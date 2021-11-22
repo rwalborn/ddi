@@ -1,0 +1,42 @@
+global
+        stats socket /var/run/haproxy/haproxy.sock user haproxy group haproxy mode 0664 level admin
+        log 127.0.0.1 local2 notice
+        maxconn {{haproxy_global_maxconn|default('4096', true)}}
+        chroot /var/tmp/haproxy
+        user haproxy
+        group haproxy
+        daemon
+        quiet
+        pidfile /var/run/haproxy/haproxy.pid
+
+defaults
+        log     global
+        mode    tcp
+        option  httplog
+        option  dontlognull
+        retries 3
+        redispatch
+        maxconn {{haproxy_defaults_maxconn|default('2000', true)}}
+        contimeout      5000
+        clitimeout      60000
+        srvtimeout      60000
+
+listen stats 127.0.0.1:8000
+        mode http
+        stats uri /haproxy-status
+
+listen {{ daemonname }} 0.0.0.0:{{ listenport }}
+        mode tcp
+        balance roundrobin
+{% for lopt in haproxy_listen_opts %}
+        {{ lopt }}
+{% endfor %}
+{% if haproxy_disable_httpchk is not defined or not haproxy_disable_httpchk %}
+        option httpchk GET /health
+{% endif %}
+{% if backendopts is not defined %}
+{%   set backendopts = '' %}
+{% endif %}
+{% for host in groups[haproxy_group_name] %}
+        server {{ hostvars[host]['server_class'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ backendport }} {{ backendopts }}
+{% endfor %}

@@ -1,0 +1,23 @@
+---
+# MQNOT-PROD VARS FILE
+
+sg: SG_LAN_PROD
+key_name: ops-config
+profile_name: mqnot-prod
+prefix: MQNOT
+env: PROD
+dd_env: prod
+service_tag: MQNOT
+
+fqdn_prefix: mqnot
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.prod.doubledowncasino.com
+
+instance_type: m3.xlarge
+
+lbname: LBMQNOT-TEST
+
+rt53_zone: doubledowncasino.com
+

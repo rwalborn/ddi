@@ -1,0 +1,3 @@
+- name: upgrade distro
+  yum: name=*
+       state=latest

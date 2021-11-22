@@ -1,0 +1,33 @@
+# export ANSIBLE_FORCE_COLOR=true; export AWS_PROFILE=prod; ansible-playbook -vvvv --vault-password-file ~/.vault_pass.txt ~/ddi-vpc//php-dev-asg.yml
+---
+- name: create a asg for php-casino backed services
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/php
+    - ../host_vars/php-qa
+  vars:
+    lc_version: "001"
+
+  tasks:
+    - name: Autoscaling group
+      ec2_asg:
+        name: "{{ service_tag }}-{{env|upper}}"
+        region: "{{ region }}"
+        availability_zones: [ "{{ az1 }}", "{{ az2 }}" ]
+        vpc_zone_identifier: [ "{{ subnet_pri_1 }}", "{{ subnet_pri_2 }}" ]
+        launch_config_name: "{{ service_tag }}-{{ env|upper }}-{{ lc_version }}"
+        desired_capacity: "{{ ec2_asg.desired_capacity }}"
+        min_size: "{{ ec2_asg.min_size }}"
+        max_size: "{{ ec2_asg.max_size }}"
+        load_balancers: [ "{{ service_tag }}-{{ env|upper }}" ]
+        health_check_type: "{{ ec2_asg.hc_type }}"
+        wait_for_instances: yes
+        tags:
+          - Name: "{{ service_tag }}-{{ env|upper }}"
+            rpm: "{{ rpm_tag }}"
+            service: "{{ service_tag }}"
+            env: "{{ env }}"
+            app: "{{ app_tag }}"
+            icinga-profile: "{{ icinga_profile }}"

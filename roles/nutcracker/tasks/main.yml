@@ -1,0 +1,20 @@
+---
+# These tasks install nutcracker modules
+#
+- name: Install memcached
+  action: yum pkg=nutcracker state=present
+
+- name: Create the conf dir if it doesn't exist
+  file:
+    path: /etc/nutcracker/
+    state: directory
+    mode: 0755
+
+- name: Link the config /etc/nutcracker/nutcraker.yml
+  file:
+    src= /usr/local/share/DDI/ops/{{ service_env }}/nutcracker.yml
+    dest=/etc/nutcracker/nutcracker.yml
+  state: link
+
+- name: Restart nutcracker
+  service: name=nutcracker state=restarted

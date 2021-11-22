@@ -1,0 +1,297 @@
+{
+  "Parameters": {
+    "S3OutputLoc": {
+      "Description": "S3 bucket name",
+      "Type": "String",
+      "Default": "ddc-dynamodb-backup"
+    },
+    "TableName": {
+      "Description": "DynamoDB table name",
+      "Type": "String",
+      "Default": "LYTUSER-USE1-LT"
+    },
+    "ReadRatio": {
+      "Description": "Ratio of DynamoDB read capacity to be used by the job",
+      "Type": "Number",
+      "Default": "0.25"
+    },
+    "Timeout": {
+      "Description": "Timeout for delay",
+      "Type": "String",
+      "Default": "1 hours"
+    }
+  },
+  "Resources": {
+    "DPL": {
+      "Type": "AWS::DataPipeline::Pipeline",
+      "Properties": {
+        "Name": { "Fn::Join" : [ " ", [ { "Ref": "TableName" }, "Backup" ] ] },
+        "Description": "Pipeline to backup DynamoDB data to S3",
+        "Activate": "true",
+        "ParameterObjects": [
+          {
+            "Id": "myDDBReadThroughputRatio",
+            "Attributes": [
+              {
+                "Key": "description",
+                "StringValue": "DynamoDB read throughput ratio"
+              },
+              {
+                "Key": "type",
+                "StringValue": "Double"
+              },
+              {
+                "Key": "default",
+                "StringValue": { "Ref": "ReadRatio" }
+              }
+            ]
+          },
+          {
+            "Id": "myOutputS3Loc",
+            "Attributes": [
+              {
+                "Key": "description",
+                "StringValue": "S3 output bucket"
+              },
+              {
+                "Key": "type",
+                "StringValue": "AWS::S3::ObjectKey"
+              },
+              {
+                "Key": "default",
+                "StringValue": { "Fn::Join" : [ "", [ "s3://", { "Ref": "S3OutputLoc" } ] ] }
+              }
+            ]
+          },
+          {
+            "Id": "myDDBTableName",
+            "Attributes": [
+              {
+                "Key": "description",
+                "StringValue": "DynamoDB Table Name "
+              },
+              {
+                "Key": "type",
+                "StringValue": "String"
+              },
+              {
+                "Key": "default",
+                "StringValue": { "Ref": "TableName" }
+              }
+            ]
+          }
+        ],
+        "PipelineObjects": [
+          {
+            "Id": "S3BackupLocation",
+            "Name": "Copy data to this S3 location",
+            "Fields": [
+              {
+                "Key": "type",
+                "StringValue": "S3DataNode"
+              },
+              {
+                "Key": "dataFormat",
+                "RefValue": "DDBExportFormat"
+              },
+              {
+                "Key": "directoryPath",
+                "StringValue": "#{myOutputS3Loc}/#{myDDBTableName}/#{format(@scheduledStartTime, 'YYYY-MM-dd-HH-mm-ss')}"
+              },
+              {
+                "Key": "schedule",
+                "RefValue": "DefaultSchedule"
+              }
+            ]
+          },
+          {
+            "Id": "DDBSourceTable",
+            "Name": "DDBSourceTable",
+            "Fields": [
+              {
+                "Key": "tableName",
+                "StringValue": "#{myDDBTableName}"
+              },
+              {
+                "Key": "type",
+                "StringValue": "DynamoDBDataNode"
+              },
+              {
+                "Key": "dataFormat",
+                "RefValue": "DDBExportFormat"
+              },
+              {
+                "Key": "readThroughputPercent",
+                "StringValue": "#{myDDBReadThroughputRatio}"
+              },
+              {
+                "Key": "schedule",
+                "RefValue": "DefaultSchedule"
+              }
+            ]
+          },
+          {
+            "Id": "DDBExportFormat",
+            "Name": "DDBExportFormat",
+            "Fields": [
+              {
+                "Key": "type",
+                "StringValue": "DynamoDBExportDataFormat"
+              },
+              {
+                "Key": "schedule",
+                "RefValue": "DefaultSchedule"
+              }
+            ]
+          },
+          {
+            "Id": "TableBackupActivity",
+            "Name": "TableBackupActivity",
+            "Fields": [
+              {
+                "Key": "resizeClusterBeforeRunning",
+                "StringValue": "true"
+              },
+              {
+                "Key": "type",
+                "StringValue": "HiveCopyActivity"
+              },
+              {
+                "Key": "input",
+                "RefValue": "DDBSourceTable"
+              },
+              {
+                "Key": "runsOn",
+                "RefValue": "EmrClusterForBackup"
+              },
+              {
+                "Key": "output",
+                "RefValue": "S3BackupLocation"
+              },
+              {
+                "Key": "schedule",
+                "RefValue": "DefaultSchedule"
+              },
+              {
+                "Key": "lateAfterTimeout",
+                "StringValue": { "Ref": "Timeout" }
+              },
+              {
+                "Key": "onLateAction",
+                "RefValue": "myAction1"
+              },
+              {
+                "Key": "onFail",
+                "RefValue": "myAction1"
+              }
+            ]
+          },
+          {
+            "Id": "DefaultSchedule",
+            "Name": "Daily",
+            "Fields": [
+              {
+                "Key": "startAt",
+                "StringValue": "FIRST_ACTIVATION_DATE_TIME"
+              },
+              {
+                "Key": "type",
+                "StringValue": "Schedule"
+              },
+              {
+                "Key": "period",
+                "StringValue": "1 Day"
+              }
+            ]
+          },
+          {
+            "Id": "Default",
+            "Name": "Default",
+            "Fields": [
+              {
+                "Key": "type",
+                "StringValue": "Default"
+              },
+              {
+                "Key": "scheduleType",
+                "StringValue": "cron"
+              },
+              {
+                "Key": "failureAndRerunMode",
+                "StringValue": "CASCADE"
+              },
+              {
+                "Key": "role",
+                "StringValue": "DataPipelineDefaultRole"
+              },
+              {
+                "Key": "resourceRole",
+                "StringValue": "DataPipelineDefaultResourceRole"
+              },
+              {
+                "Key": "schedule",
+                "RefValue": "DefaultSchedule"
+              }
+            ]
+          },
+          {
+            "Id": "EmrClusterForBackup",
+            "Name": "EmrClusterForBackup",
+            "Fields": [
+              {
+                "Key": "terminateAfter",
+                "StringValue": "6 Hours"
+              },
+              {
+                "Key": "amiVersion",
+                "StringValue": "3.3.2"
+              },
+              {
+                "Key": "masterInstanceType",
+                "StringValue": "m1.medium"
+              },
+              {
+                "Key": "coreInstanceType",
+                "StringValue": "m1.medium"
+              },
+              {
+                "Key": "coreInstanceCount",
+                "StringValue": "1"
+              },
+              {
+                "Key": "type",
+                "StringValue": "EmrCluster"
+              },
+              {
+                "Key": "schedule",
+                "RefValue": "DefaultSchedule"
+              }
+            ]
+          },
+          {
+            "Id": "myAction1",
+            "Name": "myAction1",
+            "Fields": [
+              {
+                "Key": "type",
+                "StringValue": "SnsAlarm"
+              },
+              {
+                "Key": "topicArn",
+                "StringValue": "arn:aws:sns:us-east-1:143177584759:dynamodb"
+              },
+              {
+                "Key": "subject",
+                "StringValue": "Check #{myDDBTableName} Data PipeLine status"
+              },
+              {
+                "Key": "message",
+                "StringValue": "#{myDDBTableName} Data PipeLine failed or did not complete in time"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

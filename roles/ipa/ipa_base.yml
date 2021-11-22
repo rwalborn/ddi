@@ -1,0 +1,185 @@
+# Runs as ansible-playbook -i 'localhost,' ipa_base.yml
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+  - name: IPA ec2 security group
+    ec2_group:
+      name: SG_IPA
+      description: IPA security group
+      vpc_id: vpc-a04986c4
+      region: us-east-1
+      purge_rules: true
+      purge_rules_egress: true
+      rules:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 53
+          to_port: 53
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 88
+          to_port: 88
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 389
+          to_port: 389
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 443
+          to_port: 443
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 464
+          to_port: 464
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 636
+          to_port: 636
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 7389
+          to_port: 7389
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 9443
+          to_port: 9445
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 53
+          to_port: 53
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 88
+          to_port: 88
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 123
+          to_port: 123
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 464
+          to_port: 464
+          cidr_ip: 0.0.0.0/0
+      rules_egress:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 53
+          to_port: 53
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 88
+          to_port: 88
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 389
+          to_port: 389
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 443
+          to_port: 443
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 464
+          to_port: 464
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 636
+          to_port: 636
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 7389
+          to_port: 7389
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 9443
+          to_port: 9445
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 53
+          to_port: 53
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 88
+          to_port: 88
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 123
+          to_port: 123
+          cidr_ip: 0.0.0.0/0
+        - proto: udp
+          from_port: 464
+          to_port: 464
+          cidr_ip: 0.0.0.0/0
+    register: aws_sg
+  - name: Tag the SG_IPA
+    ec2_tag:
+      resource: "{{aws_sg.group_id}}"
+      region: us-east-1
+      state: present
+      tags:
+        Name: "SG_IPA"
+#  - name: Create the IPA_1 Instance
+#    ec2:
+#      key_name: ops-config
+#      group: SG_IPA
+#      region: us-east-1
+#      instance_type: c4.large
+## fedora 22
+##      image: ami-76dfc41e
+#      image: ami-f7dca092
+#      vpc_subnet_id: subnet-f80a25a1
+#      assign_public_ip: no
+#      private_ip: 10.0.57.209
+#      wait: yes
+#      instance_tags:
+#        Name: IPA_1
+#        Enviroment: Prod
+#        Service: IPA
+#        Count: 1
+#  - name: Create the IPA_2 Instance
+#    ec2:
+#      key_name: ops-config
+#      group: SG_IPA
+#      region: us-east-1
+#      instance_type: c4.large
+#      image: ami-f7dca092
+#      vpc_subnet_id: subnet-3d7e2316
+#      assign_public_ip: no
+#      private_ip: 10.0.112.106
+#      wait: yes
+#      instance_tags:
+#        Name: IPA_2
+#        Enviroment: Prod
+#        Service: IPA
+#        Count: 1
+  - name: Create the IPA_3 Instance
+    ec2:
+      key_name: ops-config
+      group: SG_IPA
+      region: us-east-1
+      instance_type: c4.large
+      image: ami-f7dca092
+      vpc_subnet_id: subnet-3d7e2316
+      assign_public_ip: no
+      wait: yes
+      instance_tags:
+        Name: IPA_3
+        Enviroment: Prod
+        Service: IPA
+        Count: 1

@@ -1,0 +1,56 @@
+- name: add group
+  group:
+    name=jenkins
+    gid=991
+
+- name: add user
+  user:
+    name=jenkins
+    uid=991
+    group=jenkins
+    createhome=true
+    home=/var/lib/jenkins
+    generate_ssh_key=no
+    skeleton=no
+    shell=/bin/bash
+    force=yes
+
+- name: make .ssh dir
+  file:
+    path=/var/lib/jenkins/.ssh
+    state=directory
+    mode=0700
+    owner=jenkins
+    group=jenkins
+
+- name: make bin dir
+  file:
+    path=/var/lib/jenkins/bin
+    state=directory
+    mode=0755
+    owner=jenkins
+    group=jenkins
+
+- name: make remoting dir
+  file:
+    path=/var/lib/jenkins/remoting
+    state=directory
+    mode=0755
+    owner=jenkins
+    group=jenkins
+
+- name: ssh config
+  copy:
+    src=config
+    dest=/var/lib/jenkins/.ssh/config
+    mode=0600
+    owner=jenkins
+    group=jenkins
+
+- name: sudo
+  copy:
+    src=jenkins-slave.sudoer
+    dest=/etc/sudoers.d/jenkins
+    mode=0400
+    owner=root
+    group=root

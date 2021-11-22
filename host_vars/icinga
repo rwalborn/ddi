@@ -1,0 +1,4 @@
+instance_type: c3.xlarge
+instance_port: 80
+ping_path: "/ping.html"
+svc_cert: arn:aws:acm:us-east-1:143177584759:certificate/e86ffb35-b584-43ef-b65b-c3a30cbee8de

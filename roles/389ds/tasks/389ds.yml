@@ -1,0 +1,9 @@
+---
+# 389ds: Tasks entry point. Called by main.yml
+
+- name: install sssd and dependencies
+  yum: name={{ item }} state=installed
+  with_items:
+    - sssd
+    - nss-pam-ldapd
+    - openldap-clients

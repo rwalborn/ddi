@@ -1,0 +1,17 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# svcproxy for cfa, see UR-5964
+
+- name: new lb
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    env_tag: development
+    service_tag: CLS
+    sg: SG_CFAPXY_DEV
+    instance_type: t2.micro
+  roles:
+    - { role: svcproxy, do: standup, svc_code: cfa, name_tag: 'CFAPXY-DEV', az: az1, fqdn: cfapxy01.use1.dev.doubledowncasino.com, svc_fqdn: internal-cfa-cls-dev-int-28498230.us-east-1.elb.amazonaws.com }

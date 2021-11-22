@@ -1,0 +1,10 @@
+init_config:
+
+instances:
+  - name: java_8080
+    url: http://localhost:8080/api/v1/ping
+    timeout: 1
+    content_match: 'pong'
+    threshold: 3
+    window: 5
+    skip_event: true

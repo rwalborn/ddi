@@ -1,0 +1,5 @@
+- include: dynamodb-datapipeline.yml
+  when: type == 'dynamodb-datapipeline'
+
+- include: nacl.yml
+  when: type == 'nacl'

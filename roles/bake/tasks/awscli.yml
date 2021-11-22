@@ -1,0 +1,15 @@
+- name: download awscli
+  command: curl https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip
+    chdir=/tmp
+
+- name: unzip awscli
+  command: unzip awscli-bundle.zip
+    chdir=/tmp
+
+- name: install awscli
+  command: ./install -i /usr/local/aws -b /usr/bin/aws
+    chdir=/tmp/awscli-bundle
+
+- name: clean up
+  command: rm -rf awscli-bundle awscli-bundle.zip
+    chdir=/tmp

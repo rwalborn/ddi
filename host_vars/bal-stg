@@ -1,0 +1,44 @@
+# BAL-STG VARS FILE
+
+name_tag: BAL-STG
+lb: BAL-STG
+service_tag: BAL
+
+app_tag: DDC
+rpm_tag: ddc-balance-webapp
+app_ami: ami-81d56b97
+instance_type: c3.2xlarge
+spot_price: .42
+sg: SG_BAL_STG
+elb_sg: SG_LBBAL_STG
+elb_fqdn: bal.use1.stg.doubledowncasino.com
+env: staging
+key_name: ops-config
+profile_name: bal-stg
+prefix: BAL
+deployment: STG
+
+lc: BAL-STG-006
+hc_type: EC2
+instance_port_1: 11050
+
+ud_env: stg
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /status
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2

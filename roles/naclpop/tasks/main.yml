@@ -1,0 +1,55 @@
+- name: role_string
+  set_fact:
+    myrole='scanner'
+  when: scanner
+
+- name: role_string
+  set_fact:
+    myrole='endpoint'
+  when: not scanner
+
+- name: set user_data
+  set_fact:
+    user_data="{{ lookup('template', 'user_data.yml.j2') }}"
+
+- name: launch instance in vpc
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    wait: true
+    image: "{{ centos_7_ebs_hvm }}"
+    group: "{{ sg }}"
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    assign_public_ip: "{{ assign_public_ip }}"
+    zone: "{{ az }}"
+    region: "{{ region }}"
+    instance_profile_name: "{{ role }}"
+    instance_tags:
+      Name: "{{ name_tag + ' ' + location + ' ' + myrole }}"
+      service: "{{ service_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env_tag }}"
+    user_data: "{{ user_data }}"
+  when: vpc
+
+- name: launch instance in ec2
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    wait: true
+    image: "{{ centos_7_ebs_hvm }}"
+    group: "{{ sg }}"
+    region: "{{ region }}"
+    instance_profile_name: "{{ role }}"
+    instance_tags:
+      Name: "{{ name_tag + ' ' + location + ' ' + myrole }}"
+      service: "{{ service_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env_tag }}"
+    user_data: "{{ user_data }}"
+  register: ec2
+  when: not vpc
+
+- name: add classiclink
+  shell: "aws --profile {{ aws_profile }} ec2 attach-classic-link-vpc --instance-id {{ ec2.instances.0.id }} --vpc-id {{ vpc_id }} --groups {{ classiclink_sg }}"
+  when: not vpc and location == 'classiclink'   

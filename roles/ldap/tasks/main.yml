@@ -1,0 +1,48 @@
+---
+# Based on https://my.rightscale.com/acct/20956/right_scripts/473115001
+
+- name:
+  yum: name={{ item }} state=installed
+  with_items:
+    - openldap-clients
+    - nss-pam-ldapd
+
+- command: 'authconfig --enableshadow --enablelocauthorize --enablemkhomedir --enableldap --enableldapauth --ldapserver=ldap://{{ ldaphost }} --ldapbasedn={{ basedn }} --update'
+
+- template: src=ldap.conf.j2 dest=/etc/openldap/ldap.conf owner=root group=root mode=0644
+- template: src=ldap-keys.sh.j2 dest=/etc/ssh/ldap-keys.sh owner=root group=root mode=0755
+
+- file: src=/etc/openldap/ldap.conf dest=/etc/sudo-ldap.conf owner=root group=root state=link force=yes
+
+
+
+- lineinfile:
+    dest=/etc/ssh/sshd_config
+    line='PermitRootLogin without-password'
+    state=present
+
+- lineinfile:
+    dest=/etc/ssh/sshd_config
+    line='AuthorizedKeysCommand /etc/ssh/ldap-keys.sh'
+    state=present
+
+- lineinfile:
+    dest=/etc/ssh/sshd_config
+    line='AuthorizedKeysCommandUser nobody'
+    state=present
+
+- lineinfile:
+    dest=/etc/ssh/sshd_config
+    line="AllowGroups {{ sshd_default_groups }} {{ sshd_additional_groups }}"
+    state=present
+
+# note the double-quote here
+- lineinfile:
+    "dest=/etc/nsswitch.conf
+    line='sudoers:    files ldap'
+    state=present"
+
+- service: name=nscd state=restarted
+- service: name=nslcd state=restarted
+- service: name=sshd state=restarted
+

@@ -1,0 +1,160 @@
+# ansible-playbook -vvvv -i "localhost," foo.yml
+
+- name: cut over cbdealer dns records
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: cbdealer01
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer01.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-90-93-220.compute-1.amazonaws.com
+    - name: cbdealer02
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer02.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-234-148-27.compute-1.amazonaws.com
+    - name: cbdealer03
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer03.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-242-127-238.compute-1.amazonaws.com
+    - name: cbdealer04
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer04.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-163-218-103.compute-1.amazonaws.com
+    - name: cbdealer05
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer05.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-91-116-48.compute-1.amazonaws.com
+    - name: cbdealer06
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer06.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-82-23-130.compute-1.amazonaws.com
+    - name: cbdealer07
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer07.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-107-20-13-1.compute-1.amazonaws.com
+    - name: cbdealer08
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer08.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-221-103-85.compute-1.amazonaws.com
+    - name: cbdealer09
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer09.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-146-205-194.compute-1.amazonaws.com
+    - name: cbdealer10
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer10.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-227-12-215.compute-1.amazonaws.com
+    - name: cbdealer11
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer11.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-160-244-69.compute-1.amazonaws.com
+    - name: cbdealer12
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer12.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-226-3-242.compute-1.amazonaws.com
+    - name: cbdealer13
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer13.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-107-20-81-232.compute-1.amazonaws.com
+    - name: cbdealer14
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer14.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-107-20-27-10.compute-1.amazonaws.com
+    - name: cbdealer15
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer15.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-226-185-97.compute-1.amazonaws.com
+    - name: cbdealer16
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer16.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-54-82-13-67.compute-1.amazonaws.com
+    - name: cbdealer17
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: cbdealer17.use1.prod.ddc.io
+        type: CNAME
+        ttl: 60
+        value: ec2-50-19-191-36.compute-1.amazonaws.com

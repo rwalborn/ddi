@@ -1,0 +1,42 @@
+# DWMPE-DEV VARS FILE
+
+name_tag: DWMPE-DEV
+lb: DWMPE-DEV
+service_tag: DWMPE
+
+app_tag: DDI
+rpm_tag: ddc-player-engine-service-sa
+app_ami: ami-4630e950
+instance_type: m3.xlarge
+sg: SG_DWMPE_DEV
+elb_sg: SG_LBDWMPE_DEV
+elb_fqdn: dwmpe.use1.dev.doubledowncasino.com
+env: development
+key_name: ops-config
+profile_name: dwmpe-dev
+
+lc: DWMPE-DEV-001
+
+ud_env: dev
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11432
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /HealthCheck
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+

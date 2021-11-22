@@ -1,0 +1,47 @@
+---
+- name: create "{{ name_tag }}" security group
+  ec2_group:
+    name: "{{ sg }}"
+    description: "{{ sg }}"
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        from_port: 443
+        to_port: 443
+        cidr_ip: 0.0.0.0/0
+      # allow agent from repomaster
+      - proto: tcp
+        from_port: 50000
+        to_port: 50000
+        cidr_ip: 54.167.255.100/32
+      # allow agent from qa NAT
+      - proto: tcp
+        from_port: 50000
+        to_port: 50000
+        cidr_ip: 52.70.231.213/32
+      # allow agent from qa NAT
+      - proto: tcp
+        from_port: 50000
+        to_port: 50000
+        cidr_ip: 52.86.113.9/32
+      # allow agent from sbx NAT
+      - proto: tcp
+        from_port: 50000
+        to_port: 50000
+        cidr_ip: 52.87.83.131/32
+      # allow agent from jacob local env
+      - proto: tcp
+        from_port: 50000
+        to_port: 50000
+        cidr_ip: 100.38.251.59/32
+  register: ec2_group
+
+- name: Tag the security group
+  ec2_tag:
+    resource: "{{ ec2_group.group_id }}"
+    region: "{{ region }}"
+    state: present
+    tags:
+      Name: "{{ sg }}"
+      service: "{{ service_tag }}"

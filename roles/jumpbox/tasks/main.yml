@@ -1,0 +1,62 @@
+- name: disable root login 1
+  lineinfile:
+    dest=/etc/ssh/sshd_config
+    state=absent
+    line='PermitRootLogin without-password'
+
+- name: disable root login 2
+  lineinfile:
+    dest=/etc/ssh/sshd_config
+    state=present
+    line='PermitRootLogin no'
+
+- name: set ciphers
+  lineinfile:
+    dest=/etc/ssh/sshd_config
+    state=present
+    line='Ciphers aes256-ctr,aes192-ctr,aes128-ctr,aes256-cbc,aes192-cbc,aes128-cbc'
+
+- name: set macs
+  lineinfile:
+    dest=/etc/ssh/sshd_config
+    state=present
+    line='MACs hmac-sha1'
+
+
+- name: touch /etc/sudoers.d/operations
+  file:
+    path=/etc/sudoers.d/operations
+    state=touch
+    owner=root
+    group=root
+    mode=0440
+
+- name: sudo for operations
+  lineinfile:
+    "dest=/etc/sudoers.d/operations
+    state=present
+    line='%operations ALL=NOPASSWD: ALL'"
+
+- name: install packages
+  yum: name={{ item }} state=installed
+  with_items:
+    - mariadb
+    - python-virtualenv
+
+- name: motd
+  copy:
+    src=motd
+    dest=/etc/motd
+    mode=644
+
+- name: restart sssd
+  service:
+    name=sssd
+    enabled=yes
+    state=restarted
+  when: sssd
+
+- name: last step, restart sshd
+  service:
+    name=sshd
+    state=restarted

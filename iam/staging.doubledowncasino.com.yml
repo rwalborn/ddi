@@ -1,0 +1,28 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# useful commands
+# aws iam list-server-certificates
+# aws iam delete-server-certificate --server-certificate-name
+
+# iam_cert only starts to work after ansible 2.1.2
+# and it is still too stupid to read the key from vault,
+# run the playbook with decrypted file, then encrypt before committing the file
+
+# AWS API does not allow cert replacement with same name
+# So we will name the cert with expiration date
+# Expiration date format is yyyymmdd
+
+- name: create iam objects
+  hosts: localhost
+  connection: local
+  vars:
+    cn: staging.doubledowncasino.com
+    expire: 20171221
+  tasks:
+  - name: create cert
+    iam_cert:
+      name: "{{ cn }}-{{ expire }}"
+      state: present
+      cert: "ssl/{{ cn }}.crt"
+      cert_chain: "ssl/{{ cn }}.chain"
+      key: "ssl/{{ cn }}.key"

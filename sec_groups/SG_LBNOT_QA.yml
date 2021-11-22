@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBNOT_QA.yml
+---
+- name: LBNOT_QA security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/not-qa
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

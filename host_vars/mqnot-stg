@@ -1,0 +1,22 @@
+---
+# MQNOT-STG VARS FILE
+
+sg: SG_LAN_STG
+key_name: ops-config
+profile_name: mqnot-stg
+prefix: MQNOT
+env: STG
+dd_env: staging
+
+fqdn_prefix: mqnot
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.stg.doubledowncasino.com
+
+instance_type: m3.xlarge
+
+lbname: LBMQNOT
+
+rt53_zone: doubledowncasino.com
+

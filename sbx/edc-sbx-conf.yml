@@ -1,0 +1,220 @@
+# Runs as export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv edc-sbx-conf.yml --vault-password-file ~/.vault_mobile.txt --extra-vars "www_prefix=d-sbx-3 ENVIRONMENT=use1 VPC=sbx DOMAIN=doubledowncasino.com buildslave_name=D-SBX-3 tag=D_SBX_3"
+# a change to push
+---
+# Installs edc web server + local memcache
+#
+###### TODO/FIXME:
+# Site won't load properly unless SFS configuration 'moduleContentPaths'
+# is set to use the target host!!
+# SFS returns this info in the casinoData response
+# We need to make an application.ini value override
+#
+# Installs buildslave
+# Required command line vars:
+#   autobldr_private_key: path to private key file
+
+
+## THIS LAUNCHED THE INSTANCE, NOT NEEDED NOW?
+#- name: Launch
+#  hosts: ec2launched
+#  gather_facts: False
+#  become: yes
+#  become_user: root
+#  become_method: sudo
+#  vars_files:
+#    - host_vars/edc_web_dev
+#
+#  roles:
+#    - { role: edcweb, task: 'init', when: create_host is defined }
+
+- name: Configure
+  become: yes
+  become_user: root
+  become_method: sudo
+#  hosts: tag_Name_D2_SBX
+  hosts: tag_Name_{{ tag }}
+  gather_facts: yes
+  vars:
+    buildmaster_host: "{{ groups['tag_Name_MOBILEFOOLS'][0] }}"
+
+  vars_files:
+     - host_vars/edc_web_dev
+     - roles/buildbot/vars/common.yml
+     - roles/buildbot/vars/secrets.yml
+     - roles/buildbot/vars/buildslave.yml
+
+  roles:
+#      # - web
+#      # - memcached
+#      # - { role: buildbot, slave_only: true, buildslave_name: 'desktop' }
+    - repo_S3_releases
+    - { role: edcweb, task: 'apache' }
+
+  tasks:
+#      #- include: tasks/install_www_app.yml
+#      - name: copy rpms
+#        copy: src=~/resources/{{ item }}
+#            dest=/opt/
+#            mode=0644
+#        with_items:
+#            - "{{casinoapi_rpm}}"
+
+# NO LONGER NEEDED FOR EDC
+#    - name:
+#      file:
+#        path: "{{ autobldr_home }}/desktop-slave/mercurial"
+#        owner: "{{ autobldr_username }}"
+#        group: "{{ autobldr_username }}"
+#        mode: 0755
+#        state: directory
+#
+#    - name: link /mnt/edc to
+#      file:
+#        src: /mnt/edc/mobile-web-src
+#        dest: "{{ autobldr_home }}/desktop-slave/mercurial/desktopdev"
+#        owner: "{{ autobldr_username }}"
+#        group: "{{ autobldr_username }}"
+#        mode: 0755
+#        state: link
+
+# marc made me sad
+#
+#it's all of those, but desktop-web-src is the parent dir
+#
+#/mnt/ephemeral/home/autobldr/destop-web-src
+#
+#app = ssh://hg@bitbucket.org/ddimobiledev/mobile-web-src
+#tools = ssh://hg@bitbucket.org/ddimobiledev/desktop-web-tools
+#desktop-apps = ssh://hg@bitbucket.org/ddimobiledev/desktop-web-apps
+#desktop-games = ssh://hg@bitbucket.org/ddimobiledev/desktop-web-games
+#desktop-assets = ssh://hg@bitbucket.org/ddimobiledev/desktop-assets
+
+    - name: create .aws dir for creds
+      file:
+        path: "{{ autobldr_home }}/.aws"
+        state: directory
+        owner: "{{ autobldr_username }}"
+        group: "{{ autobldr_username }}"
+        mode: 0755
+
+    - name: create .aws/credentials
+      # Before 2.3, option 'dest' or 'name' was used instead of 'path'
+      blockinfile:
+        dest: "{{ autobldr_home }}/.aws/credentials"
+        owner: "{{ autobldr_username }}"
+        group: "{{ autobldr_username }}"
+        mode: 0600
+        create: yes
+        block: |
+          [default]
+          aws_access_key_id = "{{ default_aws_access_key_id }}"
+          aws_secret_access_key = "{{ default_aws_secret_access_key }}"
+          [nonprod]
+          aws_access_key_id = "{{ nonprod_aws_access_key_id }}"
+          aws_secret_access_key = "{{ nonprod_aws_secret_access_key }}"
+
+    - name: create S3 releases repo
+      yum_repository:
+        name: DDI-S3-Releases
+        description: DDI S3 releases repo
+        baseurl: http://ddi-releases-repo.s3.amazonaws.com/x86_64/
+        gpgcheck: no
+        enabled: yes
+        s3_enabled: yes
+        priority: 1
+        state: present
+
+    - name: Install rpms
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+          - "{{casinoapi_rpm}}"
+
+    - name: Change web root permissions
+      file:
+        path: "{{ virtual_www_root }}"
+        state: directory
+        recurse: yes
+        owner: "{{ autobldr_username }}"
+        group: "{{ autobldr_username }}"
+        mode: 0755
+      
+    - name: remove existing ini from config
+      ini_file:
+        dest: "{{ virtual_www_root }}/current/application/configs/application.ini"
+        section: "{{ VPC }}:parent"
+        state: absent
+
+    - name: remove existing ini from config
+      ini_file:
+        dest: "{{ virtual_www_root }}/current/application/configs/application.ini"
+        section: "{{ VPC }}_{{ ENVIRONMENT }}:{{ VPC }}"
+        state: absent
+
+    - name: Add application.ini config file
+      template:
+        src: roles/edcweb/templates/casino_api.ini.j2
+        dest: /tmp/appini
+
+    # FIXME: Will duplicate data every time this is run
+    - name: add ini to master
+      shell: 'cat /tmp/appini >>{{ virtual_www_root }}/current/application/configs/application.ini'
+
+## Create this link to link the deployed branch code to the webroot
+## /home/webapps/casino/current/content/desktop -> /mnt/ephemeral/home/autobldr/merc-bb-slave/desktop-deploy/edcskyrockets/www/content/desktop
+
+# turned off per marc
+#      - name: ln -s
+#        file:
+#          src: /mnt/ephemeral/home/autobldr/merc-bb-slave/desktop-deploy/edcskyrockets/www/content/desktop
+#          dest: /home/webapps/casino/current/content/desktop
+#          owner: "{{ autobldr_username }}"
+#          group: "{{ autobldr_username }}"
+#          state: link
+#        ignore_errors: yes
+
+    - name: restart httpd
+      service:
+        name: httpd
+        state: restarted
+        enabled: yes
+
+### HAPROXY NO LONGER A THING - DON'T DO IT!!!
+##- name: Update haproxy
+##  hosts: tag_Name_MobileDevWebProxy
+##  become: yes
+##  become_user: root
+##  become_method: sudo
+##  vars_files:
+##     - host_vars/edc_web_dev
+##  vars:
+##      adding_host:
+##        alias: "tag_Name_EDCDevWeb"
+##        hostmatch: "{{ www_prefix }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}"
+##        ip_address: "{{ groups['tag_Name_EDCDevWeb'][0] }}"
+##
+##  roles:
+##      - { role: haproxy_config, frontend_config_template: templates/haproxy/desktop-frontend.cfg.j2, backend_config_template: templates/haproxy/desktop-backend.cfg.j2, config_name: 'desktopweb' }
+#
+##
+## FURTHER TASKS:
+##
+## buildbot's Dev CI builder factory that pulls from maven uses a config file
+## (tools/build/conf/desktopdev_deployconfig.json) which references the wrong maven host.  We need a way to
+## templatize the host so that the ssh tunnel can work, or find a clean way to
+## update buildbot source to use a different config file.
+## python ./tools/buildbot-scripts/deploy_artifacts.py --config ./tools/build/conf/desktopdev_deployconfig.json --deployDev
+##
+## Run CI builder to deploy the code
+##
+## Run
+## > python <buildslave-path>/tools/dev/client-scripts/update_client.py configs/<env>.json
+## to download SVN repos and create symlinks for www
+## Possibly edit/install that config json
+##
+## Create this link to link the deployed branch code to the webroot
+## /home/webapps/casino/current/content/desktop -> /mnt/ephemeral/home/autobldr/merc-bb-slave/desktop-deploy/edcskyrockets/www/content/desktop
+##
+## Make sure permissions are 775 for autobldr/apache
+

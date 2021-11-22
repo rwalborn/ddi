@@ -1,0 +1,13 @@
+build: false
+config: true
+rebuild: false
+mountpoint: /mnt/atlassian
+#this is the package you are going to upgrade to after its online
+jira_package: atlassian-jira-software-7.3.1-x64.bin
+#this package will be installed
+old_jira_package: atlassian-jira-software-7.3.1-x64.bin
+control_port: 8005
+http_port: 8080
+ssl_cert_arn: arn:aws:iam::143177584759:server-certificate/doubledowninteractive.com-20200708
+jira_domain: jira.doubledowninteractive.com
+jira_mgt: jira.use1.tools.ddc.io

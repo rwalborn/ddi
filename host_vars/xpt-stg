@@ -1,0 +1,45 @@
+# XPT-STG VARS FILE
+
+name_tag: XPT-STG
+service_tag: XPT
+icinga_profile: XPT
+lb: XPT-STG
+
+app_tag: DDC
+rpm_tag: ddi-experiment-server
+app_ami: ami-4c5a835a
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_XPT_STG
+elb_sg: SG_LBXPT_STG
+elb_fqdn: xpt.stg.doubledowncasino.com
+env: staging
+profile_name: xpt-stg
+
+# prefix needed for role tag for this to service to work
+prefix: XPTDDC
+
+lc: XPT-STG-004
+
+ud_env: stg
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11500
+instance_port_2: 11509
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /experiments/1234
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2

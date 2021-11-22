@@ -1,0 +1,8 @@
+---
+
+- include: centos6.yml
+  when: distro == 'centos6'
+
+- include: centos7.yml
+  when: distro == 'centos7'
+

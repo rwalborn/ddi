@@ -1,0 +1,225 @@
+#!/usr/bin/python
+
+DOCUMENTATION = '''
+---
+module: sfs_casino_config
+short_description: allows user to manage the smartfoxServers casino_config
+description:
+    This performs an HTTP PUT to the REST API of the cp service (e.g.
+    cp.doubledowncasino.com:8005/api/config/etc...).  Internally, cp consumes
+    this value and stores the entire JSON blob that it receives in the
+    ``ConfigValue`` table of the ``casino_config`` database.  You can check the
+    active value with the following query ``select jsonString from ConfigValue
+    where jsonConfigName = 'smartfoxServers' order by startDate desc limit
+    1;``.  This is the JSON blob that gets consumed by clients of the cp
+    service that need to find all the sfs servers.
+
+    While this seems like exactly the same data that gets inserted directly
+    into the ``casino_config`` db in the sfs_casino_config_db module, these
+    phases are both required.  This REST call is necessary to trigger sending a
+    notification to all the clients of the cp service to refresh this value.
+    That's why we can't just shove it into the right place in the database.
+'''
+
+EXAMPLES = '''
+sfs_casino_config casino_config_host='devops02.dev.doubledowncasino.com'  casino_config_host_port='11000'  shorthostname='baz' hostname='baz.dev.doubledowncasino.com' internalhostname='baz.internal.dev.doubledowncasino.com' admin_url='baz.internal.dev.doubledowncasino.com:88/ddcadmin' state=present
+'''
+
+
+try:
+  import time
+  import requests
+  import json
+  from itertools import count, product, islice
+  from string import ascii_lowercase
+except ImportError as error:
+  import_error = True
+  import_error_msg = error.message
+else:
+  import_error = False
+
+class SmartfoxConfigCorruptionException(Exception):
+  pass
+
+class CasinoConfig:
+  def __init__(self, params):
+    pass
+  def _set_json_config_value(self, cfgKey, cfgValue):
+    data = { 'json' : { cfgKey : cfgValue }, 'startDate' : str(int(time.time()) * 1000 )};
+    headers = {'content-type': 'text/json'}
+    try:
+      r = requests.put(self.cfgServiceUri, data=json.dumps(data), headers=headers)
+      r.raise_for_status()
+    except:
+      exit(json.dumps(data))
+
+  def _get_json_config_value(self, cfgKey):
+    r = requests.get(self.cfgServiceUri)
+    r.raise_for_status()
+    json_obj = json.loads(r.content)
+    return json_obj['json'][cfgKey]
+
+class SmartfoxCasinoConfig(CasinoConfig):
+  # A generator that produces an alphabeltic sequence, e.g (a,b,c...aa,ab,ac....)
+  def _generate_iterator(self, seq):
+      for n in count(1):
+	  for s in product(seq, repeat=n):
+	      yield ''.join(s)
+
+  # Given a position in the sequence, produce the alphabetic value
+  def _generate_visible_name_suffix(self, index_number):
+    visibleNameSuffix = ', '.join(list(islice(self._generate_iterator(ascii_lowercase), index_number, index_number+1)))
+    return visibleNameSuffix
+
+  # Given hostname data, product a new array item for the smartfoxServer list
+  def _generate_smartfox_server_config(self, visibleNameSuffix, configIndexLength):
+
+    config = {}
+    config['name'] = self.sfsShortHostname
+    config['hostname'] = self.sfsHostname
+    config['internalHostname'] = self.sfsInternalHostname
+    config['visibleNameSuffix'] = visibleNameSuffix
+    #generate_visible_name_suffix(configIndexLength)
+    config['adminURL'] = self.adminUrl
+    config['id'] = configIndexLength + 1
+    config['licenseID'] = "NULL"
+
+    return config
+
+  # Get index of smartfox config
+  def _smartfox_server_index(self, sfsHostname, smartfoxConfig):
+    results = 0
+    for index,smartfox in enumerate(smartfoxConfig):
+      if smartfox['hostname'] == sfsHostname:
+	configIndex = index
+	results += 1
+
+    if results > 1:
+      raise SmartfoxConfigCorruptionException(results)
+    elif results == 1:
+      return configIndex
+    else:
+      return None
+
+  # Check if the hostname specified exists in the config
+  # Return the index if found, otherwise return NoneType
+  def _smartfox_server_exists(self, sfsHostname, smartfoxConfig):
+    results = 0
+    for index,smartfox in enumerate(smartfoxConfig):
+      if smartfox['hostname'] == sfsHostname:
+	configIndex = index
+	results += 1
+
+    if results > 1:
+      raise SmartfoxConfigCorruptionException(results)
+    elif results == 1:
+      return True
+    else:
+      return False
+
+  # TODO: IMPLEMENT THIS SO WE CAN COMPARE THE KEYS TOO
+  def _compare_smartfox_config_value(self, orig, new):
+    return True
+
+  @property
+  def exitJson(self):
+    return self.__exitJson
+
+  def __init__(self, params):
+    self.cfgServerUrl = params['casino_config_host']
+    self.cfgServerPort = params['casino_config_host_port']
+    self.cfgUrlPrefix = params['cfg_url_prefix']
+    self.cfgUrlPostfix = params['cfg_url_postfix']
+    self.cfgKey = params['cfg_key']
+    self.sfsShortHostname = params['shorthostname']
+    self.sfsHostname= params['hostname']
+    self.sfsInternalHostname= params['internalhostname']
+    self.adminUrl = params['admin_url']
+
+    uri_format_str = ('http://{cfgServerUrl}:{cfgServerPort}/'
+		      '{cfgUrlPrefix}/{cfgKey}/'
+		      '{cfgUrlPostfix}'
+		     )
+
+    self.cfgServiceUri = uri_format_str.format(cfgServerUrl=self.cfgServerUrl,
+					       cfgServerPort=self.cfgServerPort,
+					       cfgUrlPrefix=self.cfgUrlPrefix,
+					       cfgKey=self.cfgKey,
+					       cfgUrlPostfix=self.cfgUrlPostfix
+                                              )
+    self.currentConfig = self._get_json_config_value(self.cfgKey)
+    self.__exitJson = {}
+
+  def add_sfs_server(self, sfsHostname):
+    if self._smartfox_server_exists(sfsHostname, self.currentConfig):
+      self.exitJson['changed'] = False
+    else:
+      configIndexLength = len(self.currentConfig)
+      visibleNameSuffix = self._generate_visible_name_suffix(configIndexLength)
+      newHostData = self._generate_smartfox_server_config(visibleNameSuffix, configIndexLength)
+
+      self.currentConfig.append(newHostData)
+      self._set_json_config_value(self.cfgKey, self.currentConfig)
+      time.sleep(5)
+      newConfigValue = self._get_json_config_value(self.cfgKey)
+      if self._smartfox_server_exists(sfsHostname, newConfigValue):
+        self.exitJson['changed'] = True
+      else:
+        self.exitJson['failed'] = True
+        self.exitJson['msg'] = 'Failed to add sfs server to casino config'
+
+  def remove_sfs_server(self, sfsHostname):
+    configIndex = self._smartfox_server_index(sfsHostname, self.currentConfig)
+    if configIndex is not None:
+      self.currentConfig.pop(configIndex)
+      self._set_json_config_value(self.cfgKey, self.currentConfig)
+      time.sleep(5)
+      newConfigValue = self._get_json_config_value(self.cfgKey)
+      if not self._smartfox_server_exists(sfsHostname, newConfigValue):
+        self.exitJson['changed'] = True
+      else:
+        self.exitJson['failed'] = True
+        self.exitJson['msg'] = 'Failed to delete sfs server to casino config'
+    else:
+      self.exitJson['changed'] = False
+
+
+
+def main():
+  module = AnsibleModule(
+    argument_spec = dict(
+      state = dict(required = True, choices=['present', 'absent']),
+      shorthostname = dict(required = True),
+      hostname = dict(required = True),
+      internalhostname = dict(required = True),
+      casino_config_host = dict(required = True),
+      admin_url = dict(required = True),
+      cfg_key = dict(default = 'smartfoxServers'),
+      casino_config_host_port = dict(default = '8005'),
+      cfg_url_prefix = dict(default = 'api/config'),
+      cfg_url_postfix = dict(default = 'current')
+
+    )
+  )
+
+  if import_error:
+    module.fail_json(msg=import_error_msg)
+
+  sfsHostname= module.params['hostname']
+  state = module.params['state']
+
+  sfsCasinoConfig = SmartfoxCasinoConfig(module.params)
+
+  if state == 'present':
+    sfsCasinoConfig.add_sfs_server(sfsHostname)
+  else:
+    sfsCasinoConfig.remove_sfs_server(sfsHostname)
+
+  module.exit_json(**sfsCasinoConfig.exitJson)
+
+# import module snippets
+
+from ansible.module_utils.basic import *
+
+main()
+

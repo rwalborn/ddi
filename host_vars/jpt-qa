@@ -1,0 +1,42 @@
+# JPT-QA VARS FILE
+
+name_tag: JPT-QA
+service_tag: JPT
+icinga_profile: JPT
+lb: JPT-QA
+
+app_tag: DDC
+rpm_tag: ddi-jackpot-service
+app_ami: ami-85cbbc93
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_JPT_QA
+elb_sg: SG_LBJPT_QA
+elb_fqdn: jpt.qa.doubledowncasino.com
+env: qa
+profile_name: jpt-qa
+
+lc: JPT-QA-009
+
+ud_env: qa
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11560
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+

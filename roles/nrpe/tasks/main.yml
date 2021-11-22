@@ -1,0 +1,33 @@
+---
+
+- name: install NRPE rpms
+  yum: name={{ item }} state=installed
+  with_items:
+    - nrpe
+    - nagios-plugins-nrpe
+    - nagios-plugins-disk
+    - nagios-plugins-disk_smb
+    - nagios-plugins-load
+    - nagios-plugins-swap
+
+- name: nrpe config file
+  copy: src=nrpe.cfg dest=/etc/nagios/nrpe.cfg
+
+- name: directory for checks
+  file: name=/usr/lib64/nagios/plugins/extra state=directory
+  
+- name: extra checks
+  copy: src={{ item }} dest=/usr/lib64/nagios/plugins/extra/{{ item }} mode=755 
+  with_items: 
+    - check_cpu.sh
+    - check_memory.sh
+    - check_jstat_wrapper_sfs.sh
+    - check_rgs_logs.sh
+    - check_sfs_userCount.sh
+    - check_dlrold_times.py
+    - check_nginx.sh
+    - disk_await.py
+    - vg_await.py
+
+- name: start nrpe
+  service: name=nrpe state=restarted

@@ -1,0 +1,4 @@
+- name: restart sfs
+  service:
+    name: sfs
+    state: restarted

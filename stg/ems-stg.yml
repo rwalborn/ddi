@@ -1,0 +1,22 @@
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/STG ems-stg.yml
+
+# This playbook does not build instances.
+# It configures pre-production environments, such as sudo
+
+- name: Configure instance(s)
+  hosts: EMS
+  user: root
+  gather_facts: True
+  vars:
+    sshd_additional_groups: 'dev qa'
+  tasks:
+    - name: sshd_config AllowGroups
+      lineinfile:
+        dest=/etc/ssh/sshd_config
+        regexp='^AllowGroups (.*)$'
+        line="AllowGroups root ldap_all {{ sshd_additional_groups }}"
+        backrefs=yes
+      register: sshdconfig
+    - name: bounce sshd
+      service: name=sshd state=reloaded
+      when: sshdconfig.changed

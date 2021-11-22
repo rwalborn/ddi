@@ -1,0 +1,30 @@
+# Schema definitions for Whisper files. Entries are scanned in order,
+# and first match wins. This file is scanned for changes every 60 seconds.
+#
+#  [name]
+#  pattern = regex
+#  retentions = timePerPoint:timeToStore, timePerPoint:timeToStore, ...
+
+# Carbon's internal metrics. This entry should match what is specified in
+# CARBON_METRIC_PREFIX and CARBON_METRIC_INTERVAL settings
+[carbon]
+pattern = ^carbon\.
+retentions = 60:90d
+
+# RightScale collectd global interval is 20 seconds
+# But 'tail' interval is 60 seconds regardless
+# example: us-east-1.rs.03-64HF1GPC3MT6B.tail-userDelta.gauge-user_delta
+[rightscale_tail]
+pattern = ^[a-z]+-[a-z]+-[0-9]+\.rs\..*\.tail-.*\..*$
+retentions = 1m:14d,5m:2y
+
+# archive 20s into 1m
+[rightscale]
+pattern = ^[a-z]+-[a-z]+-[0-9]+\.rs\..*$
+retentions = 20s:1m,1m:14d,5m:2y
+
+# wild card pattern .* for default, which should be the last section
+# collect every 30s, keep 1-minute data for 2 weeks, keep 5-minute data for 2 years
+[default]
+pattern = .*
+retentions = 30s:1m,1m:14d,5m:2y

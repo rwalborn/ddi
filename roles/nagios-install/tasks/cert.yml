@@ -1,0 +1,13 @@
+- file: path=/etc/httpd/ssl state=directory owner=root group=root mode=0600
+- name: Generate Signing key
+  command: openssl genrsa -des3 -passout pass:x -out /etc/httpd/ssl/server.pass.key 2048 creates=/etc/httpd/ssl/server.pass.key
+  when: nagios.ssl_selfsigned
+- name: Generate Private key
+  command: openssl rsa -passin pass:x -in /etc/httpd/ssl/server.pass.key -out {{ssl_key}} creates={{ssl_key}}
+  when: nagios.ssl_selfsigned
+- name: Generate Certificate request
+  command: openssl req -new -newkey rsa:2048 -nodes -subj "/C=US/ST=Washington/L=Seattle/O=IT/CN=*.{{nagios_environment}}.ddc.io" -key {{ssl_key}} -out /etc/httpd/ssl/server.csr creates=/etc/httpd/ssl/server.csr
+  when: nagios.ssl_selfsigned
+- name: Generate SSL Certificate
+  command: openssl x509 -req -days 3650 -in /etc/httpd/ssl/server.csr -signkey {{ssl_key}} -out {{ssl_cert}} creates={{ssl_cert}}
+  when: nagios.ssl_selfsigned

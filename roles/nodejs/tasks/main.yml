@@ -1,0 +1,31 @@
+- yum: name="nodejs-{{ nodejs_version }}" state=installed
+  when: install_nodejs == true
+
+- file: path=/var/log/nodejs
+        state=directory
+        mode=0775
+        owner=root
+        group=ddiuser
+
+# haproxy is used to mask availability issues by load-balacning
+# local nodejs processes, in case one of them dies
+# it is non-standard setup and not a stand-alone role
+
+- yum: name="haproxy" state=installed
+
+- file: path=/etc/haproxy
+        state=directory
+        mode=0775
+        owner=root
+        group=ddiuser
+
+- file: path=/etc/haproxy/haproxy.cfg
+        state=file
+        mode=0664
+        owner=root
+        group=ddiuser
+
+- service:
+    name=haproxy
+    enabled=yes
+    state=started

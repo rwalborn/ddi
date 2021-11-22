@@ -1,0 +1,4 @@
+#!/bin/bash
+
+ldapsearch -LLL -x -b '{{ basedn }}' '(&(objectClass=posixAccount)(uid='"$1"'))' 'sshPublicKey' | perl -p00e 's/\r?\n //g' | awk '/sshPublicKey/ { print $2,$3,$4}'
+

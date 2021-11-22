@@ -1,0 +1,32 @@
+# TMT-STG VARS FILE
+
+name_tag: TMT-STG
+service_tag: TMT
+icinga_profile: TMT
+hzcaststg: hzstg_tmnt
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmt.stg.doubledowncasino.com
+spot_price: 0.225
+sg: SG_TMT_STG
+
+env: staging
+profile_name: tmt-stg
+
+key_name: ops-config
+role: tmt-stg
+
+lc: TMT-STG-002
+
+ec2_asg:
+  desired_capacity: 5
+  min_size: 5
+  max_size: 5
+  hc_type: EC2
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

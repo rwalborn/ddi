@@ -1,0 +1,493 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Change Control 1",
+  "Parameters": {
+    "nametag": {
+      "Description": "VPC Name.",
+      "Type": "String",
+      "Default": "New VPC"
+    },
+    "VPCCidr": {
+      "Description": "CIDR address for the VPC to be created.",
+      "Type": "String",
+      "Default": "192.168.0.0/21"
+    },
+    "PublicSubnet1": {
+      "Description": "Address range for a public subnet to be created in AZ1.",
+      "Type": "String",
+      "Default": "192.168.0.0/24"
+    },
+    "PublicSubnet2": {
+      "Description": "Address range for a public subnet to be created in AZ2.",
+      "Type": "String",
+      "Default": "192.168.2.0/24"
+    },
+    "PublicSubnet3": {
+      "Description": "Address range for a public subnet to be created in AZ2.",
+      "Type": "String",
+      "Default": "192.168.4.0/24"
+    },
+    "PublicSubnet4": {
+      "Description": "Address range for a public subnet to be created in AZ2.",
+      "Type": "String",
+      "Default": "192.168.6.0/24"
+    },
+    "PrivateSubnet1": {
+      "Description": "Address range for a private subnet to be created in AZ1.",
+      "Type": "String",
+      "Default": "192.168.1.0/24"
+    },
+    "PrivateSubnet2": {
+      "Description": "Address range for a private subnet to be created in AZ2.",
+      "Type": "String",
+      "Default": "192.168.3.0/24"
+    },
+    "PrivateSubnet3": {
+      "Description": "Address range for a private subnet to be created in AZ2.",
+      "Type": "String",
+      "Default": "192.168.5.0/24"
+    },
+    "PrivateSubnet4": {
+      "Description": "Address range for a private subnet to be created in AZ2.",
+      "Type": "String",
+      "Default": "192.168.7.0/24"
+    },
+    "AvailabilityZone1": {
+      "Description": "First AZ to use for PublicSubnet1/3 and PrivateSubnet1/3.",
+      "Type": "String",
+      "Default": "us-east-1c"
+    },
+    "AvailabilityZone2": {
+      "Description": "Second AZ to use for PublicSubnet2/4 and PrivateSubnet2/4.",
+      "Type": "String",
+      "Default": "us-east-1d"
+    }
+  },
+  "Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": { "Ref": "VPCCidr" },
+        "EnableDnsSupport" : True,
+        "EnableDnsHostnames" : True,
+        "Tags": [
+          { "Key": "Name", "Value": { "Ref" : "nametag" } }
+        ]
+      }
+    },
+    "PubSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone1"
+        },
+        "CidrBlock": {
+          "Ref": "PublicSubnet1"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "trusted_pub 1" ]] }}
+        ]
+      }
+    },
+    "PriSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone1"
+        },
+        "CidrBlock": {
+          "Ref": "PrivateSubnet1"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "trusted_pvt 1" ]] }}
+        ]
+      }
+    },
+    "PubSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone2"
+        },
+        "CidrBlock": {
+          "Ref": "PublicSubnet2"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "trusted_pub 2" ]] }}
+        ]
+      }
+    },
+    "PriSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone2"
+        },
+        "CidrBlock": {
+          "Ref": "PrivateSubnet2"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "trusted_pvt 2" ]] }}
+        ]
+      }
+    },
+    "PubSubnet3": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone1"
+        },
+        "CidrBlock": {
+          "Ref": "PublicSubnet3"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "sewage_pub 1" ]] }}
+        ]
+      }
+    },
+    "PriSubnet3": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone1"
+        },
+        "CidrBlock": {
+          "Ref": "PrivateSubnet3"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "sewage_pvt 1" ]] }}
+        ]
+      }
+    },
+    "PubSubnet4": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone2"
+        },
+        "CidrBlock": {
+          "Ref": "PublicSubnet4"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "sewage_pub 2" ]] }}
+        ]
+      }
+    },
+    "PriSubnet4": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "AvailabilityZone": {
+          "Ref": "AvailabilityZone2"
+        },
+        "CidrBlock": {
+          "Ref": "PrivateSubnet4"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "sewage_pvt 2" ]] }}
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+       "Tags": [
+          { "Key": "Name", "Value": { "Ref" : "nametag" } }
+        ]
+      }
+    },
+    "GatewayToInternet": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "PublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "pub" ]] }}
+        ]
+      }
+    },
+    "PrivateRouteTable1": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "pvt 1" ]] }}
+        ]
+      }
+    },
+    "PrivateRouteTable2": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : [ " ", [ { "Ref" : "nametag" }, "pvt 2" ]] }}
+        ]
+      }
+    },
+    "PublicRoute": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "PrivateRoute1": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable1"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "NATGateway1"
+        }
+      }
+    },
+    "PrivateRoute2": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable2"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "NATGateway2"
+        }
+      }
+    },
+    "PubSubnet1RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PubSubnet1"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "PubSubnet2RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PubSubnet2"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "PubSubnet3RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PubSubnet3"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "PubSubnet4RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PubSubnet4"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        }
+      }
+    },
+    "PriSubnet1RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PriSubnet1"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable1"
+        }
+      }
+    },
+    "PriSubnet2RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PriSubnet2"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable2"
+        }
+      }
+    },
+    "PriSubnet3RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PriSubnet3"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable1"
+        }
+      }
+    },
+    "PriSubnet4RTAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "PriSubnet4"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRouteTable2"
+        }
+      }
+    },
+    "NATGateway1": {
+      "DependsOn": "InternetGateway",
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": ["EIP1", "AllocationId"]
+        },
+        "SubnetId": {
+          "Ref": "PubSubnet1"
+        }
+      }
+    },
+    "NATGateway2": {
+      "DependsOn": "InternetGateway",
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": ["EIP2", "AllocationId"]
+        },
+        "SubnetId": {
+          "Ref": "PubSubnet2"
+        }
+      }
+    },
+    "EIP1": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc"
+      }
+    },
+    "EIP2": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc"
+      }
+    }
+  },
+"Outputs" : {
+    "NATGateway1" : {
+      "Description" : "NAT #1 EIP.",
+      "Value" :  { "Fn::Join" : [ "", [ { "Ref" : "NATGateway1" }, " (", { "Ref" : "EIP1" }, ")" ]] }
+    },
+    "NATGateway2" : {
+      "Description" : "NAT #2 EIP.",
+      "Value" :  { "Fn::Join" : [ "", [ { "Ref" : "NATGateway2" }, " (", { "Ref" : "EIP2" }, ")" ]] }
+    },
+    "VPCID" : {
+      "Description" : "VPC Info.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "VPC" }]] }
+    },
+    "PublicSubnet1" : {
+      "Description" : "Public Subnet #1.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PubSubnet1" }]] }
+    },
+    "PrivateSubnet1" : {
+      "Description" : "Private Subnet #1.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PriSubnet1" }]] }
+    },
+    "PublicSubnet2" : {
+      "Description" : "Public Subnet #2.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PubSubnet2" }]] }
+    },
+    "PrivateSubnet2" : {
+      "Description" : "Private Subnet #2.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PriSubnet2" }]] }
+    },
+    "PublicSubnet3" : {
+      "Description" : "Public Subnet #3.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PubSubnet3" }]] }
+    },
+    "PrivateSubnet3" : {
+      "Description" : "Private Subnet #3.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PriSubnet3" }]] }
+    },
+    "PublicSubnet4" : {
+      "Description" : "Public Subnet #4.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PubSubnet4" }]] }
+    },
+    "PrivateSubnet4" : {
+      "Description" : "Private Subnet #4.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PriSubnet4" }]] }
+    },
+    "PublicRouteTable" : {
+      "Description" : "Public Route Table.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PublicRouteTable" }]] }
+    },
+    "PrivateRouteTable1" : {
+      "Description" : "Private Route Table #1.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PrivateRouteTable1" }]] }
+    },
+    "PrivateRouteTable2" : {
+      "Description" : "Private Route Table #2.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "PrivateRouteTable2" }]] }
+    },
+    "AvailabilityZone1" : {
+      "Description" : "Availability Zone #1.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "AvailabilityZone1" }]] }
+    },
+    "AvailabilityZone2" : {
+      "Description" : "Availability Zone #2.",
+      "Value" : { "Fn::Join" : [ "", [ { "Ref" : "AvailabilityZone2" }]] }
+    }
+  }
+}

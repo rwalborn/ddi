@@ -1,0 +1,73 @@
+- name: repo
+  include: repo.yml
+
+- name: upgrade distro
+  yum: name=* state=latest
+
+- name: install via yum
+  yum: name={{ item }} state=installed
+  with_items:
+    - htop 
+    - git
+    - mercurial
+    - wget
+    - bind-utils
+    - tcpdump
+    - sysstat
+    - vim
+    - curl
+    - libselinux-python
+    - python-pip
+    - s3cmd
+    - lsof
+    - mlocate
+    - strace
+    - python-virtualenv
+    - screen
+    - man-pages
+    - cloud-utils-growpart
+    - mariadb
+    - unzip
+    - mdadm
+
+# disabled as java-1.7.0 deps on polkit
+#- name: do not want these pacakges
+#  yum: name={{ item }} state=absent
+#  with_items:
+#    - polkit
+
+- name: disable services
+  service: name={{ item }} enabled=no
+  with_items:
+    - postfix
+    - rpcbind
+    - proc-fs-nfsd.mount
+    - var-lib-nfs-rpc_pipefs.mount
+    - nfs-client.target
+
+- name: ansible
+  include: ansible.yml
+
+- name: awscli
+  include: awscli.yml
+
+- name: cloudinit
+  include: cloudinit.yml
+
+- name: maxid
+  include: maxid.yml
+
+- name: root
+  include: root.yml
+
+- name: selinux
+  include: selinux.yml
+
+- name: sudo
+  include: sudo.yml
+
+- name: sysctl
+  include: sysctl.yml
+
+- name: time
+  include: time.yml

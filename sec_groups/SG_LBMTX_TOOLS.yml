@@ -1,0 +1,37 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: LBMTX_TOOLS security group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/mtx-tools
+  tasks:
+    - name: security group
+      ec2_group:
+        name: "{{ lb_sg }}"
+        description: "{{ lb_sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ sea_office_1 }}/32"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ sea_office_2 }}/32"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ jump_eip_1c }}/32"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ jump_eip_1d }}/32"
+          # ping from icinga slave in vpc
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"

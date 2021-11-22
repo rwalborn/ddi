@@ -1,0 +1,82 @@
+[{{ VPC }}_{{ ENVIRONMENT }} : {{ VPC }}]
+; Zend Routes
+resources.router.routes.www.route={{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.router.routes.sub.route=:environment.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Facebook
+conf.facebook.canvas.appId=892495080872108
+conf.facebook.canvas.apiSecret=c216192c0c75ae31962fb181f77db7fe
+conf.facebook.canvas.url=https://apps.facebook.com/sdc{{ VPC }}
+conf.facebook.canvas.namespace=sdc{{ VPC }}
+; what are these for?
+conf.facebook.canvas.pageUrl=http://www.facebook.com/nicolascageinthenickoftime
+conf.facebook.canvas.graphUrl=http://graph.facebook.com/nicolascageinthenickoftime
+
+; MySQL Hostnames
+resources.multidb.master.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.slave.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.logger.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.gift-master.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.gift-slave.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.batch-master.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.batch-slave.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.giftcard-master.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+resources.multidb.partner-master.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+queue.driverOptions.host=master1.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Mongo Hostnames
+conf.mongo.host=mgddc01.{{ POD }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+conf.mongo.invitation.host=mgddc01.{{ POD }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+conf.mongo.userdata.host=mgddc01.{{ POD }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+conf.mongo.userSession.host=mgddc01.{{ POD }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; AMQP Config
+conf.amqp.host=rabbit.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Post URL and Cookie Host
+conf.postUrl=http://{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+conf.cookieHost=.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Amazon Appstore
+conf.amazon.verificationUrl=http://cp.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}:8003/RVSSandbox
+
+; CP Service Hostnames
+conf.flash.tournamentService=http://cp.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}:8002
+conf.items.url=cp.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}:8004
+conf.config.url=cp.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}:8005/api
+conf.tournament.url=tmnt03.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}:8002/tournament
+
+; Friends Service
+conf.flash.friendsServiceUrl=cp.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Mobile memcached
+conf.cache.backend.servers.server1.port=11211
+conf.cache.backend.servers.server2.port=11211
+conf.cache.backend.servers.server1.host=memcache01.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+conf.cache.backend.servers.server2.host=memcache01.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Desktop memcached
+conf.cache.backend.desktop.servers.server1.port=11211
+conf.cache.backend.desktop.servers.server2.port=11211
+conf.cache.backend.desktop.servers.server1.host=mcddc01.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+conf.cache.backend.desktop.servers.server2.host=mcddc01.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Session cache
+conf.sess.backend.servers.server1.port=11211
+conf.sess.backend.servers.server2.port=11211
+conf.sess.backend.servers.server1.host=memcache01.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+conf.sess.backend.servers.server2.host=memcache01.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Membase Hostname
+conf.membase.backend.servers.server1.host=membase02.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; D5i
+conf.d5i.amqpHost=rabbit.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Dealer
+conf.dealer.url=http://dlrddc.{{ POD }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+; Experiment Service
+conf.experiment_service.url=http://xptddc.{{ POD }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+
+

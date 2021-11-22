@@ -1,0 +1,174 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' stg-loadtester.yml --vault-password-file ~/.vault_pass.txt
+
+- name: create security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+  vars:
+    name_tag: STG-LOADTESTER
+    fqdn_prefix: loadtest
+    prefix: STG-LoadTester
+    number: 103
+    env: development
+    role: s3yum_access
+    sg1: development 
+    sg2: default
+
+  tasks:
+    - name: launch instance
+      ec2:
+        key_name: PROD
+        instance_type: m3.medium
+        image: "{{ centos_68_base }}"
+        group: [ "{{ sg1 }}", "{{ sg2 }}" ]
+        region: us-east-1
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ prefix }}{{ number }}"
+          app: loadtester
+          env: ec2classic
+          service: LTST
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn_prefix }}{{ number }}.doubledowncasino.com"
+        wait: yes
+      register: ec2
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ fqdn_prefix }}{{ number }}.doubledowncasino.com"
+        type: CNAME 
+        ttl: 60
+        value: "{{ ec2.instances.0.public_dns_name }}"
+      with_items: "{{ ec2.instances }}"
+
+    - name: Add EP2 instances to host group
+      local_action: add_host hostname={{ item.public_ip }} groupname=launched
+      with_items: "{{ec2.instances}}"
+
+    - name: Wait for SSH to be available
+      wait_for: host={{ item.public_ip }} port=22 delay=30 timeout=420 state=started
+      with_items: "{{ec2.instances}}"
+
+    - name: add classiclink, after state is running
+      shell: "aws ec2 attach-classic-link-vpc --instance-id {{ ec2.instances.0.id }} --vpc-id {{ vpc_id }} --groups {{ classiclink_sg }}"
+
+    - name: allow cloud-init to execute
+      pause: seconds=15
+
+- name: Configure instances
+  hosts: launched
+  remote_user: root
+  become: no 
+  gather_facts: true
+  vars_files:
+    - ../group_vars/lt
+  vars:
+    sudoers_user:
+      - username: mriddell
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL' 
+      - username: nward
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+      - username: jkong
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+      - username: klawrence
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+      - username: jfletcher
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+      - username: jmcgrory
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+      - username: dbecker
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+
+  roles:
+    - sudoers_user
+    - ops
+    - { role: ldap_client, sshd_additional_groups: 'qa dev' }
+
+  tasks:
+    - name: install packages
+      yum: name={{ item }} state=installed
+      with_items:
+        - java-1.7.0-openjdk
+        - unzip
+
+    - name: read-only access to bitbucket
+      copy:
+        content="{{ ddiunixteam_rsa_key }}"
+        dest=/root/.ssh/hg_rsa
+        owner=root
+        group=root
+        mode=0600
+
+    - name: create jmeter and workspace directories
+      file: 
+        path=/root/{{ item }} 
+        state=directory
+        owner=root
+        group=root
+        mode=0775
+      with_items:
+        - jmeter
+        - workspace
+
+    - name: clone jmeter repo
+      hg:
+        repo=ssh://bitbucket/ddi/apache-jmeter-custom
+        dest=/root/jmeter
+      register: result1
+
+    - unarchive: src=/root/jmeter/jmeter-custom.zip dest=/root/jmeter copy=no
+      when: result1|success
+
+    - name: create qa-platforms-load-test directory
+      file: path=/root/workspace/qa-platforms-load-test state=directory owner=root group=root mode=0775
+
+    - name: clone qa-platforms-load-test repo
+      hg:
+        repo=ssh://bitbucket/ddi/qa-platforms-load-test
+        dest=/root/workspace/qa-platforms-load-test
+      register: result2
+
+    - name: run lt_folder_org.sh script
+      command: /root/workspace/qa-platforms-load-test/scripts/lt_folder_org.sh
+      when: result2|success
+
+    - name: add jenkins public key
+      authorized_key: user=root
+                      manage_dir=yes
+                      state=present
+                      key='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAlwSP9LFRLdkSvpkfi/n7TwQfObBjD9hKemDaPsunc7tf2LJ8iDCG/CuL4GRLdaXJNtDPRjNiFMW8AuBBc8AVvmKi5hqsi5I81/+xaVWe1ZrqZVwtzW1lqBqTf4RAGgIVZ2TfW4W6uSh8bWVhyTfMkr8ek3+A2neZ9KCwtCUqhPm0M8iE8V+UPxKT9/j2fCU5o3RR8CsmqXvcp9Tmzd/PAT5ETwkpxcdGhRKfi7quk6xJC5hIw+DcpFpsWUvN9pJZtz2J/QsgAWqTy/sz9fIWTWMlBO+GEJHelKDmKA5R1CeliBHH92I2Dfo3Q6dxWbuuBe056QOa22T8gX04Uamy6w== Jenkins_key'
+
+    - name: copy files into place
+      command: cp /root/workspace/qa-platforms-load-test/LT_framework2.0_scripts/node_workspace/LT_Commander.sh /root/workspace/LT_Commander.sh
+
+    - name: copy files into place
+      command: cp /root/workspace/qa-platforms-load-test/LT_framework2.0_scripts/node_workspace/Querynodesummary.groovy /root/workspace/Querynodesummary.groovy
+
+    - name: copy files into place
+      command: cp /root/workspace/qa-platforms-load-test/LT_framework2.0_scripts/node_workspace/.pswd /root/workspace/.pswd
+
+    - name: copy files into place
+      command: cp /root/workspace/qa-platforms-load-test/LT_framework2.0_scripts/node_workspace/Node.info /root/workspace/Node.info
+
+    - name: copy files into place
+      command: cp /root/workspace/qa-platforms-load-test/LT_framework2.0_scripts/node_workspace/jq /bin/jq

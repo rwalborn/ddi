@@ -1,0 +1,2 @@
+# SNS topics
+ops_topic_arn: "arn:aws:sns:us-east-1:416386939808:ops"

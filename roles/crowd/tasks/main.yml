@@ -1,0 +1,8 @@
+---
+- name: instance
+  include: build.yml
+  when: build or rebuild
+
+- name: config
+  include: config.yml
+  when: config

@@ -1,0 +1,111 @@
+- name: ensure svc_code exist before writing local fact
+  fail: msg="Please define svc_code"
+  when: svc_code is undefined
+
+- name: ensure svc_fqdn exist before writing local fact
+  fail: msg="Please define svc_fqdn"
+  when: svc_fqdn is undefined
+
+- name: subnet_pub_1
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pub_1 }}"
+    zone: "{{ az1 }}"
+    assign_public_ip: yes
+  when: az == 'az1' and subnet == 'public'
+
+- name: subnet_pub_2
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pub_2 }}"
+    zone: "{{ az2 }}"
+    assign_public_ip: yes
+  when: az == 'az2' and subnet == 'public'
+
+- name: subnet_pri_1
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pri_1 }}"
+    zone: "{{ az1 }}"
+    assign_public_ip: no
+  when: az == 'az1' and subnet == 'private'
+
+- name: subnet_pri_2
+  set_fact:
+    vpc_subnet_id: "{{ subnet_pri_2 }}"
+    zone: "{{ az2 }}"
+    assign_public_ip: no
+  when: az == 'az2' and subnet == 'private'
+
+- name: user_data
+  set_fact:
+    user_data: "{{ lookup('file', 'files/user_data') }}"
+
+- name: get envronment subdomain
+  set_fact: env_domain="{{ fqdn.split('.')[2] }}"
+
+- name: route53 module will use r53zone var
+  set_fact: r53zone="{{ dnszone }}"
+
+- name: r53zone sbx
+  set_fact: r53zone="sbx.{{ dnszone }}"
+  when: env_domain == 'sbx'
+
+- name: launch instance in vpc
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    image: "{{ app_ami }}"
+    group: "{{ sg }}"
+    zone: "{{ zone }}"
+    wait: yes
+    wait_timeout: 500
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    assign_public_ip: "{{ assign_public_ip }}"
+    region: "{{ region }}"
+    instance_profile_name: "{{ role }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      env: "{{ env_tag }}"
+      service: "{{ service_tag }}"
+    user_data: "{{ user_data }}"
+  register: vpi
+  when: vpc
+
+- name: launch instance in ec2
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    image: "{{ app_ami }}"
+    group: "{{ sg }}"
+    zone: "{{ zone }}"
+    wait: yes
+    wait_timeout: 500
+    region: "{{ region }}"
+    instance_profile_name: "{{ role }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      env: "{{ env_tag }}"
+      service: "{{ service_tag }}"
+    user_data: "{{ user_data }}"
+  register: ec2
+  when: not vpc
+
+- name: dns record for vpc
+  route53:
+    command: create
+    zone: "{{ r53zone }}"
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ vpi.instances.0.private_ip }}"
+    overwrite: true
+  when: vpc
+
+- name: dns record for ec2
+  route53:
+    command: create
+    zone: "{{ r53zone }}"
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ ec2.instances.0.public_ip }}"
+    overwrite: true
+  when: not vpc

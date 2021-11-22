@@ -1,0 +1,11 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv SG_LBJPA_SBX.yml
+---
+- name: LBJPA_SBX security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/jpa-sbx
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

@@ -1,0 +1,102 @@
+---
+
+- name: install epel
+  yum: name=epel-release state=installed
+
+- name: upgrade distro
+  shell: yum upgrade -y
+
+- name: remove cloud-init
+  yum: name=cloud-init
+       state=absent
+
+- name: install needful
+  yum: name={{ item }} state=installed
+  with_items:
+    - htop 
+    - wget
+    - git
+    - bind-utils
+    - tcpdump
+    - sysstat
+    - vim
+    - ntp
+    - ntpdate
+    - curl
+    - libselinux-python
+    - python-pip
+    - s3cmd
+    - lsof
+    - mlocate
+    - strace
+    - mysql
+
+- name: install aws cli
+  pip: name=awscli
+
+- name: replace ntp.conf with AWS timeservers
+  copy: src=centos6x.ntp.conf
+        dest=/etc/ntp.conf
+        owner=root
+        mode=0644
+
+- name: restart ntp for changes to take effect
+  service: name=ntpd
+           enabled=yes
+           state=restarted
+
+- name: copy custom .bashrc
+  copy: src=.bashrc
+        dest=/root/.bashrc
+        owner=root
+        mode=0644
+
+- name: copy custom .vimrc
+  copy: src=.vimrc
+        dest=/root/.vimrc
+        owner=root
+        mode=0644
+
+- name: replace the centos 6x selinux config
+  copy: src=centos6x.config
+        dest=/etc/selinux/config
+        owner=root
+        mode=0644
+
+- name: disable selinux before reboot
+  shell: setenforce 0
+
+#- name: copy DDI.repo
+#  copy: src=DDI.repo
+#        dest=/etc/yum.repos.d/DDI.repo
+#        owner=root
+#        mode=0644
+#
+#- name: copy DDI-RELEASES.repo
+#  copy: src=DDI-RELEASES.repo
+#        dest=/etc/yum.repos.d/DDI-RELEASES.repo
+#        owner=root
+#        mode=0644
+
+- name: copy aws_hostname_by_id.sh
+  copy: src=aws_hostname_by_id.sh
+        dest=/usr/local/sbin/aws_hostname_by_id.sh
+        owner=root
+        mode=0755
+
+- name: modify rc.local to run aws_hostname_by_id.sh
+  lineinfile: dest=/etc/rc.local 
+              line="test -x /usr/local/sbin/aws_hostname_by_id.sh && /usr/local/sbin/aws_hostname_by_id.sh"
+              state=present
+              insertafter=EOF
+
+- name: disable services
+  service: name={{ item }} enabled=no
+  with_items:
+    - acpid
+    - iptables
+    - ip6tables
+
+- name: install datadogs
+  shell: DD_API_KEY=1c5d5e65c22e09f50bb48035b3837864 bash -c "$(curl -L https://raw.githubusercontent.com/DataDog/dd-agent/master/packaging/datadog-agent/source/install_agent.sh)"
+

@@ -1,0 +1,44 @@
+# XPT-PROD VARS FILE
+
+name_tag: XPT-PROD
+service_tag: XPT
+icinga_profile: XPT-Paged
+lb: XPT-PROD
+
+app_tag: DDC
+rpm_tag: ddi-experiment-server
+app_ami: ami-4c5a835a
+instance_type: m3.xlarge
+sg: SG_XPT_PROD
+elb_sg: SG_LBXPT_PROD
+elb_fqdn: xpt.prod.doubledowncasino.com
+env: production
+profile_name: xpt-prod
+
+# prefix needed for role tag for this to service to work
+prefix: XPTDDC
+
+lc: XPT-PROD-004
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11500
+instance_port_2: 11509
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /experiments/1234
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2

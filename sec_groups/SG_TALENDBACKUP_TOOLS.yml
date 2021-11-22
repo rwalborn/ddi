@@ -1,0 +1,11 @@
+---
+- name: TALENDBACKUP_TOOLS security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    sg: "SG_TALENDBACKUP_TOOLS"
+  vars_files:
+    - ../group_vars/tools
+  tasks:
+    - include: "{{ sg }}_INC.yml"

@@ -1,0 +1,25 @@
+---
+## this routine is for use when baking AMI's
+## if you need to install spacewalk packages from special channels as part of the ami build you can include them here
+## then we will remove registration as the last step to reset for the autoscaling group
+## you will need to re-add any special channels that were added into your cloud-init lc if you want updates to be delivered
+## the channel also can be added via the spacewalk gui
+
+- name: register with spacewalk
+  shell: "rhnreg_ks --serverUrl='https://{{ spacewalk_host }}/XMLRPC' --sslCACert=/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT --activationkey=1-centos{{ ansible_distribution_major_version }}-x86_64-{{ this_env }} --force"
+  when: packages
+
+- name: enable extra channels
+  shell: "spacewalk-channel -a -c {{ item }} -u {{ spacewalk_admin_user }} -p {{ spacewalk_admin_pw }}"
+  with_items: "{{ extra_channels }}"
+  when: extra_channels|length > 0
+
+- name: install packages
+  yum: state=installed name={{ item }}
+  with_items: "{{ baking_packages }}"
+  when: packages|length > 0
+
+- name: de-register node
+  file:
+    path: /etc/sysconfig/rhn/systemid
+    state: absent

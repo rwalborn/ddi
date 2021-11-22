@@ -1,0 +1,42 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Action": [
+        "s3:AbortMultipartUpload",
+        "s3:GetBucketLocation",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:ListBucketMultipartUploads",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::ddi-vpc",
+        "arn:aws:s3:::ddi-vpc/*",
+        "arn:aws:s3:::ddi-vpc-nonprod",
+        "arn:aws:s3:::ddi-vpc-nonprod/*"
+      ]
+    },
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Action": [
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:us-east-1:416386939808:log-group:/aws/kinesisfirehose/VPCFlowLogsToS3:log-stream:*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "firehose:PutRecordBatch"
+      ],
+      "Resource": [
+        "arn:aws:firehose:*:*:deliverystream/VPCFlowLogsToS3"
+      ]
+    }
+  ]
+}

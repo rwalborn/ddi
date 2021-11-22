@@ -1,0 +1,75 @@
+#!/bin/bash
+
+#set -x
+
+SFS_CONFIG_BUCKET_NAME={{ sfs_config_config_bucket_name }}
+SFS_CONFIG_PATH={{ sfs_config_config_path }}
+SFS_CONFIG_FILENAME={{ sfs_config_config_filename }}
+SFS_CONFIG_DOWNLOAD_DIR={{ sfs_config_config_download_dir }}
+SFS_CONFIG_DIR={{ sfs_config_config_dir }}
+SFS_OWNER={{ sfs_config_owner }}
+SFS_GROUP={{ sfs_config_group }}
+
+send_email()
+{
+  SUBJECT="SFS Config Report"
+  EMAIL="ddi-unixteam@igt.com"
+  MESSAGE=$1
+  echo "${MESSAGE}" /bin/mail -s "$SUBJECT" "$EMAIL" 
+}
+
+
+# Exit helper function
+die() { echo "$@"; exit 1; }
+
+if [ ! -d ${SFS_CONFIG_DOWNLOAD_DIR} ]; then
+  mkdir -p ${SFS_CONFIG_DOWNLOAD_DIR}
+  chown -R ${SFS_OWNER}:${SFS_GROUP} ${SFS_CONFIG_DOWNLOAD_DIR}
+fi
+
+cd ${SFS_CONFIG_DOWNLOAD_DIR}
+
+# Grab the md5sum for the artifact from s3
+/usr/bin/aws s3 cp s3://${SFS_CONFIG_BUCKET_NAME}/${SFS_CONFIG_PATH}/${SFS_CONFIG_FILENAME}.md5 ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}.md5
+
+if [ ! -f ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME} ]; then
+  /usr/bin/aws s3 cp s3://${SFS_CONFIG_BUCKET_NAME}/${SFS_CONFIG_PATH}/${SFS_CONFIG_FILENAME} ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}
+fi
+
+# Check to make sure the downloaded file's md5 matches the downloaded one
+md5sum -c ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}.md5
+md5_checkresult=$?
+
+if [ $md5_checkresult -ne 0 ]; then
+  rm -rf ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}.md5
+  rm -rf ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}
+  # Grab the md5sum for the artifact from s3
+  /usr/bin/aws s3 cp s3://${SFS_CONFIG_BUCKET_NAME}/${SFS_CONFIG_PATH}/${SFS_CONFIG_FILENAME}.md5 ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}.md5
+
+  if [ ! -f ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME} ]; then
+    /usr/bin/aws s3 cp s3://${SFS_CONFIG_BUCKET_NAME}/${SFS_CONFIG_PATH}/${SFS_CONFIG_FILENAME} ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}
+  fi
+
+  # Check to make sure the downloaded file's md5 matches the downloaded one
+  md5sum -c ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}.md5
+  md5_finalcheck=$?
+  if [ $md5_finalcheck -ne 0 ]; then
+    die "MD5sum and config artifact don't match in s3"
+  fi
+
+fi
+
+diff ${SFS_CONFIG_DIR}/current.md5 ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}.md5
+md5_diffresult=$?
+
+if [ $md5_diffresult -eq 0 ]; then
+  echo "NO CHANGES, SKIPPING CONFIG DEPLOYMENT"
+  exit 0
+fi
+
+echo "DEPLOYING CONFIG"
+tar zxvf ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME} -C ${SFS_CONFIG_DOWNLOAD_DIR} &&
+mv ${SFS_CONFIG_DOWNLOAD_DIR}/${SFS_CONFIG_FILENAME}.md5 ${SFS_CONFIG_DOWNLOAD_DIR}/current.md5 &&
+cp -rv ${SFS_CONFIG_DOWNLOAD_DIR}/* ${SFS_CONFIG_DIR} &&
+rm -rf ${SFS_CONFIG_DOWNLOAD_DIR}/*
+

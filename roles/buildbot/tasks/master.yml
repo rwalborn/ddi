@@ -1,0 +1,224 @@
+---
+# Configures buildbot master
+#
+- include_vars: common.yml
+- include_vars: secrets.yml
+- include_vars: buildmaster.yml
+
+# STILL NEEDED MARC?
+#- name: Install Atlassian Crowd Connector
+#  yum: name=http://downloads.atlassian.com/software/crowd/downloads/cwdapache/packages/rhel6/mod_authnz_crowd-2.2.2-1.el6.x86_64.rpm
+#      state=present
+#      disable_gpg_check=yes
+
+- name: Install PHP
+  yum:
+    name: "{{ php_ver }}"
+    state: present
+    enablerepo: epel
+
+- name: copy hg_rsa
+  copy:
+    src: hg_rsa
+    dest: "{{ autobldr_home }}/.ssh/hg_rsa"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0400
+
+# TODO: maven module installs
+- name: Install autobldr-tools jar
+  copy:
+    src: "autobuilder-tools-1.0.8-SNAPSHOT-jar-with-dependencies.jar"
+    dest: "{{ autobldr_home }}/"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+# TODO: make tgz exports directory
+- name: Create build deploy dirs
+  file:
+    path: "{{ mobilebuilds_root }}/content/builds/web/{{ item }}"
+    state: directory
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+  with_items:
+    - mstaging
+    - m
+
+- name: create /mnt/ephemeral/home/autobldr/{{ buildbot_master_dir }}
+  file:
+    path: "{{ autobldr_home }}/{{ buildbot_master_dir }}"
+    state: directory
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0755
+
+- name: Create htdigest for mobilebuilds
+  copy:
+    src: buildtools-htpasswd
+    dest: "{{ mobilebuilds_root }}/.htpasswd"
+    mode: 0755
+    force: no
+  tags:
+      - htpasswd
+
+- name: Install rightscale oauth keyfile
+  template:
+    src: rightscale_oauth.j2
+    dest: "{{ autobldr_home }}/.ssh/rightscale_oauth"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0600
+#  sudo_user: "{{ autobldr_username }}"
+
+- name: Check for buildbot master dir
+  stat:
+    path: "{{ buildbot_master_dir }}"
+  register: buildbot_master
+
+- name: Add the remote public key for hg to work
+  shell: "ssh-keyscan bitbucket.org >> /etc/ssh/ssh_known_hosts"
+
+- name: Install buildbot master codebase
+  hg:
+    repo: "{{ buildbot_repo_name }}"
+    dest: "{{ autobldr_home }}/{{ buildbot_master_dir }}"
+    revision: "{{ buildbot_revision | default('default') }}"
+#    executable: /usr/local/bin/hg
+  become: true
+  become_user: "{{ autobldr_username }}"
+  when: buildbot_master.stat.exists == false
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+# TODO: Rename templates/layout.html to layout.html.bak
+#
+
+# TODO 777? really?
+- name: Change buildbot master owner:group
+  file:
+    path: "{{ autobldr_home }}/{{ buildbot_master_dir }}"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    recurse: yes
+    mode: 0777
+
+################ADD BUILDBOT SCRIPTS DIR
+
+- name: create {{ autobldr_home }}/buildbot-scripts
+  file:
+#    path: "{{ autobldr_home }}/buildbot-scripts"
+    path: "{{ autobldr_home }}/mobile-buildbot-scripts"
+    state: directory
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0755
+
+- name: Check for buildbot scripts
+  stat:
+#    path: "{{ autobldr_home }}/buildbot-scripts"
+    path: "{{ autobldr_home }}/mobile-buildbot-scripts"
+  register: bb_scripts
+
+- name: Download buildbot scripts repo
+  hg:
+    repo: "{{ buildbot_scripts_repo_name }}"
+    dest: "{{ autobldr_home }}/mobile-buildbot-scripts"
+#    executable: /usr/local/bin/hg
+#    dest: "{{ autobldr_home }}/buildbot-scripts"
+  become: true
+  become_user: "{{ autobldr_username }}"
+  when: bb_scripts.stat.exists == false
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+- name:
+  file:
+    src: "{{ autobldr_home }}/mobile-buildbot-scripts"
+    dest: "{{ autobldr_home }}/buildbot-scripts"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    state: link
+
+- name: Check for ops scripts repo
+  stat:
+    path: "{{ autobldr_home }}/ops"
+  register: bb_ops
+
+- file:
+    path: /ops/scripts/rightscale-lib/bin
+    state: directory
+    mode: 0755
+
+- name: 
+  copy:
+    src: run_rightscripts.py
+    dest: /ops/scripts/rightscale-lib/bin/run_rightscripts.py
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0755
+
+- name: Create http auth password file for buildbot dev
+  htpasswd:
+    path: "{{ autobldr_home }}/{{ buildbot_master_dir }}/htpasswd"
+    state: present
+    name: "{{ buildbot_auth_user_dev }}"
+    password: "{{ buildbot_auth_user_dev_password }}"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0640
+    crypt_scheme: des_crypt
+#  become: true
+#  become_user: "{{ autobldr_username }}"
+  tags:
+      - htpasswd
+
+- name: Create http auth password file for buildbot prod
+  htpasswd:
+    path: "{{ autobldr_home }}/{{ buildbot_master_dir }}/htpasswd"
+    state: present
+    name: "{{ buildbot_auth_user_prod }}"
+    password: "{{ buildbot_auth_user_prod_password }}"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0640
+    crypt_scheme: des_crypt
+  tags:
+      - htpasswd
+
+- name: Install buildbot master.cfg
+  template:
+    src: "{{ buildbot_master_cfg }}"
+    dest: "{{ autobldr_home }}/{{ buildbot_master_dir }}/master.cfg"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+
+- name: Check buildbot process
+  stat:
+    path: "{{ autobldr_home }}/{{ buildbot_master_dir }}/twistd.pid"
+  register : buildbot_pid
+
+- name: where the hell is buildbot
+  shell: which buildbot
+  become: no
+  register: buildbot_path
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+- name: Upgrade buildmaster
+  command: "python {{ buildbot_path.stdout }} upgrade-master -r {{ autobldr_home }}/{{ buildbot_master_dir }}"
+  become: true
+  become_user: "{{ autobldr_username }}"
+  when: buildbot_pid.stat.exists == false
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+- name: Start buildbot
+  command: "python {{ buildbot_path.stdout }} start {{ autobldr_home }}/{{ buildbot_master_dir }}"
+  become: true
+  become_user: "{{ autobldr_username }}"
+  when: buildbot_pid.stat.exists == false
+# TEMP FOR DEBUG
+  ignore_errors: yes
+

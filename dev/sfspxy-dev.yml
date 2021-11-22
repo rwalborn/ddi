@@ -1,0 +1,14 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new lb
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    env_tag: development
+    service_tag: SFS
+    sg: SG_SFSPXY_DEV
+  roles:
+    - { role: svcproxy, do: standup, svc_code: sfs, name_tag: 'SFSPXY-DEV', az: az1, fqdn: sfspxy06.use1.dev.doubledowncasino.com, svc_fqdn: sfsddc06.use1.dev.doubledowncasino.com }

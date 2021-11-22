@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv -i 'localhost,' test_ldap_client.yml
+
+- name: test ldap_client playbook
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/sbx
+  roles:
+    - ldap_client
+  check_mode: yes

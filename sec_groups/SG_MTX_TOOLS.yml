@@ -1,0 +1,78 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    sg: SG_MTX_TOOLS
+    vpc_cidr: 192.168.0.0/21
+    tools_cidr: 192.168.0.0/22
+  tasks:
+    - name: security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: us-east-1
+        rules:
+            # from elb to grafana
+          - proto: tcp
+            from_port: 8080
+            to_port: 8080
+            cidr_ip: "{{ tools_cidr }}"
+
+            # from grafana to aurora
+          - proto: tcp
+            from_port: 3306
+            to_port: 3306
+            cidr_ip: "{{ tools_cidr }}"
+
+            # from grafana to graphite
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: "{{ tools_cidr }}"
+
+            # ssh from jumpbox
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: "{{ tools_cidr }}"
+
+            # carbon
+          - proto: tcp
+            from_port: 2003
+            to_port: 2004
+            cidr_ip: 172.16.0.0/12
+          - proto: tcp
+            from_port: 2003
+            to_port: 2004
+            cidr_ip: "{{ vpc_cidr }}"
+
+            # carbon-relay
+          - proto: tcp
+            from_port: 2013
+            to_port: 2014
+            cidr_ip: 172.16.0.0/12
+          - proto: tcp
+            from_port: 2013
+            to_port: 2014
+            cidr_ip: "{{ vpc_cidr }}"
+
+            # collectd network listener
+          - proto: udp
+            from_port: 25826
+            to_port: 25826
+            cidr_ip: 172.16.0.0/12
+          - proto: udp
+            from_port: 25826
+            to_port: 25826
+            cidr_ip: "{{ vpc_cidr }}"
+
+            # ping from icinga slave in vpc
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"

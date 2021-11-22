@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBDCH_DEV.yml
+---
+- name: LBDCH_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/dch-dev
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

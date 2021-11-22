@@ -1,0 +1,11 @@
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/TOOLS --vault-password-file ~/.vaultpass repomaster-tools.yml
+
+# for maintaining jenkins configuration on REPOMASTER-TOOLS
+# run any time
+
+- hosts: REPOMASTER
+  remote_user: root
+  become: no
+  gather_facts: yes
+  roles:
+    - { role: jenkins_slave, extra: repomaster }

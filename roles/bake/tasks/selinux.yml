@@ -1,0 +1,5 @@
+- name: replace the selinux config
+  copy: src="selinux.{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
+        dest=/etc/selinux/config
+        owner=root
+        mode=0644

@@ -1,0 +1,17 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    app_tag: php-casino
+    env_tag: production
+    sg: production
+    resource_path: /ddchealthchk.html
+    service_port: 80
+  roles:
+    - { role: lb, name_tag: 'LBAPI-PROD 01', az: us-east-1c, fqdn: lbapi01.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBAPI-PROD 02', az: us-east-1d, fqdn: lbapi02.use1.prod.ddc.io }

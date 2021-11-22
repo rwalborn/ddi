@@ -1,0 +1,17 @@
+<VirtualHost *:80>
+        ServerAdmin webmaster@localhost
+        DocumentRoot /home/webapps/casino/current/content
+        ServerName {{ www_prefix }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}
+        UseCanonicalName On
+
+        <Directory /home/webapps/casino/current/content>
+                AllowOverride all
+                Options Indexes FollowSymLinks Includes
+                Order deny,allow
+                Allow from all
+        </Directory>
+
+        ErrorLog /var/log/httpd/api-error.log
+        CustomLog /var/log/httpd/api-access.log combined
+</VirtualHost>
+

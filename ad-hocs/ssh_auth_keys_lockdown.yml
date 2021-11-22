@@ -1,0 +1,38 @@
+# run as ansible-playbook ssh_auth_keys_lockdown.yml --limit=tag_Name_CBTEST8*_DEV
+#
+# THIS IS NOT IDEMPOTENT BUT YOU WILL STILL HAVE LDAP LOGIN SHOULD YOU RUN THIS
+# WHERE IT WAS NOT NEEDED AND WILL HAVE TO HANDCRAFT THE KEY BACK INTO THE 
+# EMPTY /etc/ssh/.ssh/authorized_keys
+---
+- name: lockdown the ssh/authorized_keys
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: create /etc/ssh/.ssh for auth keys
+      file: path=/etc/ssh/.ssh
+            state=directory
+            mode=0700
+
+    - name: copy the root auth keys to /etc/ssh/.ssh/
+      shell: '/bin/cp /root/.ssh/authorized_keys /etc/ssh/.ssh/authorized_keys'
+
+    - name: perms
+      file: path=/etc/ssh/.ssh/authorized_keys
+            state=touch
+            mode=0600
+
+    - name: change authorized_keys location
+      lineinfile: dest=/etc/ssh/sshd_config
+                  state=present
+                  line='AuthorizedKeysFile      /etc/ssh/.ssh/authorized_keys'
+
+    - name: delete /root/.ssh/authorized_keys
+      file: path=/root/.ssh/authorized_keys
+            state=absent
+
+    - name: restart sshd
+      service: name=sshd
+               state=restarted
+

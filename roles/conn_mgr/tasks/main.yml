@@ -1,0 +1,94 @@
+- include_vars: secrets.yml
+- include_vars: ddiunixteam.yml
+
+- name: yum update
+  yum: name=* state=latest
+  register: yum_updated
+
+- name: install via yum
+  yum: name={{ item }} state=installed
+  with_items:
+    - python-virtualenv
+    - epel-release
+    - wget
+    - screen
+    - gcc
+    - unzip
+    - mysql
+    - mysql-devel
+    - hg
+  when: yum_updated|success
+  register: packages_installed
+
+- name: Create app directory
+  file: path={{ app_dir }} state=directory
+  register: dir_created
+
+- template: src=threaded_getmsg.py dest={{ app_dir }}/threaded_getmsg.py mode=0700
+  when: dir_created|success
+
+- template: src=start_getmsg.sh dest={{ app_dir }}/start_getmsg.sh mode=0700
+  when: dir_created|success
+
+- template src=ec2_instance_sync.py dest={{ app_dir }}/ec2_instance_sync.py mode=0700
+  when: dir_created|success
+
+- name: create virtualenv
+  command: virtualenv {{ app_dir }}/venv -p python2.7 creates="{{ app_dir }}/venv"
+  register: venv_created
+  when: packages_installed|success
+
+- name: install pip packages
+  pip: name={{ item }} state=present virtualenv={{ app_dir }}/venv
+  with_items:
+    - requests
+    - boto3
+    - django
+    - MySQL-python
+    - ipaddress
+  when: venv_created|success
+  register: venv_ready
+
+- name: create django folder
+  file:
+    path={{ app_dir }}/django
+    state=directory
+    owner=root
+    group=root
+    mode=0775
+  register: django_path_created
+  when: dir_created|success
+
+- template: src=ssh_config dest=/root/.ssh/config
+
+- name: read-only access to bitbucket ops mercurial project
+  copy:
+    content="{{ ddiunixteam_rsa_key }}"
+    dest=/root/.ssh/hg_rsa
+    owner=root
+    group=root
+    mode=0600
+
+- name: /usr/local/share/DDI
+  file:
+    path=/usr/local/share/DDI
+    state=directory
+    owner=root
+    group=root
+    mode=0775
+  register: ops_repo_dir
+
+- name: clone ops repo
+  hg:
+    repo=ssh://bitbucket/ddi/ops
+    dest=/usr/local/share/DDI/ops
+  when: ops_repo_dir|success
+  register: clone_repo
+
+- name: copy django app to proper location
+  shell: "cp -r /usr/local/share/DDI/ops/django-connmgr/* {{ app_dir }}/django/"
+  register: django_copied
+  when: clone_repo|success
+
+- template: src=settings.py dest={{ app_dir }}/django/opsmgr/settings.py mode=0600
+  when: django_copied|success

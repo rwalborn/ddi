@@ -1,0 +1,11 @@
+{
+   "Version": "2012-10-17",
+   "Statement": [
+        {
+            "Sid": "Stmt1409679573299",
+            "Action": "dynamodb:*",
+            "Effect": "Allow",
+            "Resource": "arn:aws:dynamodb:us-east-1:143177584759:table/Balance_Service_PROD"
+        }
+    ]
+}

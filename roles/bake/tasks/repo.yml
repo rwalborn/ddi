@@ -1,0 +1,22 @@
+- name: install epel
+  yum: name=epel-release state=installed
+
+- name: copy yum-s3-iam
+  copy: src=yum-plugin-s3-iam-1.1.0-1.noarch.rpm
+        dest=/root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm
+        owner=root
+
+- name: install yum-s3-iam
+  yum: name=/root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm state=installed
+
+- name: delete yum-s3-iam rpm to be tidy
+  file: name=/root/yum-plugin-s3-iam-1.1.0-1.noarch.rpm state=absent
+
+- name: ddi ops repo
+  yum_repository:
+    name: DDI
+    description: DDI
+    baseurl: http://ddi-ops-repo.s3.amazonaws.com/$releasever/$basearch
+    enabled: yes
+    gpgcheck: no
+    s3_enabled: yes

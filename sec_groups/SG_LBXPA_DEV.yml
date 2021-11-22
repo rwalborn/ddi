@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBXPA_DEV.yml
+---
+- name: LBXPA_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/xpa-dev
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

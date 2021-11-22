@@ -1,0 +1,13 @@
+# everything is still evaluated even with 'when', yuck
+
+- include: php.yml
+  when: agent == 'php'
+
+- include: java.yml
+  when: agent == 'java'
+
+- include: machine.yml
+  when: agent == 'machine'
+
+- include: db.yml
+  when: agent == 'db'

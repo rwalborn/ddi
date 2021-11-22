@@ -1,0 +1,25 @@
+#cloud-config
+runcmd:
+  - yum --disableplugin=fastestmirror install -y ansible haproxy nmap net-snmp
+  - sysctl -w net.ipv4.ip_local_port_range='32768 60000'
+  - iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 1024:30000 -j REDIRECT --to-port 80
+  - aws configure set region us-east-1
+  - git config --system credential.https://git-codecommit.us-east-1.amazonaws.com.helper '!aws --profile default codecommit credential-helper $@'
+  - git config --system credential.https://git-codecommit.us-east-1.amazonaws.com.UseHttpPath true
+  - git clone https://git-codecommit.us-east-1.amazonaws.com/v1/repos/nacl /root/src/git/nacl
+  - cd /root/src/git/nacl && ansible-playbook -i localhost, -c local nacl.yml
+  - mkdir -p /root/src/git/nacl /etc/ansible/facts.d
+write_files:
+  - path: /etc/ansible/facts.d/local.fact
+    content: |
+      [nacl]
+      location={{ location }}
+      scanner={{ scanner }}
+    owner: root
+    permissions: 0644
+  - path: /root/.ansible.cfg
+    content: |
+      [defaults]
+      jinja2_extensions = jinja2.ext.loopcontrols
+    owner: root
+    permissions: 0644

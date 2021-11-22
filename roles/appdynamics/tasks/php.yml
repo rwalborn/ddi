@@ -1,0 +1,21 @@
+- include_vars: dev.yml
+  when: prod is defined and prod == false
+
+- include_vars: prod.yml
+  when: prod is defined and prod == true
+
+- yum: name=appdynamics-php-agent state=present
+
+- name: appdynamics_agent.ini
+  template:
+    src=appdynamics_agent.ini.j2
+    dest=/etc/php.d/appdynamics_agent.ini
+    owner=root
+    group=root
+    mode=0644
+  when: licensed == true
+  register: agentconf
+
+- service: name=httpd state=reloaded
+  when: agentconf.changed
+

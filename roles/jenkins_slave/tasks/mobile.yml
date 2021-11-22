@@ -1,0 +1,23 @@
+- name: mobile_jenkins_slave pw
+  include_vars: mobile_jenkins_slave_vault
+
+- name: autobldr vault
+  include_vars: ../../auth_autobldr/vars/vaults.yml
+
+- name: mobile build environment
+  include_vars: mobile.yml
+
+- name: jenkins_url for ops test setup
+  set_fact:
+    jenkins_url='http://mobilejenkins09.use1.tools.ddc.io:8080'
+  when: opstest
+
+- name: autobldr private key
+  copy:
+    dest="/var/lib/jenkins/.ssh/{{ item }}"
+    content="{{ autobldr_private_key }}"
+    owner=jenkins
+    group=jenkins
+    mode=0400
+  with_items:
+    - hg_rsa

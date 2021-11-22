@@ -1,0 +1,42 @@
+---
+# These tasks are responsible for copying the latest dev/production code from
+# the version control system. 
+
+# Required vars:
+
+- name: Add php application env var
+  lineinfile:
+    dest: /etc/httpd/conf.d/env.conf
+    state: present
+    line: 'SetEnv APPLICATION_ENV {{ VPC }}_{{ ENVIRONMENT }}'
+    create: yes
+
+- name: Create vhost directories
+  file:
+    path: /etc/httpd/{{ item }}
+    mode: 0755
+    state: directory
+  with_items:
+    - sites-available
+    - sites-enabled
+
+- name: Add Apache configuration
+  register: apache_config
+  template:
+    src: "{{ http_vhost_conf }}"
+    dest: "/etc/httpd/sites-available/{{ http_vhost_conf }}"
+    owner: root
+    group: root
+
+- name: Link vhost conf
+  file:
+    src: "/etc/httpd/sites-available/{{ http_vhost_conf }}"
+    dest: "/etc/httpd/sites-enabled/{{ http_vhost_conf }}"
+    state: link
+  notify: apache restart
+
+- name: Include vhosts configs
+  lineinfile:
+    dest: /etc/httpd/conf/httpd.conf
+    line: 'Include /etc/httpd/sites-enabled/*.conf'
+

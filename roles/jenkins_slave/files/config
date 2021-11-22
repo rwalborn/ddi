@@ -1,0 +1,6 @@
+StrictHostKeyChecking no
+CheckHostIP no
+Host bitbucket.org
+  HostName bitbucket.org
+  User git
+  IdentityFile ~/.ssh/hg_rsa

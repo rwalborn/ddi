@@ -1,0 +1,4 @@
+---
+- name: bake an MOB AMI
+  include: ami.yml
+  when: do == 'ami'

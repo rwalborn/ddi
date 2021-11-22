@@ -1,0 +1,7 @@
+StrictHostKeyChecking no
+CheckHostIP no
+PasswordAuthentication no
+Host bitbucket
+  HostName  bitbucket.org
+  User hg
+  IdentityFile ~/.ssh/hg_rsa

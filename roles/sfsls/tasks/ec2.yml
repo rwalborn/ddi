@@ -1,0 +1,65 @@
+# purpose is to launch an standby in ec2
+
+- name: get envronment subdomain
+  set_fact: env_domain="{{ fqdn.split('.')[2] }}"
+
+- name: get service code
+  set_fact: svc="{{ fqdn.split('.')[0] | regex_replace('^([a-z]+)\\d+$', '\\1') }}"
+
+- name: get host sequence
+  set_fact: seq="{{ fqdn.split('.')[0] | regex_replace('^[a-z]+(\\d+)$', '\\1') }}"
+
+- name: get service fqdn
+  set_fact: service_fqdn="{{ svc }}.{{ reg_domain }}.{{ env_domain }}.{{ dnszone }}"
+
+- name: get name_tag
+  set_fact: name_tag="{{ (svc + '-' + env_domain)|upper }} {{ seq }}"
+
+- name: set licensed ip to production
+  set_fact:
+    licip=192.168.250.2
+    lictype=prod
+    env=production
+    sg=Operations-sfs_license_server
+    instance_type=c3.large
+    zone=us-east-1c
+
+- name: allow hostvars[inventory_hostname] to retrieve values beyond group_vars/all
+  include_vars: ../../../group_vars/{{ env_domain }}.yml
+
+- name: launch a standby license server for production in ec2
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    region: "{{ region }}"
+    zone: "{{ zone }}"
+    group: "{{ sg }}"
+    image: "{{ app_ami }}"
+    instance_profile_name: "{{ iamrole }}"
+    instance_tags:
+      Name: "{{ name_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env }}"
+      service: "{{ service_tag }}"
+    user_data: |
+               #cloud-config
+               hostname: {{ fqdn }}
+               runcmd:
+                 - cd /usr/local/share/DDI/ddi-ops && git pull
+                 - /root/bin/sysconfig
+                 - s3cmd get --force s3://ddc-artifacts/sfs-license-server/licenses_{{ lictype }}.sfl /ddi/services/{{ base }}/licenses.sfl
+                 - ip addr add {{ licip }} dev eth0
+                 - iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 60006 -j DNAT --to-destination {{ licip }}:60006
+                 - service sfsls restart
+    wait: yes
+  register: ec2
+
+- name: host record
+  route53:
+    command: create
+    zone: "{{ dnszone }}"
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ ec2.instances.0.public_ip }}"
+    overwrite: true

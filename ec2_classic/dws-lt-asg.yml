@@ -1,0 +1,30 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+---
+- name: create autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../host_vars/dws
+  vars:
+    name_tag: DWS-LT
+    lc: DWS-LT-004
+    lb: DWS-LT
+    env: load_test
+    hc_type: EC2
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: us-east-1
+      availability_zones: [ 'us-east-1c', 'us-east-1d' ]
+      launch_config_name: "{{ lc }}"
+      min_size: 0
+      max_size: 4
+      desired_capacity: 4
+      load_balancers: [ "{{ lb }}" ]
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "{{ app_tag }}"

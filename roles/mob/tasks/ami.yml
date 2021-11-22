@@ -1,0 +1,83 @@
+- name: packages
+  yum:
+    name={{ item }}
+    state=installed
+  with_items:
+   - php
+   - php-mysql
+   - php-pear
+   - php-pecl-memcache
+   - php-pecl-mongo
+   - php-pecl-geoip
+   - php-pecl-apc
+   - php-soap
+   - php-gd
+   - php-ZendFramework-full
+
+- name: /var/log/httpd/php_errors.log
+  lineinfile:
+    path=/etc/php.ini
+    regexp='^;error_log = php_errors.log$'
+    line='error_log = /var/log/httpd/php_errors.log'
+
+- name: remove useless conf
+  file:
+    path=/etc/httpd/{{ item }}
+    state=absent
+  with_items:
+    - conf/httpd.conf
+    - conf.d/autoindex.conf
+    - conf.d/dojo.conf
+    - conf.d/userdir.conf
+    - conf.d/welcome.conf
+    - conf.modules.d/00-base.conf
+    - conf.modules.d/00-dav.conf
+    - conf.modules.d/00-lua.conf
+    - conf.modules.d/00-proxy.conf
+ 
+- name: /etc/security/limits.d/20-nproc.conf
+  copy:
+    src=20-nproc.conf
+    dest=/etc/security/limits.d/20-nproc.conf
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/GeoIP.conf
+  copy:
+    src=GeoIP.conf
+    dest=/etc/GeoIP.conf
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/php.d/geoip.ini
+  copy:
+    src=geoip.ini
+    dest=/etc/php.d/geoip.ini
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/cron.d/geoip
+  copy:
+    src=geoip.cron
+    dest=/etc/cron.d/geoip
+    mode=0644
+    owner=root
+    group=root
+
+- name: /etc/logrotate.d/mobileclientlog
+  copy:
+    src=mobileclientlog
+    dest=/etc/logrotate.d/mobileclientlog
+    mode=0644
+    owner=root
+    group=root
+
+- name: remove /var/log/httpd
+  file:
+    src=/mnt/ebs1/log
+    dest=/var/log/httpd
+    state=link
+    force=yes

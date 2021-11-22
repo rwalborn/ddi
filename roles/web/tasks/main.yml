@@ -1,0 +1,10 @@
+---
+- include_vars: secrets.yml
+- include: install_httpd.yml
+- include: copy_code.yml
+
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted
+    enabled: yes

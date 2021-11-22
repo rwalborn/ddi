@@ -1,0 +1,11 @@
+- name: httpd_reload
+  service:
+    name=httpd
+    state=reloaded
+  ignore_errors: True
+
+- name: carbon_reload
+  service:
+    name=carbon-cache
+    state=reloaded
+  ignore_errors: True

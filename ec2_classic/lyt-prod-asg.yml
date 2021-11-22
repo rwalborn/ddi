@@ -1,0 +1,30 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+---
+- name: create autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../host_vars/lyt
+  vars:
+    name_tag: LYT-PROD
+    lc: LYT-PROD-001
+    lb: LYT-PROD
+    env: production
+    hc_type: EC2
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: us-east-1
+      availability_zones: [ 'us-east-1c', 'us-east-1d' ]
+      launch_config_name: "{{ lc }}"
+      min_size: 8
+      max_size: 9
+      desired_capacity: 8
+      load_balancers: [ "{{ lb }}" ]
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "{{ app_tag }}"

@@ -1,0 +1,19 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    app_tag: php-casino
+    env_tag: qa
+    service_tag: PHP
+    sg: SG_LAN_QA
+    resource_path: /ddchealthchk.html
+    nginx: true
+    instance_type: c3.xlarge
+    private_lb: false
+  roles:
+    - { role: lb, name_tag: 'LBPHP-QA', az: az1, fqdn: lbphp01.use1.qa.ddc.io }

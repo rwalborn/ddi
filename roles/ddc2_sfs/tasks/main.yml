@@ -1,0 +1,133 @@
+- name: template /etc/hosts to support local couchbase and mongo
+  template:
+    src=hosts.j2
+    dest=/etc/hosts
+    owner=root
+    group=root
+    mode=0644
+
+- name: init script
+  copy:
+    src: sfs.init
+    dest: /etc/rc.d/init.d/sfs
+    owner: root
+    group: root
+    mode: 0744
+
+- name: instance_id
+  shell: 'curl -s http://169.254.169.254/latest/meta-data/instance-id'
+  register: instance_id
+
+- name: let instance find name tag to avoid cross-account cred
+  shell: aws ec2 describe-tags --region us-east-1 --filter "Name=resource-id,Values={{ instance_id.stdout }}" --query "Tags[?Key=='Name'].Value" --output text
+  register: nametag
+
+- name: get license
+  set_fact: lic_number="{{ licenses|json_query(nametag.stdout) }}"
+
+# xml module can't deal with garbage in config.xml, resorting to lineinfile
+- name: license server hostname
+  lineinfile:
+    dest="{{ SFS_SERV }}/config.xml"
+    state=present
+    backrefs=yes
+    regexp='(^\s*<ip>).*(</ip>.*$)'
+    line="\1{{ lic_hostname }}\2"
+  notify:
+    - restart sfs
+
+- name: assign license while working around ascii expansion
+  lineinfile:
+    dest="{{ SFS_SERV }}/config.xml"
+    state=present
+    backrefs=yes
+    regexp='(^\s*)<license>.*(</license>.*$)'
+    line="\1<license>{{ lic_number }}\2"
+  notify:
+    - restart sfs
+
+- name: notificationConfig.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/notificationConfig.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*playerEngine\":\"http://).*(/sg/PlayerEngineNotificationAcknowledgementsHandler.*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: balanceClient.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/balanceClient.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*Url\":\"http://)[^\"]*(\".*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: userServiceUri.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/userServiceUri.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*Uri\":\"http://)[^\"]*(\".*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: experimentServiceUri.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/experimentServiceUri.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*Uri\":\"http://)[^\"]*(\".*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: jwtTokenServiceUrl.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/jwtTokenServiceUrl.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*Url\":\"http://).*(/service/v1/publickey.*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: restExperimentClientConfig.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/restExperimentClientConfig.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*host\":\")[^\"]*(\",.*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: mpe.api.host.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/mpe.api.host.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*host\":\")[^\"]*(\".*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: dealerUri.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/dealerUri.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*Uri\":\"http://)[^\"]*(/\".*$)'
+    line="\1{{ locator_hostname }}\2"
+
+- name: rgsWrapper.serverUrl.json
+  lineinfile:
+    dest="{{ SFS_CONF }}/rgsWrapper.serverUrl.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*Url\":\"http://).*(/rgslite/tc.*$)'
+    line="\1{{ rgs_hostname }}\2"
+
+- name: set userDataKeptInCouchbaseAtLogout.json to false
+  lineinfile:
+    dest="{{ SFS_CONF }}/userDataKeptInCouchbaseAtLogout.json"
+    state=present
+    backrefs=yes
+    regexp='(^.*Logout\":).*$'
+    line="\1false}"
+
+- name: sfs service
+  service:
+    name=sfs
+    state=started
+    enabled=yes

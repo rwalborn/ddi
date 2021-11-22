@@ -1,0 +1,31 @@
+# TMT-PROD VARS FILE
+
+name_tag: TMT-PROD
+service_tag: TMT
+icinga_profile: TMT-Paged
+hzcastprod: hzprod_tmnt
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmt.prod.doubledowncasino.com
+sg: SG_TMT_PROD
+
+env: production
+profile_name: tmt-prod
+
+key_name: ops-config
+role: tmt-prod
+
+lc: TMT-PROD-001
+
+ec2_asg:
+  desired_capacity: 5
+  min_size: 5
+  max_size: 5
+  hc_type: EC2
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

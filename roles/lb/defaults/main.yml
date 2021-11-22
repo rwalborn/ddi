@@ -1,0 +1,15 @@
+aws_profile: default
+key_name: ops-config
+app_ami: ami-2327ac35
+instance_type: c3.large
+az: az1
+role: lb
+nginx: false
+sysconfig_arg1: ''
+traffic_zone: doubledowncasino.com
+mgt_zone: ddc.io
+policy_routing: false
+private_lb: false
+deploy: true
+update_service_fqdn: false
+vpc: true

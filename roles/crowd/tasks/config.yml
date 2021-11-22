@@ -1,0 +1,76 @@
+---
+- name: make sure mountpoint exists
+  file:
+    path: "{{ mountpoint }}"
+    state: directory
+
+- name: mount ebs volume
+  mount:
+    path: "{{ mountpoint }}"
+    src: "/dev/{{ blkdev }}"
+    fstype: ext4
+    state: mounted
+
+- name: create crowd user
+  user:
+    name: crowd
+    state: present
+
+- name: make sure base directories exist and owned by crowd user
+  file:
+    path: "{{ mountpoint }}/{{ item }}"
+    owner: crowd
+    group: crowd
+    state: directory
+    recurse: yes
+  with_items:
+    - crowd
+    - crowd-home
+
+- name: upgrade
+  include: upgrade.yml
+  when: upgrade
+
+- name: install packages
+  yum: state=installed name={{ item }}
+  with_items:
+    - graphviz
+    - java-1.8.0-openjdk-headless
+    - postfix
+
+- name: get public crt
+  shell: "openssl s_client -connect crowd.doubledowninteractive.com:443 < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/public.crt"
+
+- name: copy pass
+  shell: 'echo changeit > /root/pass'
+
+- name: keytool
+  shell: "/usr/bin/keytool -import -alias doubledowninteractive.com -file /tmp/public.crt -storepass:file /root/pass -noprompt"
+  ignore_errors: true
+
+- name: crowd-init.properties
+  template: src=crowd-init.properties.j2 dest="{{ mountpoint }}/crowd/crowd-webapp/WEB-INF/classes/crowd-init.properties" mode=0666
+
+- name: crowd-init.d
+  template: src=crowd.init.d.j2 dest="{{ mountpoint }}/crowd/crowd.init.d" mode=755
+
+- name: symlink crowd.init.d
+  file:
+    src: "{{ mountpoint }}/crowd/crowd.init.d"
+    dest: "/etc/init.d/crowd"
+    state: link
+    force: yes
+
+- name: remove /tmp/public.crt
+  file: path=/tmp/public.crt
+        state=absent
+
+- name: remove /root/pass
+  file: path=/root/pass
+        state=absent
+
+- name: start services
+  service: name={{ item }} state=started
+  with_items:
+    - postfix
+    - crowd

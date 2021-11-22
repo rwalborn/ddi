@@ -1,0 +1,34 @@
+# Runs as export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv bal-sbx-asg.yml
+
+# beware of the config.s3.bucket tag
+
+---
+- name: create autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/bal-sbx
+  vars:
+    bucket: ddc-artifacts-nonprod
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: "{{ region }}"
+      availability_zones: [ "{{ az1 }}", "{{ az2 }}" ]
+      vpc_zone_identifier: [ "{{ subnet_pri_1 }}", "{{ subnet_pri_2 }}" ]
+      launch_config_name: "{{ lc }}"
+      desired_capacity: 2
+      min_size: 2
+      max_size: 2
+      load_balancers: [ "{{ lb }}" ]
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          rpm: "{{ rpm_tag }}"
+          app: "{{ app_tag }}"
+          service: "{{ service_tag }}"
+          config.s3.bucket: "{{ bucket }}"

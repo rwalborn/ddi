@@ -1,0 +1,98 @@
+---
+# Provisions newly spun up mobile web server from AMI
+- include_vars: common.yml
+- include_vars: secrets.yml
+- include_vars: buildmaster.yml
+- include_vars: buildslave.yml
+- include_vars: mobile_web_dev
+
+#- include_vars:
+#    - common.yml
+#    - secrets.yml
+#    - buildmaster.yml
+#    - buildslave.yml
+#    - mobile_web_dev
+
+- name: Update Apache configuration
+  template:
+    src: "{{ http_vhost_conf }}"
+    dest: "/etc/httpd/sites-available/{{ http_vhost_conf }}"
+
+# STUPID HACK DUE TO INCONSISTENT SLAVE NAMING SCHEME
+# IT WILL PROBABLY BREAK SOME OTHER DEPENDENCY
+# mdev = m1dev
+- name: Set marker for the environment
+  shell: "echo 'mdev' > {{ autobldr_home }}/slave_hostname.txt"
+  become: true
+  become_user: "{{ autobldr_username }}"
+  when: buildslave_name == "m1dev"
+
+- name: Set marker for the environment
+  shell: "echo {{ buildslave_name }} > {{ autobldr_home }}/slave_hostname.txt"
+  become: true
+  become_user: "{{ autobldr_username }}"
+  when: buildslave_name != "m1dev"
+
+- name: Link hg source dir (ami uses m1dev)
+  file:
+    src: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/m1dev"
+    dest: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    state: link
+  when: buildslave_name != 'm1dev'
+
+- name: update buildslave name
+  replace:
+    dest: "{{ autobldr_home }}/{{ buildslave_dir }}/buildbot.tac"
+    regexp: 'slavename =.*$'
+    replace: "slavename = '{{ buildslave_name }}-slave'"
+
+- name: update buildmaster ip
+  replace:
+    dest: "{{ autobldr_home }}/{{ buildslave_dir }}/buildbot.tac"
+    regexp: 'buildmaster_host =.*$'
+    replace: "buildmaster_host = '{{ groups['tag_Name_MOBILEFOOLS'][0] }}'"
+
+- name: where the hell is buildslave
+  shell: which buildslave
+  become: no
+  register: buildslave_path
+
+# TODO: Make handler
+- name: restart buildbot slave for paths
+  shell: 'python2.7 {{ buildslave_path.stdout }} stop {{ autobldr_home }}/{{ buildslave_dir }}'
+  become: true
+  become_user: "{{ autobldr_username }}"
+  ignore_errors: true
+
+- name: restart buildbot slave for paths
+  shell: 'python2.7 {{ buildslave_path.stdout }} start {{ autobldr_home }}/{{ buildslave_dir }}'
+  become: true
+  become_user: "{{ autobldr_username }}"
+  ignore_errors: true
+
+- name: Start apache
+  service:
+    name: httpd
+    state: restarted
+    enabled: yes
+
+- name: Start memcached
+  service:
+    name: memcached
+    state: restarted
+    enabled: yes
+
+- name: Create app DNS record
+  become: no
+  route53:
+    command: "create"
+    zone: "{{ DOMAIN }}"
+    record: "{{ www_prefix }}.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}"
+    type: "CNAME"
+    value: "mobile.{{ ENVIRONMENT }}.{{ VPC }}.{{ DOMAIN }}"
+    ttl: 30
+    overwrite: yes
+  delegate_to: localhost
+

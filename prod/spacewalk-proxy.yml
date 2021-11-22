@@ -1,0 +1,70 @@
+- name: spin up instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    name_tag: "SPACEWALKPROXY-{{ this_env|upper }}"
+    fqdn: "{{ spacewalk_host }}"
+    sg: "SG_SPACEWALKPROXY_{{ this_env|upper }}"
+    role: OPS
+  tasks:
+    - include: sec_groups/SG_SPACEWALKPROXY_INC.yml
+    - name: launch instance
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: c3.large
+        image: "{{ centos_7_ebs_hvm }}"
+        group: "{{ sg }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        assign_public_ip: false
+        zone: "{{ az1 }}"
+        region: "{{ region }}"
+        instance_profile_name: "{{ role }}"
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 100
+            device_type: gp2
+            delete_on_termination: true
+        instance_tags:
+          Name: "{{ name_tag }}"
+          env: "{{ this_env }}"
+          service: OPS
+          app: "spacewalk"
+          icinga-profile: "SPACEWALKPROXY"
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn }}"
+        wait: yes
+      register: ec2
+    - name: Add instances to host group
+      local_action: add_host hostname={{ ec2.instances.0.private_ip }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=500 state=started
+    - name: allow cloud-init to execute
+      pause: seconds=15
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: "{{ fqdn }}"
+        type: A
+        ttl: 300
+        value: "{{ ec2.instances.0.private_ip }}"
+
+- name: configure instance
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars:
+    fqdn: "{{ spacewalk_host }}"
+  vars_files:
+    - ../group_vars/prod
+  roles:
+    - ldap_client
+    - icinga
+    - { role: spacewalk, proxy: true }

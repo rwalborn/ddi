@@ -1,0 +1,13 @@
+[icinga2]
+transport = "local"
+path = "/var/run/icinga2/cmd/icinga2.cmd"
+
+[global]
+show_stacktraces = "1"
+module_path = "/usr/share/icingaweb2/modules"
+config_backend = "ini"
+
+[logging]
+log = "file"
+level = "WARNING"
+file = "/var/log/icingaweb2/icingaweb2.log"

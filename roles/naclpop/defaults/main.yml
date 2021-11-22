@@ -1,0 +1,11 @@
+service_tag: nacl
+app_tag: TOOLS
+env_tag: tools
+vpc: true
+role: nacl
+instance_type: t2.nano
+az: us-east-1d
+vpc_subnet_id: vpc-357eec53
+sg: default
+assign_public_ip: false
+scanner: false

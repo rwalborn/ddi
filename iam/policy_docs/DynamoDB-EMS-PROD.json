@@ -1,0 +1,30 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Stmt1445888401000",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:BatchGetItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:DescribeStream",
+                "dynamodb:DescribeTable",
+                "dynamodb:GetItem",
+                "dynamodb:GetRecords",
+                "dynamodb:GetShardIterator",
+                "dynamodb:ListStreams",
+                "dynamodb:PutItem",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:UpdateItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:143177584759:table/EMSADDR-USE1-PROD",
+                "arn:aws:dynamodb:us-east-1:143177584759:table/EMSADDR-USE1-PROD/index/email_address_index",
+                "arn:aws:dynamodb:us-east-1:143177584759:table/EMSTOKEN-USE1-PPOD",
+                "arn:aws:dynamodb:us-east-1:143177584759:table/EMSTOKEN-USE1-PROD/index/email_address_index"
+            ]
+        }
+    ]
+}

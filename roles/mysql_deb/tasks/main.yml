@@ -1,0 +1,134 @@
+---
+
+- name: add percona repo key
+  shell: apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A
+
+- name: add percona source
+  shell: echo "deb http://repo.percona.com/apt "$(lsb_release -sc)" main" | sudo tee /etc/apt/sources.list.d/percona.list
+
+- name: add sources.list with commented out source repo
+  copy: src=sources.list
+        dest=/etc/apt/sources.list
+        owner=root
+        mode=644
+
+- name: update apt cache
+  shell: apt-get update
+
+# debian_frontend added to fix the grub update prompt
+- name: update distro
+  shell: DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
+- name: install needful
+  apt: name={{ item }} state=installed
+  with_items:
+    - htop
+    - git
+    - mercurial
+    - python-pip
+    - dnsutils
+    - tcpdump
+    - sysstat
+    - vim
+    - ntp
+    - curl
+    - aptitude
+    - xfsprogs
+    - bwm-ng
+    - rsync
+    - telnet
+    - mydumper
+
+- name: install percona server
+  apt: pkg={{ item }} state=present update_cache=yes
+  with_items:
+    - percona-server-server-5.6
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: replace ntp.conf with AWS timeservers
+  copy: src=deb8x.ntp.conf
+        dest=/etc/ntp.conf
+        owner=root
+        mode=0644
+
+- name: restart ntp for changes to take effect
+  service: name=ntp
+           enabled=yes
+           state=restarted
+
+- name: install custom /etc/vim/vimrc for pretty syntax highlighting
+  copy: src=vimrc
+        dest=/etc/vim/vimrc
+        owner=root
+        mode=0644
+
+- name: copy custom .bashrc
+  copy: src=.bashrc
+        dest=/root/.bashrc
+        owner=root
+        mode=0644
+
+- name: add sources.list with commented out source repo
+  copy: src=sources.list
+        dest=/etc/apt/sources.list
+        owner=root
+        mode=0644
+
+- name: copy custom /etc/cloud/cloud.cfg
+  copy: src=cloud.cfg
+        dest=/etc/cloud/cloud.cfg
+        owner=root
+        mode=0644
+
+- name: overwrite /root/.ssh/authorized_keys to allow root login
+  shell: cp /home/admin/.ssh/authorized_keys /root/.ssh/authorized_keys
+
+- name: and change owener to root on /root/.ssh/authorized_keys
+  shell: 'chown root: /home/admin/.ssh/authorized_keys'
+
+#- name: Find the resourceId using the AWS metadata service
+#  shell: curl http://169.254.169.254/latest/meta-data/instance-id
+#  register: instanceId
+
+- name: partition /dev/xvdf with script
+  script: sfdisk.sh
+
+- name: fomat /dev/xvdf1 as xfs
+  filesystem: fstype=xfs dev=/dev/xvdf1
+
+- name: create dir for new ebs mount
+  shell: mkdir /mnt/ebs1
+
+- name: add /mnt/ebs1 to /etc/fstab
+  lineinfile: dest=/etc/fstab
+              state=present
+              line='/dev/xvdf1      /mnt/ebs1           xfs     noatime,relatime 0       2'
+              insertafter=EOF
+
+- name: mount /mnt/ebs1
+  shell: mount /mnt/ebs1
+
+- name: stop mysql
+  service: name=mysql state=stopped
+
+- name: copy my.cnf
+  copy: src=my.cnf
+        dest=/etc/mysql/my.cnf
+        backup=yes
+        owner=root
+        mode=0644
+
+- name: rsync /var/lib/mysql to /mnt/ebs1/mysql
+  shell: rsync -av /var/lib/mysql /mnt/ebs1/
+
+- name: mv /var/lib/mysql to /var/lib/mysql.org
+  shell: mv /var/lib/mysql /var/lib/mysql.org
+
+- name: create symlink /var/lib/mysql -> /mnt/ebs1/mysql
+  shell: ln -s /mnt/ebs1/mysql /var/lib/mysql
+
+- name: start mysql
+  service: name=mysql state=started
+  
+

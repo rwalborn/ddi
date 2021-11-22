@@ -1,0 +1,25 @@
+---
+# MQDDC-STG VARS FILE
+
+sg: SG_LAN_STG
+key_name: ops-config
+profile_name: mqddc-stg
+icinga_profile: MQDDC
+prefix: MQDDC
+env: STG
+dd_env: staging
+service_tag: MQDDC
+app_tag: DDC
+
+fqdn_prefix: mqddc
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.stg.doubledowncasino.com
+
+instance_type: m3.xlarge
+
+lbname: LBMQDDC-TEST
+
+rt53_zone: ddc.io
+

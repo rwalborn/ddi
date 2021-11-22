@@ -1,0 +1,33 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+---
+- name: create autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/lgn
+  vars:
+    name_tag: LGN-STG
+    lb: LGN-STG
+    env: staging
+    hc_type: EC2
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: us-east-1
+      availability_zones: [ 'us-east-1c', 'us-east-1d' ]
+      vpc_zone_identifier: [ "{{ subnet_pri_1c }}", "{{ subnet_pri_1d }}" ]
+      launch_config_name: "{{ stg_lc }}"
+      desired_capacity: 1
+      min_size: 0
+      max_size: 2
+      load_balancers: [ "{{ lb }}" ]
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "{{ app_tag }}"
+          rpm: "{{ rpm_tag }}"
+          service: "{{ service_tag }}"

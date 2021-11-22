@@ -1,0 +1,18 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+  vars:
+    name_tag: LBDCH-LT
+    fqdn: lbdch01.use1.lt.ddc.io
+    app_tag: daily-challenge
+    env_tag: load_test
+    sg: LoadTest
+    az: us-east-1e
+    service_fqdn: dchddc.use1.lt.doubledowncasino.com
+  roles:
+    - { role: lb, private_lb: true }

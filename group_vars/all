@@ -1,0 +1,45 @@
+---
+# file: group_vars/all
+# This file is NOT the right place for the followings:
+# - application ami should be in host_vars or role vars
+# - variables used by your playbook should be in vars, host_vars or role vars
+
+# bad examples below:
+# couchbase 4.1
+cb_4x_ami: ami-2ef3e744
+# couchbase 4.5 ami
+cb_45_ami: ami-fbcce980
+# mongo
+mg_ami: ami-a31976b4
+# rabbitmq
+mq_ami: ami-7c2f466b
+#
+tools_vpc: vpc-440d8e20
+
+# centos 6.8 ami from the bake role
+centos_68_base: ami-591daf4f
+
+# centos 7 ami from the bake role
+centos_7_base: "{{ centos_7_ebs_hvm }}"
+centos_7_ebs_hvm: ami-c812a0de
+
+jump_int_1c: 192.168.0.21
+jump_eip_1c: 52.70.18.78
+jump_int_1d: 192.168.2.21
+jump_eip_1d: 52.70.133.15
+
+vpn_ext: 52.90.121.124
+icinga_master_1: 192.168.3.32
+
+aws_acct: 143177584759
+region: us-east-1
+az1: us-east-1c
+az2: us-east-1d
+
+sea_meraki_1: 65.117.84.83
+sea_meraki_2: 50.226.229.178
+
+sea_office_1: 204.11.203.10
+sea_office_2: 65.117.84.84
+sea_office_3: "{{ sea_meraki_1 }}"
+sea_office_4: "{{ sea_meraki_2 }}"

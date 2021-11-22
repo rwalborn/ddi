@@ -1,0 +1,8 @@
+/mnt/atlassian/fecru-3.4.4/var/log/fisheye.out {
+        copytruncate
+        daily
+        rotate 7
+        compress
+        delaycompress
+        notifempty
+}

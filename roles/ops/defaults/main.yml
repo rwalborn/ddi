@@ -1,0 +1,3 @@
+code_deploy: true
+legacy: true
+repo: hg

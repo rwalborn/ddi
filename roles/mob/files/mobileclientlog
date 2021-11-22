@@ -1,0 +1,9 @@
+/var/log/httpd/mobileClientLog.txt {
+    create 664 apache apache
+    missingok
+    notifempty
+    rotate 3
+    size 50M
+    compress
+    delaycompress
+}

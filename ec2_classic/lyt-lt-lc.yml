@@ -1,0 +1,29 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/lt
+    - ../host_vars/lyt
+  vars:
+    role: lyt-lt
+    sg_id: sg-69fc8002
+  tasks:
+  - name: launch configuration
+    ec2_lc:
+      name: "{{ lt_lc }}"
+      image_id: "{{ app_ami }}"
+      key_name: ops-config
+      security_groups: [ "{{ sg_id }}" ]
+      instance_profile_name: "{{ role }}"
+      instance_type: "{{ instance_type }}"
+      instance_monitoring: false
+      volumes:
+      - device_name: /dev/sda1
+        volume_size: 8
+        device_type: gp2
+        delete_on_termination: true
+      region: us-east-1
+      classic_link_vpc_id: "{{ vpc_id }}"
+      classic_link_vpc_security_groups: "{{ classiclink_sg }}"

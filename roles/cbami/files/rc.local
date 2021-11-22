@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# This script will be executed *after* all the other init scripts.
+# You can put your own initialization stuff in here if you don't
+# want to do the full Sys V style init stuff.
+
+touch /var/lock/subsys/local
+
+# set a random pass on first boot
+if [ -f /root/firstrun ]; then
+  dd if=/dev/urandom count=50|md5sum|passwd --stdin root
+  passwd -l root
+  rm /root/firstrun
+fi
+
+if [ ! -d /root/.ssh ]; then
+  mkdir -m 0700 -p /root/.ssh
+  restorecon /root/.ssh
+fi
+
+if test -f /sys/kernel/mm/transparent_hugepage/enabled; then
+  echo never > /sys/kernel/mm/transparent_hugepage/enabled
+fi
+
+if test -f /sys/kernel/mm/transparent_hugepage/defrag; then
+   echo never > /sys/kernel/mm/transparent_hugepage/defrag
+fi
+
+test -x /usr/local/sbin/aws_hostname_by_id.sh && /usr/local/sbin/aws_hostname_by_id.sh
+
+~                 

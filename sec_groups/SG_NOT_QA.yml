@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_NOT_QA.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/not-qa
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

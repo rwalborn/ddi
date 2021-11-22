@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBMPA_PROD.yml
+---
+- name: LBMPA_PROD security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/mpa-prod
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

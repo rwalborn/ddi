@@ -1,0 +1,11 @@
+sg: SG_LAN_TOOLS
+name_tag: MOBILEJENKINS-TOOLS
+service_tag: MOB
+role: mobjm-tools
+env: tools
+key_name: ops-config
+instance_type: c3.xlarge
+image: ami-6d1c2007
+vpc_subnet_id: "{{ subnet_pri_3 }}"
+assign_public_ip: false
+zone: "{{ az1 }}"

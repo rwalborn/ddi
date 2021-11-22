@@ -1,0 +1,48 @@
+---
+vpc_id: vpc-440d8e20
+vpc_cidr: 192.168.0.0/22
+subnet_pub_1c: subnet-08679e7e
+subnet_pub_1d: subnet-fe0714a7
+subnet_pri_1c: subnet-09679e7f
+subnet_pri_1d: subnet-fa0714a3
+classiclink_sg: sg-e167789d
+icinga_sg: sg-bb7897c6
+this_env: tools
+spacewalk_host: spacewalk.use1.tools.ddc.io
+
+
+# NEW STYLE SINCE SUBS ARE IN DIFF AZ'S IN NONPROD
+subnet_pub_1: subnet-08679e7e
+subnet_pub_2: subnet-fe0714a7
+#sewage
+subnet_pub_3: subnet-b912b1f0
+subnet_pub_4: subnet-98ac57c3
+
+subnet_pri_1: subnet-09679e7f
+subnet_pri_2: subnet-fa0714a3
+#sewage
+subnet_pri_3: subnet-7b11b232
+subnet_pri_4: subnet-b5ac57ee
+
+region: us-east-1
+az1: us-east-1c
+az2: us-east-1d
+
+key_name: ops-config
+
+vpc_id_dev: vpc-7bb4021f
+vpc_id_qa: vpc-13b31c77
+vpc_id_lt: vpc-6a95260e
+vpc_id_stg: vpc-e896258c
+vpc_id_prod: vpc-cf65e5ab
+
+aurora_master_user: DBA
+aurora_master_pw: "{{ vault_aurora_master_pw }}"
+
+appdynamics_ldap_pw: "{{ vault_appdynamics_ldap_pw }}"
+
+sssd_conf:
+  ca_cert_path: /etc/openldap/cacerts
+  ldap_servers:
+     - ldap00-tools.ddc.io
+     - ldap01-tools.ddc.io

@@ -1,0 +1,11 @@
+app_ami: ami-021f3e14
+app_tag: DDC
+rpm_tag: ddi-loyalty
+service_tag: LYT
+svc: LYT
+instance_type: m3.large
+spot_price: 0.133
+instance_port: 8080
+ping_path: /
+stg_lc: LYT-STG-001
+prod_lc: LYT-PROD-001

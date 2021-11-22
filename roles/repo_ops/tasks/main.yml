@@ -1,0 +1,11 @@
+---
+- name: create Ops repo
+  yum_repository:
+    name: DDI
+    description: DDI Ops repo
+    baseurl: http://ddi-ops-repo.s3.amazonaws.com/$releasever/$basearch/
+    gpgcheck: no
+    enabled: yes
+    s3_enabled: yes
+    priority: 1
+    state: present

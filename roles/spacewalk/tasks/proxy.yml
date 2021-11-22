@@ -1,0 +1,85 @@
+---
+- name: set hostname via kernel
+  shell: "echo {{ fqdn }} > /proc/sys/kernel/hostname"
+
+- name: set hostname in /etc/hostname
+  shell: "echo {{ fqdn }} > /etc/hostname"
+
+- name: set HOSTNAME variable
+  shell: "export HOSTNAME={{ fqdn }}"
+
+- name: get spacewalk certificate
+  yum: state=installed name='http://{{ spacewalk_master }}/pub/rhn-org-trusted-ssl-cert-1.0-1.noarch.rpm'
+
+- name: install spacewalk server repo
+  yum: state=installed name=http://yum.spacewalkproject.org/2.6/RHEL/7/x86_64/spacewalk-repo-2.6-0.el7.noarch.rpm
+
+- name: install packages
+  yum: state=installed name={{ item }}
+  with_items:
+    - rhn-client-tools
+    - rhn-check
+    - rhn-setup
+    - rhnsd
+    - m2crypto
+    - yum-rhn-plugin
+    - httpd
+    - spacewalk-proxy-installer
+    - spacewalk-proxy-selinux
+    - sendmail
+    - mailx
+
+# downgrade version of httpd because https://www.redhat.com/archives/spacewalk-list/2017-April/msg00110.html
+- name: yum downgrade
+  shell: "yum downgrade -y httpd httpd-tools mod_ssl"
+
+- name: register with spacewalk
+  shell: "rhnreg_ks --serverUrl='https://{{ spacewalk_master }}/XMLRPC' --sslCACert=/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT --activationkey=1-centos{{ ansible_distribution_major_version }}-x86_64-{{ this_env }} --force"
+  when: registerme
+
+- name: setup answer file
+  blockinfile:
+    dest: /root/answers.txt
+    create: yes
+    block: |
+      VERSION="2.6"
+      RHN_PARENT="{{ spacewalk_master }}"
+      TRACEBACK_EMAIL="DDI-UNIXTeam@IGT.com"
+      USE_SSL="Y"
+      CA_CHAIN="/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT"
+      HTTP_PROXY=
+      SSL_CNAME_ASK="{{ fqdn }}"
+      SSL_ORG="Doubledown Interactive"
+      SSL_ORGUNIT="Techops"
+      SSL_COMMON="{{ fqdn }}"
+      SSL_CITY="Seattle"
+      SSL_STATE="Washington"
+      SSL_COUNTRY="US"
+      SSL_PASSWORD="{{ ssl_pw }}"
+      POPULATE_CONFIG_CHANNEL="y"
+      RHN_USER="{{ spacewalk_admin_user }}"
+      RHN_PASSWORD="{{ spacewalk_admin_pw }}"
+
+#- name: create ssl-build dir and RHN-ORG-PRIVATE-SSL-KEY RHN-ORG-TRUSTED-SSL-CERt rhn-ca-openssl.cnf from spacewalk server
+- name: create ssl-build dir
+  file:
+    path: /root/ssl-build
+    state: directory
+
+- name: create RHN-ORG-PRIVATE-SSL-KEY
+  blockinfile:
+    create: yes
+    dest: /root/ssl-build/RHN-ORG-PRIVATE-SSL-KEY
+    mode: 0600
+    owner: root
+    group: root
+    block: "{{ ssl_privkey }}"
+
+- name: create rhn-ca-openssl.cnf
+  template: src=rhn-ca-openssl.cnf.j2 dest=/root/ssl-build/rhn-ca-openssl.cnf mode=0600
+
+- name: copy RHN-ORG-TRUSTED-SSL-CERT
+  shell: cp /usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT /root/ssl-build/
+
+- name: configure proxy
+  shell: configure-proxy.sh --answer-file=/root/answers.txt --non-interactive

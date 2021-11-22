@@ -1,0 +1,10 @@
+- name: use our timeservers
+  copy: src="chrony.conf.{{ ansible_distribution }}_{{ ansible_distribution_major_version }}"
+        dest=/etc/chrony.conf
+        owner=root
+        mode=0644
+
+- name: restart chronyd
+  service: name=chronyd
+           enabled=yes
+           state=restarted

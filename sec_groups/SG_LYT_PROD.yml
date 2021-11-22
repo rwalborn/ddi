@@ -1,0 +1,13 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/lyt
+  vars:
+      sg: SG_LYT_PROD
+  tasks:
+    - include: "{{ sg }}_INC.yml"

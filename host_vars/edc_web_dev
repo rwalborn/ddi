@@ -1,0 +1,41 @@
+---
+# The variables file used by playbooks in the edc web group.
+
+http_vhost_conf: edc.dev.apache.conf
+
+casinoapi_rpm: php-casino-1.0.2133.7-1
+
+# These are needed for the www directory
+virtual_www_root: /home/webapps/casino
+current_www_dir: /home/webapps/casino/repo/mobile/www
+www_repo_link_dest: /home/webapps/casino/repo
+www_repo_dir: /mnt/ephemeral/repo
+www_document_root: /home/webapps/casino/current/content
+webapp_install_path: /mnt/ephemeral/repo/mobile/www
+www_prefix: edc1
+
+mobile_repo_dir: /mnt/ephemeral/repo
+
+# random junk
+http_ver: 2.2.31
+php_ver: php55
+php_conf_dir: /etc/php-5.5.d
+mobilebuilds_root: /export/www/webdeploy
+
+buildslave_name: desktop-dev
+server_name: edc
+svn_branch: default
+
+ec2:
+    key_name: MobileDevInternal
+    instance_type: t2.medium
+    security_groups:
+        - sg-b1cc0cd7
+        - sg-4eda6537
+        - sg-dfece8a6
+    image: ami-874048ed
+    region: us-east-1
+    vpc_subnet_id: subnet-62fcd949
+    user_data: user_data.sh
+    instance_profile_name: MobileDevSFSRole
+

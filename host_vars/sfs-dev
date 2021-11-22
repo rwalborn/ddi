@@ -1,0 +1,11 @@
+vpc_sg: SG_LAN_DEV
+ec2_sg: Dev
+env: development
+iamrole: sfs-dev
+service_tag: SFS
+svc: SFS
+icinga: SFS
+
+sfs_externals_casino_config_host: cp.dev.doubledowncasino.com
+sfs_externals_casino_config_db_host: dbddcm01.use1.dev.doubledowncasino.com
+sfs_externals_admin_config_host: dev.doubledowncasino.com

@@ -1,0 +1,43 @@
+---
+- name: Check for mnt ephemeral
+  file:
+    name=/mnt/ephemeral
+    state=directory
+
+- name: Check ephemeral is mounted
+  mount:
+    name=/mnt/ephemeral
+    src=/dev/xvdb
+    fstype=ext3
+    state=mounted
+
+- name: Check whether swap file exists
+  stat:
+    path=/mnt/ephemeral/swapfile
+    get_md5=no
+  register: swapfile
+
+- name: Write swapfile
+  command: dd if=/dev/zero of=/mnt/ephemeral/swapfile bs=4096 count="{{ (mb*256) }}"
+  when: not swapfile.stat.exists
+  register: write_swapfile
+
+- name: Set swap permissions
+  file: name=/mnt/ephemeral/swapfile state=file mode=600
+  when: write_swapfile.changed
+
+- name: set up as swap
+  command: mkswap /mnt/ephemeral/swapfile
+  when: write_swapfile.changed
+
+- name: turn on swap
+  command: swapon /mnt/ephemeral/swapfile
+  when: write_swapfile.changed
+  register: swap_enabled
+
+- name: Add swapfile to /etc/fstab
+  lineinfile:
+    dest=/etc/fstab
+    line="/mnt/ephemeral/swapfile   none    swap    sw    0   0"
+    state=present
+  when: swap_enabled.changed

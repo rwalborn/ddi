@@ -1,0 +1,6 @@
+app_ami: ami-0ed1dd19
+app_tag: SmartFoxServerPro
+instance_type: t2.medium
+instance_port: 60006
+dev_lc: LIC-DEV-001
+prod_lc: LIC-PROD-001

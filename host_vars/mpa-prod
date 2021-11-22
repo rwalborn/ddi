@@ -1,0 +1,43 @@
+# MPA-PROD VARS FILE
+
+name_tag: MPA-PROD
+service_tag: MPE
+icinga_profile: MPA-Paged
+lb: MPA-PROD
+
+app_tag: DDC
+rpm_tag: metagame-admin-webapp
+app_ami: ami-320b7e24
+instance_type: m3.xlarge
+sg: SG_MPA_PROD
+elb_sg: SG_LBMPA_PROD
+elb_fqdn: mpa.prod.doubledowncasino.com
+env: production
+key_name: ops-config
+profile_name: mpa-prod
+
+lc: MPA-PROD-003
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 1
+  min_size: 1
+  max_size: 1
+  hc_type: EC2
+
+instance_port_1: 11422
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /ping
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+

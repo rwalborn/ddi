@@ -1,0 +1,7 @@
+pgp_keys_password: "{{ vault_pgp_keys_password }}"
+releases_pgp_key: "{{ vault_releases_pgp_key }}"
+releases_pgp_key_public: "{{ vault_releases_pgp_key_public }}"
+ddi_pgp_key: "{{ vault_ddi_pgp_key }}"
+ddi_pgp_key_public: "{{ vault_ddi_pgp_key_public }}"
+jenkins_pub_key: "{{ vault_jenkins_pub_key }}"
+

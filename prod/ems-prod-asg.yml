@@ -1,0 +1,34 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/ems
+  vars:
+    name_tag: EMS-PROD
+    cfghost_tag: cfg.ddc-prod.ddims.cc
+    lb: EMS-PROD
+    env: production
+    hc_type: EC2
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: us-east-1
+      availability_zones: [ 'us-east-1c', 'us-east-1d' ]
+      vpc_zone_identifier: [ "{{ subnet_pri_1c }}", "{{ subnet_pri_1d }}" ]
+      launch_config_name: "{{ prod_lc }}"
+      desired_capacity: 3
+      min_size: 3
+      max_size: 4
+      load_balancers: [ "{{ lb }}" ]
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          rpm: "{{ rpm_tag }}"
+          app: "{{ app_tag }}"
+          cfghost: "{{ cfghost_tag }}"

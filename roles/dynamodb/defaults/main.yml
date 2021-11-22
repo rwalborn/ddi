@@ -1,0 +1,7 @@
+region: us-east-1
+aws_profile: default
+read_cap: 5
+write_cap: 5
+hash_key_name: key
+hash_key_type: STRING
+state: present

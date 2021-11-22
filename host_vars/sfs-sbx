@@ -1,0 +1,10 @@
+vpc_sg: SG_LAN_SBX
+env: sbx
+iamrole: sfs-sbx
+icinga: SFS
+
+sfs_config_config_path: sfs-configs/sbx
+sfs_externals_casino_config_host: ccp.use1.sbx.doubledowncasino.com
+sfs_externals_casino_config_db_host: dbddc.use1.sbx.doubledowncasino.com
+sfs_externals_admin_config_host: sandbox.doubledowncasino.com
+sfs_deploy_artifact_version: 1.0.25

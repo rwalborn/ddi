@@ -1,0 +1,15 @@
+graphite_ver: 0.9.15
+carbon_ver: 0.9.15
+whisper_ver: 0.9.15
+
+svc_fqdn: rscollectd.use1.prod.ddc.io
+app: graphite
+instance_type: m4.large
+sg: SG_MTX_PROD
+sg_id: sg-1a838e61
+az: us-east-1d
+ami: ami-23df5b34
+role: ddc-nagios-prod
+
+rebuild: false
+config: false

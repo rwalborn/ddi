@@ -1,0 +1,50 @@
+---
+
+- name: 
+  lineinfile: "dest=/etc/cloud/cloud.cfg 
+               line='mounts:'"
+
+- name: 
+  lineinfile: "dest=/etc/cloud/cloud.cfg 
+               line=' - [ ephemeral0, null ]'"
+
+- name: download the files into the ami because yum sux so bad
+  get_url: url=http://downloads-distro.mongodb.org/repo/redhat/os/x86_64/RPMS/mongo-10gen-2.4.1-mongodb_1.x86_64.rpm
+           dest=/root/mongo-10gen-2.4.1-mongodb_1.x86_64.rpm
+
+- name: download the files into the ami because yum sux so bad, still
+  get_url: url=http://downloads-distro.mongodb.org/repo/redhat/os/x86_64/RPMS/mongo-10gen-server-2.4.1-mongodb_1.x86_64.rpm
+           dest=/root/mongo-10gen-server-2.4.1-mongodb_1.x86_64.rpm
+
+- name: Set the swappiness value for the running system
+  shell: echo 0 > /proc/sys/vm/swappiness
+
+- name: Backup sysctl.conf
+  shell: cp -p /etc/sysctl.conf /etc/sysctl.conf.`date +%Y%m%d-%H:%M`
+
+- name: Set the value in /etc/sysctl.conf so it stays after reboot
+  shell: echo '' >> /etc/sysctl.conf
+
+- name: Set the value in /etc/sysctl.conf so it stays after reboot
+  shell: echo '#Set swappiness to 0 to avoid swapping' >> /etc/sysctl.conf
+
+- name: Set the value in /etc/sysctl.conf so it stays after reboot
+  shell: echo 'vm.swappiness = 0' >> /etc/sysctl.conf
+
+- name: Disable THP on a running system
+  shell: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
+- name: Disable THP on a running system
+  shell: echo never > /sys/kernel/mm/transparent_hugepage/defrag
+
+- name: Backup rc.local and set the value in rc.local to survive reboot
+  shell: "cp -p /etc/rc.d/rc.local /etc/rc.d/rc.local.`date +%Y%m%d-%H:%M`"
+
+- name: replace /etc/rc.local so the above changes keep on reboot
+  copy: src=rc.local
+        dest=/etc/rc.d/rc.local
+        owner=root
+        group=root
+        mode=0755
+
+

@@ -1,0 +1,33 @@
+
+---
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/php
+    - ../host_vars/php-qa
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"
+
+- name: Create the "{{ name_tag }}" security group
+  ec2_group:
+    name: "{{ elb_sg }}"
+    description: "{{ elb_sg }}"
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        from_port: 80
+        to_port:  80
+        cidr_ip: 0.0.0.0/0
+      # Allow an icinga slave ping
+      - proto: icmp
+        from_port: -1
+        to_port: -1
+        cidr_ip: "{{ vpc_cidr }}"
+  register: ec2_group
+
+- name: Tag the ELB
+  command: aws ec2 create-tags --region "{{ region }}" --resources "{{ ec2_group.group_id }}" --tags Key=Name,Value="{{ elb_sg }}"

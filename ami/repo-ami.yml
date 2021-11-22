@@ -1,0 +1,129 @@
+## Runs as ansible-playbook -vvvv repo-ami.yml --vault-password-file ~/.vault_pass.txt
+
+---
+- name: Creation of a repomaster ami
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    sg: SG_LAN_TOOLS
+    name_tag: REPO-AMI
+  tasks:
+    - name: Launch instances
+      local_action:
+        module: ec2
+        region: "{{ region }}"
+        key_name: ops-config
+        group: "{{ sg }}"
+        instance_type: m3.xlarge
+        instance_profile_name: ami_base_centos
+        image: "{{ centos_68_base }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        count: 1
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 8
+            delete_on_termination: true
+        wait: yes
+      register: ec2
+
+    - name: Add EP2 instances to host group
+      add_host:
+        name: "{{ item.private_ip }}"
+        groups: ec2launch
+      with_items: "{{ ec2.instances }}"
+
+    - name: Add tag to instances
+      ec2_tag:
+        resource: "{{ item.id }}"
+        region: "{{ region }}"
+        state: present
+      with_items: "{{ ec2.instances }}"
+      args:
+        tags:
+          Name: "{{ name_tag }}"
+
+    - name: Wait for SSH to be available
+      wait_for:
+        host: "{{ item.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+      with_items: "{{ ec2.instances }}"
+
+- name: Configure provisioned servers
+  hosts: ec2launch
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - group_vars/tools
+  pre_tasks:
+    - name: upgrade distro
+      shell: yum upgrade -y
+  roles:
+    - ddiuser
+    - { role: ldap_client, baking: true }
+    - { role: ops, repo: git, code_deploy: false }
+    - { role: splunkforwarder, baking: true }
+    - { role: icinga, baking: true }
+#    - repo_ops
+
+- name: lets get baked
+  hosts: ec2launch
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: True
+  vars_files:
+    - group_vars/tools
+  roles:
+    - { role: bake, distro: nada }
+
+- name: make AMI and terminate instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ami_name: REPOMASTER-002
+    ami_desc: Repomaster Centos 6.x
+    name_tag: REPO-AMI-002
+    service_tag: OPS
+  tasks:
+    - name: Wait for SSH to be available
+      wait_for:
+        host: "{{ item.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+      with_items: "{{ ec2.instances }}"
+
+    - name: create image
+      ec2_ami:
+        instance_id: "{{ ec2.instances.0.id }}"
+        region: "{{ region }}"
+        name: "{{ ami_name }}"
+        description: "{{ ami_desc }}"
+        wait: yes
+        tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        launch_permissions:
+          user_ids: ['416386939808']
+      register: ec2_ami
+    - name: terminate instance
+      ec2:
+        instance_ids: "{{ ec2.instances.0.id }}"
+        region: us-east-1
+        state: absent
+      when: ec2_ami.state == 'available'
+      tags:
+        - terminate
+

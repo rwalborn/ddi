@@ -1,0 +1,19 @@
+# ansible-playbook -vv -i 'localhost,' Prod-vpc-pub.yml
+
+# naclversion automatically increases by 1
+# but you must specify naclversion to remove, such as:
+#    - { role: cloudformation, type: nacl, naclversion: '007', state: absent }
+
+# commit locally before running the playbook so that commit hash tracks correctly
+
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    vpcname: Prod
+    subnettype: vpc-pub
+    env: production
+  roles: 
+    - { role: cloudformation, type: nacl }

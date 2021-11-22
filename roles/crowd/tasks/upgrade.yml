@@ -1,0 +1,31 @@
+---
+- name: remove any existing -old dirs
+  shell: "rm -rf {{ mountpoint }}/*-old"
+
+- name: move existing crowd directory away
+  shell: "mv {{ mountpoint }}/{{ item }} {{ mountpoint }}/{{ item }}-old"
+  with_items:
+    - crowd
+    - crowd-home
+
+- name: make sure base directories exist (again) owned by crowd user
+  file:
+    path: "{{ mountpoint }}/{{ item }}"
+    owner: crowd
+    group: crowd
+    state: directory
+    recurse: yes
+  with_items:
+    - crowd
+    - crowd-home
+
+- name: extract crowd package
+  unarchive:
+    remote_src: yes
+    src: "https://www.atlassian.com/software/crowd/downloads/binary/{{ package }}"
+    dest: "{{ mountpoint }}"
+    owner: crowd
+    group: crowd
+
+- name: rename crowd directory
+  shell: "mv {{ mountpoint }}/atlassian-crowd-{{ version }}/* {{ mountpoint }}/crowd"

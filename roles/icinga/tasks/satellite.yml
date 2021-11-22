@@ -1,0 +1,65 @@
+---
+- name: install couchbase release
+  yum:
+    name: http://packages.couchbase.com/releases/couchbase-release/couchbase-release-1.0-2-x86_64.rpm
+    state: present
+  register: cbrelease
+
+- name: Add Couchbase repo for cbstats tools etc nagios checks
+  template: src=couchbase-release.j2 dest=/etc/yum.repos.d/couchbase-Base.repo mode=0644
+  when: cbrelease|success
+  register: cbrepo
+
+- name: Install couchbase-server
+  yum: name=couchbase-server state=installed
+  when: cbrepo|success
+
+- name: Create pki dir
+  file: path={{ pki_dir }} state=directory owner=icinga group=icinga
+  register: pki_dir_created
+
+- name: generate ticket
+  shell: "curl -k -s -u {{ director_api_user }}:{{ director_api_pass }} -H 'Accept: application/json' -X POST 'https://{{ icinga_master_fqdn }}:5665/v1/actions/generate-ticket' -d '{ \"cn\": \"{{ fqdn }}\" }'"
+  when: not update
+  register: ticket
+
+- name: set ticket
+  set_fact: this_ticket={{ (ticket.stdout|from_json).results.0.ticket }}
+  when: not update
+
+- name: Create new cert
+  shell: "icinga2 pki new-cert --cn {{ fqdn }} --key {{ pki_dir }}/{{ fqdn }}.key --cert {{ pki_dir }}/{{ fqdn }}.crt"
+  when: not update
+
+- name: Save cert
+  shell: "icinga2 pki save-cert --key {{ pki_dir }}/{{ fqdn }}.key --trustedcert {{ pki_dir }}/trusted-master.crt --host {{ icinga_master_fqdn }}"
+  when: not update
+
+- name: PKI request
+  shell: "icinga2 pki request --host {{ icinga_master_fqdn }} --port 5665 --ticket {{ this_ticket }} --key {{ pki_dir }}/{{ fqdn }}.key --cert {{ pki_dir }}/{{ fqdn }}.crt --trustedcert {{ pki_dir }}/trusted-master.crt --ca {{ pki_dir }}/ca.crt"
+  when: not update
+
+- name: Node setup
+  shell: "icinga2 node setup --ticket {{ this_ticket }} --endpoint {{ icinga_master_fqdn }},{{ icinga_master_fqdn }},5665 --zone {{ local_zone }} --master_host {{ icinga_master_fqdn }} --trustedcert {{ pki_dir }}/trusted-master.crt --accept-commands --accept-config"
+  when: not update
+
+- name: Setup icinga2 conf
+  template: src=satellite-conf.j2 dest=/etc/icinga2/icinga2.conf mode=0660 owner=icinga group=icinga
+  register: icingaconfig
+
+- name: setup zones.conf
+  template: src=satellite-zones.j2 dest=/etc/icinga2/zones.conf mode=0640 owner=root group=icinga
+
+- name: Enable Icinga Service
+  service: name=icinga2 enabled=yes state=restarted
+  when: (packages|success and icingaconfig|success)
+  register: start_icinga
+
+- name: Disable Couchbase Service
+  service: name=couchbase-server enabled=no state=stopped
+
+- name: get check_mongodb.py
+  get_url:
+    url: https://raw.githubusercontent.com/mzupan/nagios-plugin-mongodb/master/check_mongodb.py
+    dest: /usr/lib64/nagios/plugins/check_mongodb.py
+    mode: 0755

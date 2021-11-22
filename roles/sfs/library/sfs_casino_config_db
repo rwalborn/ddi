@@ -1,0 +1,348 @@
+#!/usr/bin/python
+
+try:
+    import re
+    import json
+    import pymysql
+    import_error=False
+except ImportError as error:
+    import_error = True
+    import_error_message = error.message
+
+DOCUMENTATION = '''
+---
+module: casino_config_db
+short_description: Allows user add a smartfox server and map games to 
+that server
+
+ 
+'''
+
+class HostGameMapper:
+    def __init__(self, params): 
+        self.params = params
+
+        self.exit_json = {}
+        self.exit_json['msg'] = ''
+
+        self.cursor = self._get_db_session()
+
+    def __del__(self):
+      self.cursor.close()
+      self.conn.close()
+      pass
+
+    # Connect to the db
+    def _get_db_session(self):
+        try:
+            self.conn = pymysql.connect(host=self.params['db_host'],
+                                        port=int(self.params['db_port']), 
+                                        user=self.params['db_user'],
+                                        passwd=self.params['db_passwd'], 
+                                        db=self.params['db_name'])
+            return self.conn.cursor()
+        except Exception, e:
+            exit("Error connecting to the database: %s" % e)
+
+  # some magic
+    def _generate_iterator(self, seq):
+      for n in count(1):
+        for s in product(seq, repeat=n):
+          yield ''.join(s)
+
+  # Given a position in the sequence, produce the alphabetic value
+    def _generate_visible_name_suffix(self, index_number):
+      visibleNameSuffix = ', '.join(list(islice(self._generate_iterator(
+                                                ascii_lowercase),
+                                                index_number, 
+                                                index_number+1)))
+      return visibleNameSuffix
+
+    # Generate the game name, and the subname clause for the game_room_id 
+    # query or return None if the input was wrong
+    def _generate_game_and_subgame(self, room_name):
+        # Game-Type and Sub-Type separated by a period
+        if '.' in room_name:
+          # Make sure the user has supplied a valid room name
+          if len(room_name.split(".")) == 2:
+            return (split(".")[0],"=%s" % (split(".")[1]))
+          else:
+            error_data = {}
+            error_data['msg'] = ("Incorrect room name ({room_name}) "
+                                 "format, should be <gametype>.<subtype> "
+                                 "or <gametype>.".format(**locals()))
+            error_data['failed'] = True 
+            error_data['changed'] = False
+            raise ValueError(error_data)
+        # If you just supplied a Game-Type with no Sub-Type use NULL for
+        # WHERE clause on the sub-type portion
+        else:
+          return (room_name, "is NULL")
+
+    def _add_sfs_server(self, sfs_hostname, sfs_adminurl,
+                             sfs_internalhostname, sfs_licenseid, 
+                             sfs_name, sfs_visiblenamesuffix):
+
+      success = self.cursor.execute("""
+                                  INSERT INTO 
+                                    SmartFoxServer 
+                                  SET
+                                    hostname='{sfs_hostname}', 
+                                    adminURL='{sfs_adminurl}',
+                                    internalHostname='{sfs_internalhostname}', 
+                                    licenseID='{sfs_licenseid}',
+                                    name='{sfs_name}', 
+                                    visibleNameSuffix='{sfs_visiblenamesuffix}'
+                                  """.format(**locals()))
+
+      if success:
+        return True
+      else: 
+        error_data = {}
+        error_data['failed'] = True
+        error_data['msg'] = ("Adding Smartfox server: {sfs_hostname} failed"
+                             "".format(**locals()))
+        raise ValueError(error_data)
+
+    def _remove_sfs_server(self, sfs_hostname):
+       success = self.cursor.execute("""DELETE FROM  
+                                          SmartFoxServer 
+                                        WHERE 
+                                          hostname='{sfs_hostname}'
+                                        """.format(**locals()))
+       if success:
+         return True
+       return False
+
+    # Get Id of the of SmartFox server name
+    def _get_sfs_server_id(self, sfs_hostname):
+      success = self.cursor.execute("""SELECT 
+                                         ID 
+                                       FROM  
+                                         SmartFoxServer  
+                                       WHERE  
+                                         hostname='{sfs_hostname}'
+                                       """.format(**locals()))
+
+      if success:
+        return self.cursor.fetchall()[0][0]
+      return None
+
+    # Get Room ID of specified SubGame name
+    def _get_game_room_type_id(self, game_name, sub_name_clause):
+
+      # Note: that we are passing in the whole clause to the sql statement so
+      # that we can have a single query string vs breaking the NULL case out 
+      # as a separate query string"
+
+      success =self.cursor.execute("""SELECT 
+                                        GameRoomType.ID  
+                                      FROM 
+                                        GameRoomType 
+                                      INNER JOIN 
+                                        GameType 
+                                      ON  
+                                        GameRoomType.gameTypeID=GameType.ID
+                                      WHERE
+                                        GameType.Name='{game_name}'
+                                      AND
+                                        GameRoomType.Subname {sub_name_clause}
+                                      """.format(**locals()))
+
+      if success:
+        return self.cursor.fetchall()[0][0]
+      else:
+        error_data = {}
+        error_data['msg'] = ("Problem finding room for game:({game_name}) " 
+                             "subgame: ({sub_name_clause})."
+                             "".format(**locals()))
+        error_data['failed'] = True
+        error_data['changed'] = False
+        raise ValueError(error_data)
+
+    def _get_room_mapping(self, room_id, sfs_host_id):
+      success = self.cursor.execute("""SELECT 
+                                         *
+                                       FROM 
+                                         GameRoomType_SmartFoxServer 
+                                       WHERE
+                                         GameRoomType_ID='{room_id}'
+                                       AND 
+                                         smartFoxServers_ID='{sfs_host_id}'
+                                     """.format(**locals()))
+      if success:
+        return self.cursor.fetchall()[0][0]
+      else:
+        return False
+
+    def _add_room_to_sfs_server(self, room_id, sfs_host_id):
+      success = self.cursor.execute("""INSERT INTO 
+                                         GameRoomType_SmartFoxServer 
+                                       SET
+                                         GameRoomType_ID='{room_id}',
+                                         smartFoxServers_ID='{sfs_host_id}'
+                                    """.format(**locals()))
+      if success:
+        return True
+      else:
+        error_data = {}
+        error_data['changed'] = False
+        error_data['failed'] = True
+        error_data['msg'] = ("Database insert failed for {room_name}. "
+                             "".format(**locals()))
+
+    def _remove_room_from_sfs_server(self, room_id, sfs_host_id):
+      success = self.cursor.execute("""DELETE FROM
+                                         GameRoomType_SmartFoxServer 
+                                       WHERE 
+                                         GameRoomType_ID='{room_id}'
+                                       AND  
+                                         smartFoxServers_ID='{sfs_host_id}'
+                                    """.format(**locals()))
+      
+      if success:
+        return True
+      else:
+        error_data = {}
+        error_data['failed'] = True
+        error_data['msg'] = ("Could not Delete ROOM_ID: {room_id}."
+                             "".format(**locals()))
+        raise ValueError(error_data)
+
+    # A function to delete the smartfox server.
+    def _remove_sfs_server_helper(self, sfs_hostname):
+      if self._get_sfs_server_id(sfs_hostname):
+        if self._remove_sfs_server(sfs_hostname):
+            self.exitJson['changed'] = True
+        else:
+            self.exitJson['failed'] = True
+            self.exitJson['msg'] += ("Deleting Smartfox server: "
+                                     "{sfs_hostname} failed"
+                                     "".format(**locals()))
+
+    # Check to make sure all the room map entries are valid
+    def validate_room_list(self, room_name_list):
+      for room_name in room_name_list:
+        # Generate a tuple containging the game type and the subname
+        name_tuple = self._generate_game_and_subgame(room_name)
+        self._get_game_room_type_id(*name_tuple)
+
+    # Add an sfs server to the casino_config database
+    def add_sfs_server(self, sfs_hostname, sfs_adminurl,
+                             sfs_internalhostname, sfs_licenseid, 
+                             sfs_name, sfs_visiblenamesuffix):
+      if not self._get_sfs_server_id(sfs_hostname):
+        self._add_sfs_server( sfs_hostname, sfs_adminurl,
+                             sfs_internalhostname, sfs_licenseid, 
+                             sfs_name, sfs_visiblenamesuffix)
+        self.exit_json['changed'] = True
+      self.exit_json['changed'] = False
+
+    # Remove an sfs server from the casino_config database
+    def remove_sfs_server(self, sfs_hostname):
+      if self._get_sfs_server_id(sfs_hostname):
+        self._remove_sfs_server(sfs_hostname)
+        self.exit_json['changed'] = True
+      self.exit_json['changed'] = False
+
+    # Map a single room to an sfs server.
+    def add_sfs_server_and_mapping(self, room_name_list, sfs_hostname):
+      """ Add an sfs server to the casino_config db and map rooms to it.
+    
+          Keyword arguments:
+          room_name_list -- A list object of room names
+      """
+      for room_name in room_name_list:
+        name_tuple = self._generate_game_and_subgame(room_name)
+        room_id = self._get_game_room_type_id(*name_tuple)
+        sfs_host_id = self._get_sfs_server_id(sfs_hostname)
+        # If room mapping exists, do nothing
+        if self._get_room_mapping(room_id, sfs_host_id):
+          self.exit_json['changed'] = False
+          self.exit_json['msg'] += '%s exists--skipping. ' % room_name
+        # Otherwise add the mapping
+        else:
+          self._add_room_to_sfs_server(room_id, sfs_host_id)
+          self.exit_json['changed'] = True
+          self.exit_json['msg'] += 'Added %s. ' % room_name
+
+    def remove_sfs_server_and_mapping(self, room_name_list, sfs_hostname):
+      """ Remove an sfs server and room maps from the casino_config db
+    
+          Keyword arguments:
+          room_name_list -- A list object of room names
+          sfs_hostname -- The fqdn of the smartfox server
+      """
+
+      for room_name in room_name_list:
+        name_tuple = self._generate_game_and_subgame(room_name)
+        room_id = self._get_game_room_type_id(*name_tuple)
+        sfs_host_id = self._get_sfs_server_id(sfs_hostname)
+        # If room mapping exists, delete it.
+        if self._get_room_mapping(room_id, sfs_host_id):
+          success = self._remove_room_from_sfs_server(room_id, sfs_host_id)
+          self.exit_json['changed'] = True
+          self.exit_json['msg'] += 'Deleted %s. ' % room_name
+        # Otherwise do nothing
+        else:
+          self.exit_json['msg'] += '%s not found: Skipping. ' % room_name
+          #self.exit_json['changed'] = False
+
+
+def main():
+        module = AnsibleModule(
+            argument_spec = dict(
+                state = dict(required=True, choices=['present', 'absent']),
+                db_name=dict(default='casino_config'),
+                db_host = dict(required=True),
+                db_port = dict(default='3306'),
+                db_user = dict(required=True),
+                db_passwd = dict(required=True),
+                room_list = dict(required=True),
+                hostname=dict(required=True),
+                adminURL=dict(required=True),
+                internalHostname=dict(required=True),
+                name=dict(required=True),
+                port=dict(default=3306)
+            )
+          )
+
+        if import_error:
+            module.fail_json(msg=import_error_message)
+
+        sfs_hostname= module.params['hostname']
+        state = module.params['state']
+        room_list = module.params['room_list'].split(",")
+        hgm = HostGameMapper(module.params)
+        hgm.exit_json['changed'] = False
+      
+        try:
+          hgm.validate_room_list(room_list)
+        except ValueError as e:
+          module.exit_json(**e.args[0])
+
+        if state == 'present':
+          try:
+            hgm.add_sfs_server(sfs_hostname=sfs_hostname,
+                               sfs_name=module.params['name'],
+                               sfs_internalhostname=module.params['internalHostname'],
+                               sfs_adminurl=module.params['adminURL'],
+                               sfs_visiblenamesuffix="foo",
+                               sfs_licenseid="0")
+            hgm.add_sfs_server_and_mapping(room_list,sfs_hostname)
+            module.exit_json(**hgm.exit_json)
+          except ValueError as e:
+            module.exit_json(**e.args[0])
+        elif state == 'absent':
+          try:
+            hgm.remove_sfs_server_and_mapping(room_list, sfs_hostname)
+            hgm.remove_sfs_server(sfs_hostname)
+            module.exit_json(**hgm.exit_json)
+          except ValueError as e:
+            # Make sure we remove the smartfox server
+            hgm.remove_sfs_server(sfs_hostname)   
+            module.exit_json(**e.args[0])
+
+
+from ansible.module_utils.basic import *
+main()

@@ -1,0 +1,76 @@
+---
+
+- name: create /dev/md0
+  shell: mdadm --create /dev/md0 --name=0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc -R
+
+- name: save the md0 config to survive reboot
+  shell: mdadm --detail --brief /dev/md0 >> /etc/mdadm.conf
+
+- name: partition
+  shell: 'echo \; | sfdisk /dev/md0'
+
+- name: format /dev/md0 as xfs
+  filesystem: fstype=xfs dev=/dev/md0
+
+- name: mount /var/lib/rabbitmq
+  mount: name=/var/lib/rabbitmq
+         src=/dev/md0
+         fstype=xfs
+         opts=noatime,relatime
+         state=mounted
+
+- name: Generate /etc/hosts file
+  template: src=hosts.j2
+            dest=/etc/hosts
+
+## begin rabbit 3.3.5-1 install option
+#- name: install the pre-downloaded rabbitmq
+#  yum: name=/root/rabbitmq-server-3.3.5-1.noarch.rpm
+#       state=present
+#       disablerepo=DDI
+#
+## end rabbit 3.3.5-1 install option
+
+## begin rabbit 3.6.1-1 install option which needs the erlang repo
+- name: install the erlang repo because what's in CentOS is too jurassic for rabbit 3.6
+  yum: name=http://packages.erlang-solutions.com/erlang-solutions-1.0-1.noarch.rpm
+       state=present
+       disablerepo=DDI
+
+- name: install latest erlang for 3.6
+  yum: name=erlang
+       state=present
+       disablerepo=DDI
+
+- name: install the pre-downloaded rabbitmq 3.6
+  yum: name=/root/rabbitmq-server-3.6.1-1.noarch.rpm
+       state=present
+       disablerepo=DDI
+
+## end rabbit 3.6.1-1 install option
+
+- name: template out the rabbitmq.config
+  template: src=rabbitmq.config.j2
+            dest=/etc/rabbitmq/rabbitmq.config
+            owner=root
+            group=root
+            mode=0644
+
+- name: template out the enabled_plugins
+  template: src=enabled_plugins.j2
+            dest=/etc/rabbitmq/enabled_plugins
+            owner=root
+            group=root
+            mode=0644
+
+- name: template out the .erlang.cookie
+  template: src=erlang.cookie.js
+            dest=/var/lib/rabbitmq/.erlang.cookie
+            owner=rabbitmq
+            group=rabbitmq
+            mode=0400
+
+- name: start rabbitmq and enable service
+  service: name=rabbitmq-server
+           enabled=yes
+           state=restarted

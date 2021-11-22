@@ -1,0 +1,41 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: aurora instance for grafana
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+    - ../group_vars/vaults/prod
+    - ../host_vars/mtx-tools
+  tasks:
+    - name: create aurora cluster with awscli
+      command: "aws rds create-db-cluster --engine aurora --master-username {{ aurora_master_user }} --master-user-password {{ aurora_master_pw }} --database-name {{ db }} --db-cluster-identifier {{ aurora_cluster }} --vpc-security-group-ids {{ sg_id }} --db-subnet-group-name {{ db_subnet_group }}"
+      tags: cluster
+
+    # stdout from previous task is not clean json
+    - name: get endpoint
+      command: "aws rds describe-db-clusters --db-cluster-identifier {{ aurora_cluster }} --query 'DBClusters[0].Endpoint' --output text"
+      register: endpoint
+      tags: cluster, mysql_user
+
+    - name: create aurora instance with awscli
+      command: "aws rds create-db-instance --engine aurora --db-instance-identifier {{ aurora_instance }} --db-instance-class {{ db_instance_type }} --db-subnet-group-name {{ db_subnet_group }} --db-cluster-identifier {{ aurora_cluster }} --availability-zone {{ az }}"
+      tags: instance
+
+    - name: wait for instance to come up
+      wait_for: host={{ endpoint.stdout }} port=3306 delay=60 timeout=600 state=started
+      tags: instance
+
+    # this task needs python-mysqldb, and need security group for remote connection
+    - name: create mysql user and grants
+      mysql_user:
+        login_host="{{ endpoint.stdout }}"
+        login_user="{{ aurora_master_user }}"
+        login_password="{{ aurora_master_pw }}"
+        name="{{ db_user }}"
+        password="{{ db_user_pw }}"
+        host="{{ db_grant_hosts }}"
+        priv="{{ db }}.*:{{ db_grant_privs }}"
+      tags:
+        - mysql_user

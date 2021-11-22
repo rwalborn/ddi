@@ -1,0 +1,11 @@
+app_ami: ami-021f3e14
+app_tag: DDC
+rpm_tag: ddi-daily-wheel
+service_tag: DWS
+svc: DWS
+instance_type: m3.large
+spot_price: 0.133
+instance_port: 8080
+ping_path: "/"
+stg_lc: DWS-STG-001
+prod_lc: DWS-PROD-001

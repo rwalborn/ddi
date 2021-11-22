@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBDWMPE_PROD.yml
+---
+- name: LBDWMPE_PROD security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/dwmpe-prod
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

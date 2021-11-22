@@ -1,0 +1,42 @@
+# MPE-QA VARS FILE
+
+name_tag: MPE-QA
+service_tag: MPE
+icinga_profile: MPE
+lb: MPE-QA
+
+app_tag: ddc-player-engine-service-sa
+app_ami: ami-320b7e24
+instance_type: m3.xlarge
+sg: SG_MPE_QA
+elb_sg: SG_LBMPE_QA
+elb_fqdn: mpe.qa.doubledowncasino.com
+env: qa
+key_name: ops-config
+profile_name: mpe-qa
+
+lc: MPE-QA-002
+
+ud_env: qa
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11432
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /HealthCheck
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+

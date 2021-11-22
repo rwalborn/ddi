@@ -1,0 +1,74 @@
+---
+- name: install needful
+  yum: name={{ item }} state=installed
+  with_items:
+    - unzip
+    - java-1.8.0-openjdk-headless
+
+- name: set JAVA_HOME
+  lineinfile: dest=/etc/profile
+              line='export JAVA_HOME=/usr/lib/jvm/jre-openjdk'
+
+- name: set FISHEYE_INST
+  lineinfile: dest=/etc/profile
+              line='export FISHEYE_INST=/mnt/atlassian/fisheye_inst'
+
+- name: create fisheye user
+  user:
+    name: fisheye
+    group: fisheye
+
+- name: Get mysql-connector
+  get_url:
+    url: http://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.40.zip
+    dest: /tmp/mysql-connector-java-5.1.40.zip
+
+- name: Get crucible 3.7.0
+  get_url:
+    url: https://www.atlassian.com/software/crucible/downloads/binary/crucible-3.7.0.zip
+    dest: /tmp/crucible-3.7.0.zip
+    timeout: 30
+
+- name: unzip crucible
+  unarchive:
+    src: /tmp/crucible-3.7.0.zip
+    dest: /mnt/atlassian
+    remote_src: True
+
+- name: unzip mysql-connector
+  unarchive:
+    src: /tmp/mysql-connector-java-5.1.40.zip
+    dest: /tmp
+    remote_src: True
+
+- name: mkdir fisheye_inst
+  shell: mkdir -p /mnt/atlassian/fisheye_inst/lib
+
+- name: copy mysql-connector to crucible
+  shell: cp /tmp/mysql-connector-java-5.1.40/mysql-connector-java-5.1.40-bin.jar /mnt/atlassian/fisheye_inst/lib/
+
+- name: copy init script for crucible
+  copy:
+    src: crucible.init
+    dest: /etc/init.d/crucible
+    owner: root
+    group: root
+    mode: 0755
+
+- name: copy logrotate script
+  copy:
+    src: crucible.logrotate
+    dest: /etc/logrotate.d/crucible
+    owner: root
+    group: root
+    mode: 0644
+
+
+- name: set owner to fisheye on /mnt/atlassian/fecru-3.7.0
+  shell: 'chown -R fisheye:fisheye /mnt/atlassian/fecru-3.7.0'
+
+- name: enable crucible
+  shell: chkconfig crucible on
+
+- name: now restore the crucible backup and enjoy!
+  shell: echo "something like  sudo -u fisheye ./fisheyectl.sh restore -f /mnt/atlassian/crucible.backup.zip -t mysql -j jdbc:mysql://ops-crucible.cmgtqqi0jns8.us-east-1.rds.amazonaws.com:3306/ops_atlassian_crucible?autoReconnect=true&useSSL=false -u crucible -p REDACTED --force"

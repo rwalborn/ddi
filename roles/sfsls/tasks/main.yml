@@ -1,0 +1,12 @@
+---
+- name: bake an SFS License Server AMI
+  include: ami.yml
+  when: do == 'ami'
+
+- name: stand up an instance
+  include: standup.yml
+  when: do == 'standup'
+
+- name: stand up an instance
+  include: ec2.yml
+  when: do == 'ec2'

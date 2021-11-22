@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# chkconfig: 2345 99 60
+# description: wrapper script for start.sh
+
+. /etc/init.d/functions
+
+servicename="SmartFoxServer"
+SFS_PATH="/env/SFSPRO116/Server"
+COMMAND_LINE="./start.sh &"
+
+stop() {
+  if pgrep -f $servicename > /dev/null;then
+    echo -n "Stopping $servicename ..."
+    pkill -f $servicename > /dev/null
+    RETVAL=$?
+  else
+    echo -n "Smartfox not running!"
+    RETVAL=0
+  fi
+
+  [ $RETVAL -eq 0 ] && success || failure
+  echo
+  return $RETVAL
+}
+
+start() {
+  if pgrep -f $servicename > /dev/null;then
+    echo -n $servicename already running!
+    RETVAL=1
+  else
+    echo -n "Starting $servicename ..."
+    cd $SFS_PATH
+    eval $COMMAND_LINE
+    RETVAL=$?
+  fi
+
+  [ $RETVAL -eq 0 ] && success || failure
+  echo
+  return $RETVAL
+}
+
+status() {
+  pgrep -f $servicename > /dev/null
+  RETVAL=$?
+  [ $RETVAL -eq 0 ] && echo "$servicename is running" || echo "$servicename is not running"
+  return $RETVAL
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    status
+    ;;
+  restart)
+    stop
+    echo -n "Sleep for a few seconds for $servicename to terminate ..."
+    sleep 5
+    start
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|restart|status}"
+    RETVAL=1
+esac
+
+exit $RETVAL

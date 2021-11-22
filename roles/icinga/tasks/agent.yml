@@ -1,0 +1,57 @@
+---
+- name: Create pki dir
+  file: path={{ pki_dir }} state=directory owner=icinga group=icinga
+  register: pki_dir_created
+
+- name: generate ticket
+  shell: "curl -k -s -u {{ director_api_user }}:{{ director_api_pass }} -H 'Accept: application/json' -X POST 'https://{{ icinga_master_fqdn }}:5665/v1/actions/generate-ticket' -d '{ \"cn\": \"{{ instance_id }}\" }'"
+  register: ticket
+  when: not baking
+
+- name: set ticket
+  set_fact: this_ticket={{ (ticket.stdout|from_json).results.0.ticket }}
+  when: not baking
+
+- name: Create new cert
+  shell: "icinga2 pki new-cert --cn {{ instance_id }} --key {{ pki_dir }}/{{ instance_id }}.key --cert {{ pki_dir }}/{{ instance_id }}.crt"
+  when: not baking
+
+- name: Save cert
+  shell: "icinga2 pki save-cert --key {{ pki_dir }}/{{ instance_id }}.key --trustedcert {{ pki_dir }}/trusted-master.crt --host {{ icinga_master_fqdn }}"
+  when: not baking
+
+- name: PKI request
+  shell: "icinga2 pki request --host {{ icinga_master_fqdn }} --port 5665 --ticket {{ this_ticket }} --key {{ pki_dir }}/{{ instance_id }}.key --cert {{ pki_dir }}/{{ instance_id }}.crt --trustedcert {{ pki_dir }}/trusted-master.crt --ca {{ pki_dir }}/ca.crt"
+  when: not baking
+
+- name: Node setup
+  shell: "icinga2 node setup --ticket {{ this_ticket }} --endpoint {{ icinga_master_fqdn }},{{ icinga_master_fqdn }},5665 --cn {{ instance_id }} --zone {{ local_zone }} --master_host {{ icinga_master_fqdn }} --trustedcert {{ pki_dir }}/trusted-master.crt --accept-commands --accept-config"
+  when: not baking
+
+- name: Setup icinga2 conf
+  template: src=satellite-conf.j2 dest=/etc/icinga2/icinga2.conf mode=0660 owner=icinga group=icinga
+
+- name: setup zones.conf
+  template: src=satellite-zones.j2 dest=/etc/icinga2/zones.conf mode=0640 owner=root group=icinga
+  register: icingaconfig
+
+- name: Enable Icinga Service
+  service: name=icinga2 enabled=yes state=restarted
+  when: packages|success and icingaconfig|success and not baking
+  register: start_icinga
+
+- name: Drop director credentials for ami agent
+  template: src=director_creds.j2 dest=/tmp/director_creds mode=0640 owner=root group=icinga
+  when: baking and icingaconfig|success
+
+- name: Drop variables for ami agent
+  copy: src=roles/icinga/defaults/main.yml dest=/tmp/icinga_vars.yml mode=0640 owner=root group=icinga
+  when: baking
+
+- name: Copy zone jinja template
+  copy: src=roles/icinga/templates/satellite-zones.j2 dest=/tmp/zones.j2 mode=0640 owner=root group=icinga
+  when: baking
+
+- name: make sure icinga agent disabled for baking
+  service: name=icinga2 enabled=no state=stopped
+  when: packages|success and icingaconfig|success and baking

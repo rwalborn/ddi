@@ -1,0 +1,68 @@
+- name: create security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    sg: SG_LBEMS_QA
+  tasks:
+    - name: create security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: us-east-1
+        rules:
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+      register: ec2_group
+
+- name: elb for support service
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    name_tag: EMS-QA
+    sg: SG_LBEMS_QA
+  tasks:
+    - name: launch elb
+      ec2_elb_lb:
+        name: "{{ name_tag }}"
+        state: present
+        security_group_ids: "{{ ec2_group.group_id }}"
+        region: us-east-1
+        connection_draining_timeout: 30
+        cross_az_load_balancing: true
+        subnets:
+          - "{{ subnet_pub_1c }}"
+          - "{{ subnet_pub_1d }}"
+        listeners:
+          - protocol: http
+            load_balancer_port: 80
+            instance_port: 8080
+        health_check:
+          ping_protocol: http
+          ping_port: 8080
+          ping_path: "/"
+          response_timeout: 5
+          interval: 30
+          unhealthy_threshold: 2
+          healthy_threshold: 10
+      register: ec2_elb_lb 
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: emsddc.use1.qa.doubledowncasino.com
+        type: CNAME
+        ttl: 60
+        value: "{{ ec2_elb_lb.elb.dns_name }}"
+      tags:
+        - route53

@@ -1,0 +1,302 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<hudson>
+  <disabledAdministrativeMonitors/>
+  <version>2.46.3</version>
+  <numExecutors>2</numExecutors>
+  <mode>NORMAL</mode>
+  <useSecurity>true</useSecurity>
+  {% if setup_clouds %}
+  <clouds>
+    <hudson.plugins.ec2.EC2Cloud plugin="ec2@1.36">
+      <name>ec2-EC2-us-east-1</name>
+      <useInstanceProfileForCredentials>true</useInstanceProfileForCredentials>
+      <credentialsId></credentialsId>
+      <privateKey>
+        <privateKey>{{ cloud_private_key }}</privateKey>
+      </privateKey>
+      <instanceCap>{{ cloud_instance_cap }}</instanceCap>
+      <templates>
+{% for zone in cloud_zones %}
+{% set subnet = cloud_subnets[zone] %}
+        <hudson.plugins.ec2.SlaveTemplate>
+          <ami>{{ slave_ami }}</ami>
+          <description>Centos7_{{ zone }}</description>
+          <zone></zone>
+          <securityGroups>SG_JENKINSSLAVE_{{ zone }}</securityGroups>
+          <remoteFS>/mnt/jenkins</remoteFS>
+          <type>C34xlarge</type>
+          <ebsOptimized>true</ebsOptimized>
+          <labels>Centos7 {{ zone }}</labels>
+          <mode>NORMAL</mode>
+          <initScript></initScript>
+          <tmpDir></tmpDir>
+          <userData>#cloud-config
+runcmd:
+  - mkdir /mnt/jenkins
+  - chown -R &apos;centos:centos&apos; /mnt/jenkins
+  - echo &quot;Host *&quot; &gt; /home/centos/.ssh/config
+  - echo &quot;    StrictHostKeyChecking no&quot; &gt;&gt; /home/centos/.ssh/config
+  - echo &quot;    UserKnownHostsFile /dev/null&quot; &gt;&gt; /home/centos/.ssh/config
+  - chown centos:centos /home/centos/.ssh/config
+  - chmod 600 /home/centos/.ssh/config</userData>
+          <numExecutors>7</numExecutors>
+          <remoteAdmin>centos</remoteAdmin>
+          <jvmopts>-Djava.awt.headless=true -Xmx4096m -XX:MaxPermSize=1024m</jvmopts>
+          <subnetId>{{ subnet }}</subnetId>
+          <idleTerminationMinutes>30</idleTerminationMinutes>
+          <iamInstanceProfile>{{ cloud_instance_profile }}</iamInstanceProfile>
+          <useEphemeralDevices>true</useEphemeralDevices>
+          <customDeviceMapping></customDeviceMapping>
+          <instanceCap>7</instanceCap>
+          <stopOnTerminate>false</stopOnTerminate>
+          <tags>
+            <hudson.plugins.ec2.EC2Tag>
+              <name>Name</name>
+              <value>JENKINSSLAVE-{{ zone }}-CENT7</value>
+            </hudson.plugins.ec2.EC2Tag>
+            <hudson.plugins.ec2.EC2Tag>
+              <name>env</name>
+              <value>{{ zone|lower }}</value>
+            </hudson.plugins.ec2.EC2Tag>
+            <hudson.plugins.ec2.EC2Tag>
+              <name>service</name>
+              <value>jenkins</value>
+            </hudson.plugins.ec2.EC2Tag>
+          </tags>
+          <usePrivateDnsName>false</usePrivateDnsName>
+          <associatePublicIp>false</associatePublicIp>
+          <useDedicatedTenancy>false</useDedicatedTenancy>
+          <amiType class="hudson.plugins.ec2.UnixData">
+            <rootCommandPrefix></rootCommandPrefix>
+            <sshPort>22</sshPort>
+          </amiType>
+          <launchTimeout>500</launchTimeout>
+          <connectBySSHProcess>true</connectBySSHProcess>
+          <connectUsingPublicIp>false</connectUsingPublicIp>
+        </hudson.plugins.ec2.SlaveTemplate>
+{% endfor %}
+      </templates>
+      <region>us-east-1</region>
+    </hudson.plugins.ec2.EC2Cloud>
+  </clouds>
+{% endif %}
+{% if auth == 'ldap' %}
+  <authorizationStrategy class="hudson.security.GlobalMatrixAuthorizationStrategy">
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Create:operations</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Delete:operations</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.ManageDomains:operations</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Update:operations</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.View:operations</permission>
+    <permission>hudson.model.Computer.Build:operations</permission>
+    <permission>hudson.model.Computer.Configure:operations</permission>
+    <permission>hudson.model.Computer.Connect:operations</permission>
+    <permission>hudson.model.Computer.Create:operations</permission>
+    <permission>hudson.model.Computer.Delete:operations</permission>
+    <permission>hudson.model.Computer.Disconnect:operations</permission>
+    <permission>hudson.model.Computer.Provision:operations</permission>
+    <permission>hudson.model.Hudson.Administer:operations</permission>
+    <permission>hudson.model.Hudson.ConfigureUpdateCenter:operations</permission>
+    <permission>hudson.model.Hudson.Read:deploy_release_manager</permission>
+    <permission>hudson.model.Hudson.Read:jenkinsjobs</permission>
+    <permission>hudson.model.Hudson.Read:operations</permission>
+    <permission>hudson.model.Hudson.RunScripts:deploy_release_manager</permission>
+    <permission>hudson.model.Hudson.RunScripts:operations</permission>
+    <permission>hudson.model.Hudson.UploadPlugins:operations</permission>
+    <permission>hudson.model.Item.Build:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Build:operations</permission>
+    <permission>hudson.model.Item.Cancel:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Cancel:operations</permission>
+    <permission>hudson.model.Item.Configure:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Configure:jenkinsjobs</permission>
+    <permission>hudson.model.Item.Configure:operations</permission>
+    <permission>hudson.model.Item.Create:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Create:jenkinsjobs</permission>
+    <permission>hudson.model.Item.Create:operations</permission>
+    <permission>hudson.model.Item.Delete:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Delete:jenkinsjobs</permission>
+    <permission>hudson.model.Item.Delete:operations</permission>
+    <permission>hudson.model.Item.Discover:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Discover:jenkinsjobs</permission>
+    <permission>hudson.model.Item.Discover:operations</permission>
+    <permission>hudson.model.Item.Move:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Move:jenkinsjobs</permission>
+    <permission>hudson.model.Item.Move:operations</permission>
+    <permission>hudson.model.Item.Read:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Read:jenkinsjobs</permission>
+    <permission>hudson.model.Item.Read:operations</permission>
+    <permission>hudson.model.Item.Workspace:deploy_release_manager</permission>
+    <permission>hudson.model.Item.Workspace:jenkinsjobs</permission>
+    <permission>hudson.model.Item.Workspace:operations</permission>
+    <permission>hudson.model.Run.Delete:operations</permission>
+    <permission>hudson.model.Run.Replay:operations</permission>
+    <permission>hudson.model.Run.Update:operations</permission>
+    <permission>hudson.model.View.Configure:operations</permission>
+    <permission>hudson.model.View.Create:operations</permission>
+    <permission>hudson.model.View.Delete:operations</permission>
+    <permission>hudson.model.View.Read:operations</permission>
+    <permission>hudson.scm.SCM.Tag:operations</permission>
+  </authorizationStrategy>
+
+  <securityRealm class="hudson.security.LDAPSecurityRealm" plugin="ldap@1.14">
+    <server>{{ sssd_conf.ldap_servers|join(' ') }}</server>
+    <rootDN>dc=doubledowncasino,dc=com</rootDN>
+    <inhibitInferRootDN>false</inhibitInferRootDN>
+    <userSearchBase></userSearchBase>
+    <userSearch>uid={0}</userSearch>
+    <groupMembershipStrategy class="jenkins.security.plugins.ldap.FromGroupSearchLDAPGroupMembershipStrategy">
+      <filter></filter>
+    </groupMembershipStrategy>
+    <managerPasswordSecret>{{ ldap_pw }}</managerPasswordSecret>
+    <disableMailAddressResolver>false</disableMailAddressResolver>
+    <displayNameAttributeName>displayname</displayNameAttributeName>
+    <mailAddressAttributeName>mail</mailAddressAttributeName>
+    <userIdStrategy class="jenkins.model.IdStrategy$CaseInsensitive"/>
+    <groupIdStrategy class="jenkins.model.IdStrategy$CaseInsensitive"/>
+  </securityRealm>
+{% elif auth == 'crowd' %}
+  <authorizationStrategy class="hudson.security.GlobalMatrixAuthorizationStrategy">
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Create:jenkins-admins</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Delete:jenkins-admins</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.ManageDomains:jenkins-admins</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.Update:jenkins-admins</permission>
+    <permission>com.cloudbees.plugins.credentials.CredentialsProvider.View:jenkins-admins</permission>
+    <permission>hudson.model.Computer.Build:jenkins-admins</permission>
+    <permission>hudson.model.Computer.Configure:jenkins-admins</permission>
+    <permission>hudson.model.Computer.Connect:jenkins-admins</permission>
+    <permission>hudson.model.Computer.Create:jenkins-admins</permission>
+    <permission>hudson.model.Computer.Delete:jenkins-admins</permission>
+    <permission>hudson.model.Computer.Disconnect:jenkins-admins</permission>
+    <permission>hudson.model.Hudson.Administer:jenkins-admins</permission>
+    <permission>hudson.model.Hudson.Read:jenkins-admins</permission>
+    <permission>hudson.model.Hudson.Read:jenkins-users</permission>
+    <permission>hudson.model.Item.Build:jenkins-admins</permission>
+    <permission>hudson.model.Item.Build:jenkins-users</permission>
+    <permission>hudson.model.Item.Cancel:jenkins-admins</permission>
+    <permission>hudson.model.Item.Cancel:jenkins-users</permission>
+    <permission>hudson.model.Item.Configure:jenkins-admins</permission>
+    <permission>hudson.model.Item.Configure:jenkins-users</permission>
+    <permission>hudson.model.Item.Create:jenkins-admins</permission>
+    <permission>hudson.model.Item.Delete:jenkins-admins</permission>
+    <permission>hudson.model.Item.Discover:jenkins-admins</permission>
+    <permission>hudson.model.Item.Discover:jenkins-users</permission>
+    <permission>hudson.model.Item.Move:jenkins-admins</permission>
+    <permission>hudson.model.Item.Read:jenkins-admins</permission>
+    <permission>hudson.model.Item.Read:jenkins-users</permission>
+    <permission>hudson.model.Item.Release:jenkins-admins</permission>
+    <permission>hudson.model.Item.Release:jenkins-users</permission>
+    <permission>hudson.model.Item.Workspace:jenkins-admins</permission>
+    <permission>hudson.model.Item.Workspace:jenkins-users</permission>
+    <permission>hudson.model.Run.Delete:jenkins-admins</permission>
+    <permission>hudson.model.Run.Delete:jenkins-users</permission>
+    <permission>hudson.model.Run.Replay:jenkins-admins</permission>
+    <permission>hudson.model.Run.Replay:jenkins-users</permission>
+    <permission>hudson.model.Run.Update:jenkins-admins</permission>
+    <permission>hudson.model.Run.Update:jenkins-users</permission>
+    <permission>hudson.model.View.Configure:jenkins-admins</permission>
+    <permission>hudson.model.View.Configure:jenkins-users</permission>
+    <permission>hudson.model.View.Create:jenkins-admins</permission>
+    <permission>hudson.model.View.Create:jenkins-users</permission>
+    <permission>hudson.model.View.Delete:jenkins-admins</permission>
+    <permission>hudson.model.View.Read:jenkins-admins</permission>
+    <permission>hudson.model.View.Read:jenkins-users</permission>
+    <permission>hudson.scm.SCM.Tag:jenkins-admins</permission>
+    <permission>hudson.scm.SCM.Tag:jenkins-users</permission>
+  </authorizationStrategy>
+  <securityRealm class="de.theit.jenkins.crowd.CrowdSecurityRealm" plugin="crowd2@1.8">
+    <url>{{ crowd_url }}</url>
+    <applicationName>{{ crowd_app }}</applicationName>
+    <password>{{ crowd_pw }}</password>
+    <group></group>
+    <nestedGroups>true</nestedGroups>
+    <useSSO>false</useSSO>
+    <sessionValidationInterval>2</sessionValidationInterval>
+    <cookieDomain></cookieDomain>
+    <cookieTokenkey>crowd.token_key</cookieTokenkey>
+    <useProxy>false</useProxy>
+    <httpProxyHost></httpProxyHost>
+    <httpProxyPort></httpProxyPort>
+    <httpProxyUsername></httpProxyUsername>
+    <httpProxyPassword></httpProxyPassword>
+    <socketTimeout>20000</socketTimeout>
+    <httpTimeout>5000</httpTimeout>
+    <httpMaxConnections>20</httpMaxConnections>
+  </securityRealm>
+{% endif %}
+  <disableRememberMe>true</disableRememberMe>
+  <projectNamingStrategy class="jenkins.model.ProjectNamingStrategy$DefaultProjectNamingStrategy"/>
+  <workspaceDir>${JENKINS_HOME}/workspace/${ITEM_FULLNAME}</workspaceDir>
+  <buildsDir>${ITEM_ROOTDIR}/builds</buildsDir>
+  <systemMessage>Welcome to DoubleDown :D</systemMessage>
+  <markupFormatter class="hudson.markup.EscapedMarkupFormatter"/>
+  <jdks>
+    <jdk>
+      <name>java8-openjdk</name>
+      <home>/usr/lib/jvm/java-1.8.0/</home>
+      <properties/>
+    </jdk>
+    <jdk>
+      <name>java7-openjdk</name>
+      <home>/usr/lib/jvm/java-1.7.0/</home>
+      <properties/>
+    </jdk>
+    <jdk>
+      <name>java8-oracle</name>
+      <home></home>
+      <properties>
+        <hudson.tools.InstallSourceProperty>
+          <installers>
+            <hudson.tools.JDKInstaller>
+              <id>jdk-8u131-oth-JPR</id>
+              <acceptLicense>true</acceptLicense>
+            </hudson.tools.JDKInstaller>
+          </installers>
+        </hudson.tools.InstallSourceProperty>
+      </properties>
+    </jdk>
+    <jdk>
+      <name>java8-openjdk-amd64</name>
+      <home>/usr/lib/jvm/java-8-openjdk-amd64</home>
+      <properties/>
+    </jdk>
+  </jdks>
+  <viewsTabBar class="hudson.views.DefaultViewsTabBar"/>
+  <myViewsTabBar class="hudson.views.DefaultMyViewsTabBar"/>
+  <scmCheckoutRetryCount>0</scmCheckoutRetryCount>
+  <views>
+    <hudson.model.AllView>
+      <owner class="hudson" reference="../../.."/>
+      <name>all</name>
+      <filterExecutors>false</filterExecutors>
+      <filterQueue>false</filterQueue>
+      <properties class="hudson.model.View$PropertyList"/>
+    </hudson.model.AllView>
+  </views>
+  <primaryView>all</primaryView>
+  <slaveAgentPort>-1</slaveAgentPort>
+  <label>master Centos7</label>
+  <crumbIssuer class="hudson.security.csrf.DefaultCrumbIssuer">
+    <excludeClientIPFromCrumb>false</excludeClientIPFromCrumb>
+  </crumbIssuer>
+  <nodeProperties/>
+  <globalNodeProperties>
+    <hudson.slaves.EnvironmentVariablesNodeProperty>
+      <envVars serialization="custom">
+        <unserializable-parents/>
+        <tree-map>
+          <default>
+            <comparator class="hudson.util.CaseInsensitiveComparator"/>
+          </default>
+          <int>4</int>
+          <string>LD_LIBRARY_PATH</string>
+          <string>/opt/rh/rh-ror42/root/usr/lib64:/opt/rh/rh-nodejs6/root/usr/lib64:/opt/rh/rh-ruby23/root/usr/local/lib64:/opt/rh/rh-ruby23/root/usr/lib64</string>
+          <string>MANPATH</string>
+          <string>/opt/rh/rh-ror42/root/usr/share/man:/opt/rh/rh-nodejs6/root/usr/share/man:/opt/rh/rh-ruby23/root/usr/local/share/man:/opt/rh/rh-ruby23/root/usr/share/man</string>
+          <string>PATH</string>
+          <string>/opt/rh/rh-ror42/root/usr/bin:/opt/rh/rh-nodejs6/root/usr/bin:/opt/rh/rh-ruby23/root/usr/local/bin:/opt/rh/rh-ruby23/root/usr/bin:/usr/lib/jvm/java-1.8.0/bin:/usr/local/bin:/usr/bin</string>
+          <string>PYTHONPATH</string>
+          <string>/opt/rh/rh-nodejs6/root/usr/lib/python2.7/site-packages</string>
+        </tree-map>
+      </envVars>
+    </hudson.slaves.EnvironmentVariablesNodeProperty>
+  </globalNodeProperties>
+</hudson>

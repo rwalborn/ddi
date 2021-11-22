@@ -1,0 +1,8 @@
+app_dir: /root/connectmgr
+sqs_queue: connection_monitoring
+aws_region: us-east-1
+# sqs and ec2 creds in secrets.yml
+db_host: db-ops-connectmon.cmgtqqi0jns8.us-east-1.rds.amazonaws.com
+db_db: opsmgr
+db_user: connectmon
+# db_passwd in secrets.yml

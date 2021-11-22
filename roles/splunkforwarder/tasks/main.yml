@@ -1,0 +1,33 @@
+- include_vars: vpc.yml
+  when: vpc
+
+- yum:
+    name=splunkforwarder 
+    state=installed
+
+- template:
+    src=inputs.conf.j2
+    dest="{{ splunk_home }}/{{ relative_conf_dir }}/inputs.conf"
+  notify: splunk_restart
+
+- template:
+    src=deploymentclient.conf.j2
+    dest="{{ splunk_home }}/{{ relative_conf_dir }}/deploymentclient.conf"
+  notify: splunk_restart
+
+- command: "{{ splunk_home }}/bin/splunk start --accept-license --answer-yes creates={{ splunk_home }}/var/run/splunk/splunkd.pid"
+  changed_when: false
+
+- command: "{{ splunk_home }}/bin/splunk enable boot-start creates=/etc/init.d/splunk"
+  changed_when: false
+
+- command: "{{ splunk_home }}/bin/splunk login -auth admin:changeme"
+  changed_when: false
+
+- name: server.conf is created by splunk, remove its serverName value
+  lineinfile:
+        dest="{{ splunk_home }}/{{ relative_conf_dir }}/server.conf"
+        regexp='^serverName = (.*)$'
+        line="#serverName ="
+  notify: splunk_restart
+

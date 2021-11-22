@@ -1,0 +1,83 @@
+- name: get MPA hosts
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "MPA-*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=admin
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+
+- name: get XPA hosts
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "XPA-*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=admin
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+
+- name: get JPA hosts
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "JPA-*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=admin
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+
+- name: get NOA hosts
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "NOA-*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=admin
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+- name: update certificates
+  hosts: admin
+  become: yes
+  remote_user: mbassett
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: get public crt
+      shell: "openssl s_client -connect crowd.doubledowninteractive.com:443 < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/public.crt"
+
+    - name: copy pass
+      shell: 'echo changeit > /root/pass'
+
+    - name: keytool
+      shell: "/usr/java/default/bin/keytool -importcert -alias doubledowninteractive.com-{{ ansible_date_time.date }} -keystore /usr/java/default/jre/lib/security/cacerts -file /tmp/public.crt -storepass:file /root/pass -noprompt"
+      ignore_errors: true
+
+    - name: remove /tmp/public.crt
+      file: path=/tmp/public.crt
+            state=absent
+
+    - name: remove /root/pass
+      file: path=/root/pass
+            state=absent

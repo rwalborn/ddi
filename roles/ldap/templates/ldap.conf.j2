@@ -1,0 +1,7 @@
+BASE {{ basedn }}
+URI ldap://{{ ldaphost }}:389
+
+SSL start_tls
+TLS_REQCERT never
+TLS_CHECKPEER NO
+SUDOERS_BASE ou=SUDOers,{{ basedn }}

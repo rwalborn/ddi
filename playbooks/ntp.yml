@@ -1,0 +1,8 @@
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/TOOLS ntp.yml
+
+- hosts: NTP
+  remote_user: root
+  become: no
+  gather_facts: no
+  roles:
+    - chronyd

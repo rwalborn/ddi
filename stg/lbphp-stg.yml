@@ -1,0 +1,19 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+  vars:
+    app_tag: DDC
+    env_tag: staging
+    service_tag: PHP
+    sg: SG_LAN_STG
+    resource_path: /ddchealthchk.html
+    nginx: true
+    instance_type: c3.xlarge
+    private_lb: false
+  roles:
+    - { role: lb, name_tag: 'LBPHP-STG', az: az1, fqdn: lbphp01.use1.stg.ddc.io }

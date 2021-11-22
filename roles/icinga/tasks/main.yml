@@ -1,0 +1,106 @@
+---
+- include_vars: icinga.yml
+
+- name: yum clean all
+  shell: yum clean all
+
+- name: get instance-id
+  shell: curl http://169.254.169.254/latest/meta-data/instance-id
+  register: instance
+
+- name: set instance_id
+  set_fact: instance_id="{{ instance.stdout }}"
+  when: instance is defined
+
+- name: get hostname
+  shell: hostname -f
+  register: hostname
+  when: not agent
+
+- name: set local_zone if not set
+  set_fact: local_zone="{{ this_env }}"
+  when: local_zone is not defined
+
+- name: set fqdn
+  set_fact: fqdn="{{ hostname.stdout }}"
+  when: hostname is defined and not agent and fqdn is not defined
+
+- name: set fake fqdn since agent does not need it
+  set_fact: fqdn="this.name.is.irrelevant.ddc.io"
+  when: agent and fqdn is not defined
+
+- name: Attach EBS Volume
+  include: volume.yml
+  when: master and ( instance_id is defined ) and not update
+
+- name: Add Icinga Repository
+  template: src=icinga-release.j2 dest=/etc/yum.repos.d/Icinga-Release.repo mode=0644
+  register: repo
+
+- name: install specific version of icinga
+  yum: name=icinga2 state=installed
+  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "6"
+  register: icinga_installed
+
+- name: install latest icinga on cent7
+  yum: name=icinga2 state=installed
+  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+  register: icinga_installed
+
+- name: Install related packages
+  yum: name={{ item }} state=installed
+  with_items:
+    - nagios-plugins-all
+    - nagios-plugins-nrpe
+    - jq
+    - python-jinja2
+    - python-requests
+    - python-argparse
+  when: repo|success
+  register: packages
+
+- name: install pip packages
+  pip: name={{item}} state=present executable=pip
+  with_items: "{{ pip_pkgs }}"
+  when: not agent
+
+- name: install agent packages
+  pip: name={{item}} state=present executable=pip
+  with_items: "{{ agent_pip_pkgs }}"
+  when: agent
+
+- name: setup constants.conf
+  template: src=constants.j2 dest=/etc/icinga2/constants.conf mode=0640 owner=root group=icinga
+  when: packages|success
+
+- name: setup groups.conf
+  template: src=groups-conf.j2 dest=/etc/icinga2/conf.d/groups.conf mode=0640 owner=icinga group=icinga
+  when: packages|success
+
+- name: setup hosts.conf
+  template: src=hosts-conf.j2 dest=/etc/icinga2/conf.d/hosts.conf mode=0640 owner=icinga group=icinga
+  when: packages|success
+
+- name: setup services.conf
+  template: src=services-conf.j2 dest=/etc/icinga2/conf.d/services.conf mode=0640 owner=icinga group=icinga
+  when: packages|success
+
+- name: setup notifications.conf
+  template: src=notifications-conf.j2 dest=/etc/icinga2/conf.d/notifications.conf mode=0640 owner=icinga group=icinga
+  when: packages|success
+
+- name: Icinga Master setup
+  include: master.yml
+  when: master and not update
+
+- name: Icinga Satellite setup
+  include: satellite.yml
+  when: satellite
+
+- name: Icinga Agent setup
+  include: agent.yml
+  when: agent
+
+- name: Adjust Icinga Master configuration
+  include: update_master.yml
+  when: update and master

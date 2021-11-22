@@ -1,0 +1,106 @@
+#---------------------------------------------------------------------
+# Example configuration for a possible web application.  See the
+# full configuration options online.
+#
+#   http://haproxy.1wt.eu/download/1.4/doc/configuration.txt
+#
+#---------------------------------------------------------------------
+
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+
+global
+    # to have these messages end up in /var/log/haproxy.log you will
+    # need to:
+    #
+    # 1) configure syslog to accept network log events.  This is done
+    #    by adding the '-r' option to the SYSLOGD_OPTIONS in
+    #    /etc/sysconfig/syslog
+    #
+    # 2) configure local2 events to go to the /var/log/haproxy.log
+    #   file. A line like the following can be added to
+    #   /etc/sysconfig/syslog
+    #
+    #    local2.*                       /var/log/haproxy.log
+    #
+
+        log 127.0.0.1   local2 info
+
+        ulimit-n 8250
+        chroot /var/lib/haproxy
+        pidfile     /var/run/haproxy.pid
+        maxconn 4000
+        user haproxy
+        group haproxy
+        daemon
+
+    # turn on stats unix socket
+    #stats socket /var/lib/haproxy/stats
+    stats socket /var/run/haproxy.sock mode 600 level admin
+    stats timeout 2m
+
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+        mode    http
+        log     global
+        option  httplog
+        option  dontlognull
+        option redispatch
+        retries 3
+        maxconn 2000
+        timeout connect      5000ms
+        timeout client      60000ms
+        timeout server      60000ms
+
+
+# stats listener
+listen stats :9000 #Listen on localhost port 9000
+    mode http
+    stats enable #Enable statistics
+    stats hide-version #Hide HAPRoxy version, a necessity for any public-facing site
+    stats realm Haproxy\ Statistics #Show this text in authentication popup (escape space characters with backslash)
+    stats uri /haproxy_stats #The URI of the stats page, in this case localhost:9000/haproxy_stats
+    stats auth {{ ha_user }}:{{ ha_pass }} #Set a username and password
+
+
+# Configuration for one application:
+# Example: listen myapp 0.0.0.0:80
+listen {{ haproxy_app_name }} 0.0.0.0:{{ haproxy_listen_port }}
+        mode {{ haproxy_mode }}
+        option tcplog
+        balance {{ haproxy_algorithm }}
+        # When acting in a reverse-proxy mode, mod_proxy from Apache adds X-Forwarded-For,
+        # X-Forwarded-Host, and X-Forwarded-Server request headers in order to pass information to
+        # the origin server; therefore, the following option is commented out
+        #option forwardfor except 127.0.0.1
+        # Haproxy status page
+        #stats auth @@LB_STATS_USER@@:@@LB_STATS_PASSWORD@@
+        # when cookie persistence is required
+        # When internal servers support a status page
+        option httpchk GET /status
+        # Example server line (with optional cookie and check included)
+        # server        srv3.0 10.253.43.224:8000 cookie srv03.0 check inter 2000 rise 2 fall 3
+
+{# BEGIN JINJA2 COMMENT
+
+NEEDED UNTIL LOGIC TO DEAL WITH MISSING GROUP IS FOUND
+IF THIS IS A FRESH LAUNCH YOU WILL HAVE TO PLACE THE BLOCK WITH
+groups['tag_app_balanceservice']
+INSIDE OF THIS COMMENT BLOCK OR LAUNCH WILL FAIL
+
+{% for host in groups['tag_app_balanceservice'] %}
+server {{ hostvars[host]['ansible_eth0']['ipv4']['address'] }} {{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:{{ haproxy_out_port }} check inter 3000 rise 2 fall 3 maxconn 5000 
+{% endfor %}
+
+END COMMENT #}
+
+
+
+{% for host in groups['balnodes'] %}
+server {{ hostvars[host]['ansible_eth0']['ipv4']['address'] }} {{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:{{ haproxy_out_port }} check inter 3000 rise 2 fall 3 maxconn 5000 
+{% endfor %}
+

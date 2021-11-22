@@ -1,0 +1,93 @@
+# ansible-playbook -vvvv -i 'localhost,' centos7_base.yml
+
+- name: JenkinsSlave CentOS 7.x AMI
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    base_ami: "{{ centos_7_ebs_hvm }}"
+    name_tag: JENKINSCENTOS7-AMI
+    service_tag: OPS
+    sg: SG_LAN_TOOLS
+    role: ami_base_centos
+    instance_type: c3.large
+  tasks:
+    - name: launch instance
+      ec2:
+        region: "{{ region }}"
+        zone: "{{ az1 }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        group: "{{ sg }}"
+        key_name: ops-config
+        instance_type: "{{ instance_type }}"
+        image: "{{ base_ami }}"
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 8
+            delete_on_termination: true
+        count: 1
+        wait: yes
+      register: ec2
+    - name: Add instances to host group
+      local_action: add_host hostname={{ ec2.instances.0.private_ip }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=420 state=started
+    - name: allow cloud-init to execute
+      pause: seconds=30
+
+- name: Configure provisioned servers
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars:
+    python_versions:
+      - maven33
+      - nodejs6
+      - ruby23
+      - ror42
+  roles:
+  - centos-scl
+  tasks:
+  - name: install packages
+    yum: name={{ item }} state=installed
+    with_items:
+        - java-1.8.0-openjdk-headless
+        - java-1.7.0-openjdk-headless
+        - java-1.8.0-openjdk-devel
+        - java-1.7.0-openjdk-devel
+        - java-1.8.0-openjdk-javadoc
+        - java-1.7.0-openjdk-javadoc
+        - java
+        - maven
+        - rh-ruby23-rubygem-bundler
+        - rh-ror42-rubygem-sass
+        - rpm-build
+        - rpm-sign
+        - expect
+        - "@Development tools"
+
+- name: Clean up instance
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+  - { role: bake, distro: 'centos7' }
+
+- name: Bake AMI
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    svc: JENKINSCENTOS7
+    service_tag: OPS
+  roles:
+    - { role: bake, bake: true }

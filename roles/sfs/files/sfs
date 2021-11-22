@@ -1,0 +1,75 @@
+#!/bin/bash
+#
+#This is an alternate SFS init script for RHEL linux systems only.
+# description: SmartFoxServer Pro
+# processname: wrapper
+# processname: java
+
+# Source function library
+. /etc/init.d/functions
+. /etc/init.d/ddifunctions
+
+#global variables
+servicename="SmartFoxServer"
+SFS_PATH="/home/SFS_PRO_1.6.6/Server"
+WRAPPER_CMD="$SFS_PATH/wrapper"
+WRAPPER_CONF="$SFS_PATH/conf/wrapper.conf"
+PIDFILE="$SFS_PATH/runAsService/$servicename.pid"
+LOCKPROP="wrapper.lockfile=\"/var/lock/subsys/$servicename\""
+LIMIT="25000"
+COMMAND_LINE="$WRAPPER_CMD \"$WRAPPER_CONF\" wrapper.syslog.ident=$servicename wrapper.pidfile=\"$PIDFILE\" wrapper.daemonize=TRUE $LOCKPROP"
+
+stop() {
+        if pgrep -f $servicename > /dev/null;then
+                echo -n "Stopping $servicename..."
+                pkillproc $servicename > /dev/null
+                RETVAL=$?
+         elif [ -f $PIDFILE ];then
+                echo -n "SFS not running, but pidfile found. Cleaning up..."
+                rm -f $PIDFILE
+                RETVAL=$?
+         else
+                echo -n "Smartfox not running!"
+                RETVAL=0
+         fi
+
+         [ $RETVAL -eq 0 ] && success || failure
+         echo
+         return $RETVAL
+}
+
+start() {
+        ulimit -n $LIMIT
+	if pgrep -f $servicename > /dev/null;then
+		echo -n $servicename already running!
+		RETVAL=1
+	else
+		echo -n "Starting $servicename..."
+                eval $COMMAND_LINE
+                RETVAL=$?
+	fi
+
+        [ $RETVAL -eq 0 ] && success || failure
+	echo
+        return $RETVAL
+}
+
+case "$1" in
+        start)
+                start
+                ;;
+        stop)
+                stop
+                ;;
+        restart)
+                stop
+                start
+                ;;
+        status)
+                status -p $PIDFILE $servicename
+                ;;
+        *)
+                echo $"Usage: $0 {start|stop|restart|status}"
+                RETVAL=1
+esac
+exit $RETVAL

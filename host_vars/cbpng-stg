@@ -1,0 +1,26 @@
+---
+# cbpng-stg vars file
+
+sg: SG_LAN_STG
+key_name: ops-config
+profile_name: cbpng-stg
+fqdn_prefix: cbpng
+fqdn_suffix: ddc.io
+rt53_zone: ddc.io
+prefix: CBPNG
+env: STG
+dd_env: stg
+ic_env: staging
+app_tag: DDC
+service_tag: PNG
+icinga_profile: Couchbase
+
+instance_type: m3.xlarge
+
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 12829
+

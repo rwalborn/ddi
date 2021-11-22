@@ -1,0 +1,24 @@
+init_config:
+
+instances:
+  - name: node_8080
+    url: http://localhost:8080
+    timeout: 1
+    content_match: '{"ok":"ok"}'
+    threshold: 3
+    window: 5
+    skip_event: true
+  - name: node_8081
+    url: http://localhost:8081
+    timeout: 1
+    content_match: '{"ok":"ok"}'
+    threshold: 3
+    window: 5
+    skip_event: true
+  - name: node_8082
+    url: http://localhost:8082
+    timeout: 1
+    content_match: '{"ok":"ok"}'
+    threshold: 3
+    window: 5
+    skip_event: true

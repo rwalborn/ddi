@@ -1,0 +1,8 @@
+---
+- name: update apt cache
+  shell: apt-get update
+
+- name: install htop
+  apt: name=htop
+       state=present
+

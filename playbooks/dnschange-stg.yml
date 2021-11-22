@@ -1,0 +1,44 @@
+# ansible-playbook -vvvv -i "localhost," --tags=migrate foo.yml
+# ansible-playbook -vvvv -i "localhost," --tags=rollback foo.yml
+
+- hosts: all
+  gather_facts: no
+  connection: local
+  tasks:
+    - name: migrate
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ item.cname }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.fqdn }}"
+      with_items:
+        - { cname: sfsddc01.use1.stg.doubledowncasino.com, fqdn: ec2-52-23-168-207.compute-1.amazonaws.com }
+        - { cname: sfsddc02.use1.stg.doubledowncasino.com, fqdn: ec2-54-82-224-133.compute-1.amazonaws.com }
+        - { cname: sfsddc03.use1.stg.doubledowncasino.com, fqdn: ec2-52-55-247-134.compute-1.amazonaws.com }
+        - { cname: sfsddc04.use1.stg.doubledowncasino.com, fqdn: ec2-34-229-236-176.compute-1.amazonaws.com }
+        - { cname: smartfox.staging.doubledowncasino.com,  fqdn: sfsddc01.use1.stg.doubledowncasino.com }
+        - { cname: smartfox2.staging.doubledowncasino.com, fqdn: sfsddc02.use1.stg.doubledowncasino.com }
+        - { cname: smartfox3.staging.doubledowncasino.com, fqdn: sfsddc03.use1.stg.doubledowncasino.com }
+        - { cname: smartfox4.staging.doubledowncasino.com, fqdn: sfsddc04.use1.stg.doubledowncasino.com }
+      tags:
+        - migrate
+
+    - name: rollback
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ item.cname }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.fqdn }}"
+      with_items:
+        - { cname: sfsddc01.use1.stg.doubledowncasino.com, fqdn: ec2-54-152-29-184.compute-1.amazonaws.com }
+        - { cname: sfsddc02.use1.stg.doubledowncasino.com, fqdn: ec2-54-221-96-15.compute-1.amazonaws.com }
+        - { cname: sfsddc03.use1.stg.doubledowncasino.com, fqdn: ec2-54-144-70-60.compute-1.amazonaws.com }
+        - { cname: sfsddc04.use1.stg.doubledowncasino.com, fqdn: ec2-54-81-139-100.compute-1.amazonaws.com }
+      tags:
+        - rollback

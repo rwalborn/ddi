@@ -1,0 +1,30 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/dws
+  vars:
+    name_tag: DWS-STG-001
+    role: dws-stg
+    sg_id: sg-b4ea16de
+  tasks:
+  - name: launch configuration
+    ec2_lc:
+      name: "{{ name_tag }}"
+      image_id: "{{ app_ami }}"
+      key_name: ops-config
+      security_groups: [ "{{ sg_id }}" ]
+      instance_profile_name: "{{ role }}"
+      instance_type: m3.large
+      instance_monitoring: false
+      volumes:
+      - device_name: /dev/sda1
+        volume_size: 8
+        device_type: gp2
+        delete_on_termination: true
+      region: us-east-1
+      classic_link_vpc_id: "{{ vpc_id }}"
+      classic_link_vpc_security_groups: "{{ classiclink_sg }}"

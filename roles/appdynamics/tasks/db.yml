@@ -1,0 +1,19 @@
+- include_vars: dev.yml
+  when: prod == false
+
+- include_vars: prod.yml
+  when: prod == true
+
+- yum: name=java-1.8.0-openjdk state=present
+
+- yum: name=appdynamics-db-agent state=present
+
+- name: controller-info.xml
+  template:
+    src=db-controller-info.xml.j2
+    dest=/opt/appdynamics/db-agent/conf/controller-info.xml
+    mode=0644
+  register: agentconf
+
+- service: name=appdynamics-db-agent state=started
+  when: agentconf.changed

@@ -1,0 +1,20 @@
+# ansible-playbook -vvvv -i 'localhost,' --ask-vault-pass foo.yml
+
+# you need awscli 1.10.22 and above
+
+- name: create custom domain name
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+    - ../group_vars/vaults/qa
+    - ../host_vars/capi
+  vars:
+    api_name: capi
+    stage: qa
+  tasks:
+    - name: create domain
+      command: aws --profile "{{ aws_profile }}" apigateway create-domain-name --region "{{ region }}" --domain-name "{{ api_name }}.{{ cn }}" --certificate-name "{{ cn }}" --certificate-body "{{ cert_body }}" --certificate-private-key "{{ cert_key }}"  --certificate-chain "{{ cert_chain }}"
+
+    - name: base path mapping
+      command: aws --profile "{{ aws_profile }}" apigateway create-base-path-mapping --region "{{ region }}" --domain-name "{{ api_name }}.{{ cn }}" --rest-api-id "{{ api_id }}" --stage "{{ stage }}"

@@ -1,0 +1,28 @@
+# ansible-playbook -vvvv dch-stg-lc.yml
+
+- name: create "{{ name_tag }}" launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/dch-stg
+  tasks:
+    - name: create "{{ sg }}" security group
+      include: ../sec_groups/{{ sg }}_INC.yml
+
+    - name: launch configuration
+      ec2_lc:
+        name: "{{ lc }}"
+        image_id: "{{ app_ami }}"
+        key_name: "{{ key_name }}"
+        security_groups: [ "{{ ec2_group.group_id }}" ]
+        instance_profile_name: "{{ profile_name }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+        volumes:
+        - device_name: /dev/sda1
+          volume_size: 8
+          device_type: gp2
+          delete_on_termination: true
+        region: "{{ region }}"
+        assign_public_ip: false

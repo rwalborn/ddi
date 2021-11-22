@@ -1,0 +1,31 @@
+- name: rs token of DDI-UNIXTeam@IGT.com in vault
+  include_vars: rs_token.yml
+
+- name: rightscale_oauth
+  template:
+    src=rightscale_oauth.j2
+    dest=/root/.ssh/rightscale_oauth
+    owner=root
+    group=root
+    mode=0400
+
+#- name: remove pycrypto
+#  pip:
+#    name: pycrypto
+#    state: absent
+
+- name: install via yum
+  yum: name="{{ item }}" state=installed
+  with_items:
+    - ansible
+    - python-dns
+    - python2-crypto
+
+# move this to cloud-init
+#- name: cron
+#  cron:
+#    name="haproxy_config"
+#    cron_file=haproxy
+#    user=root
+#    minute="*/5"
+#    job="/root/bin/haproxy_config.py"

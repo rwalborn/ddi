@@ -1,0 +1,26 @@
+app_tag: DDC
+rpm_tag: php-casino
+
+service_tag: PHP
+svc: PHP
+prefix: PHP
+
+icinga_profile: PHP
+
+instance_port: 80
+
+key_name: ops-config
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+    load_balancer_port: 80
+  health_check:
+    ping_protocol: http
+    ping_port: 80
+    ping_path: "/ddchealthchk.html"
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2

@@ -1,0 +1,67 @@
+# CCP-PROD VARS FILE
+
+name_tag: CCP-PROD
+lb: CCP-PROD
+service_tag: CCP
+
+app_tag: DDC
+rpm_tag: casino-config
+app_ami: ami-abe52abd
+instance_type: c3.xlarge
+sg: SG_CCP_PROD
+elb_sg: SG_LBCCP_PROD
+elb_fqdn: ccp.use1.prod.doubledowncasino.com
+env: production
+key_name: ops-config
+profile_name: ccp-prod
+
+lc: CCP-PROD-001
+
+ud_env: prod
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 8005
+#testing with just one port first
+#instance_port_2: 11000
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /api/versionInfo
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+
+# these go into the ami/ccp-ami.yml at present
+# vars here to avoid another file for ccp
+# another fine mess left behind by nathan
+
+ddi_cpddc_deploy:
+  package_version: 1.2.9-1
+ddi_cpddc_config:
+  service_name: casino-config
+  config_listeners:
+    - s3ConfigListener
+  config_listener_properties:
+    configListenerNotificationDelayMillis: 30000
+  environment_name: prod
+  env_properties:
+    hipchatEnabled: true
+    hipchatChannel: ConfigChanges
+    hipchatAuthToken: 9efab731f659f3a666598e8c02d4d3
+  s3bucket: ddc-artifacts
+  tarball_dir: /ddi/services/casino-config/tarballs
+# from vault
+  mysql_server: dbddc.use1.prod.doubledowncasino.com
+  mysql_user: admin 
+

@@ -1,0 +1,149 @@
+# Runs as ansible-playbook -vvvv testrail.yml
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/tools
+  tasks:
+    - name: Launch instance
+      ec2:
+        region: "{{ region }}"
+        key_name: ops-config
+        group: SG_TESTRAIL_TOOLS
+        instance_type: m3.xlarge
+        instance_profile_name: testrail-tools
+        image: ami-ce5000d9
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        instance_tags:
+          Name: TESTRAIL-TOOLS 01
+          env: tools
+          app: TOOLS
+        wait: yes
+      register: ec2
+
+    - debug:
+        var: ec2
+
+    - ec2_vol:
+        region: "{{ region }}"
+        instance: "{{ item.id }}"
+        name: TESTRAIL-TOOLS 01
+        device_name: /dev/sdf
+        volume_type: gp2
+        volume_size: 500
+        delete_on_termination: yes
+      with_items: "{{ ec2.instances }}"
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: testrail.use1.tools.ddc.io
+        type: CNAME
+        ttl: 60
+        value: "{{ item.private_dns_name }}"
+      with_items: "{{ ec2.instances }}"
+
+    - name: add new instance to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=launched
+      with_items: "{{ ec2.instances }}"
+
+    - name: Wait for SSH to be available
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: "{{ec2.instances}}"
+
+
+- name: 
+  vars_files:
+    - ../group_vars/tools
+#    - ../group_vars/vaults/tools
+#    - ../host_vars/testrail
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - ldap_client
+  tasks:
+    - name: partition
+      shell: 'echo \; | sfdisk /dev/xvdf'
+    
+    - name: format /dev/xvdf1 as ext4
+      filesystem: fstype=ext4 dev=/dev/xvdf1
+    
+    #TO DO mount
+    
+    - name: Install the packages
+      yum:
+        name: "{{ item }}"
+        state: latest
+      with_items:
+          - httpd
+          - httpd-devel
+          - php
+          - php-mysql
+          - php-common
+          - php-gd
+          - php-mbstring
+          - php-mcrypt
+          - php-devel
+          - php-xml
+          - zip
+          - unzip
+
+#          - libapache2-mod-php
+#          - php-mysql
+#          - php-curl
+#          - php-json
+
+    - name: start httpd
+      service:
+        name: httpd
+        state: restarted
+        enabled: yes
+    
+    - name: download and unzip ioncube
+      unarchive:
+        src: http://downloads3.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz
+        dest: /opt
+        owner: root
+        group: root
+        remote_src: True
+
+    - name: copy loader-wizard.php
+      shell: "cp /opt/ioncube/loader-wizard.php /var/www/html/loader-wizard.php"
+
+# added notes on this server installation from Marc, this will outlast my email
+# instance is ami'd for snowflace recreation
+#  
+#  Misc:
+#  I get a warning from PHP trying to load xsl.so. The module exists in the extensions folder, but it appears some other dependency is missing/jacked up. It doesn’t seem to have an adverse effect, so I haven’t dug into it all that much. To see the error, run php –v from the shell.
+#  TestRail needs to have write access to three folders to save attachments, reports, and logs. I put these under /var/www/testrail despite instructions to the contrary because I was having problems creating those folders with write permissions elsewhere … despite having chmod of a+w. Maybe I need to chown as apache? I dunno – been I while since I F’d with this stuff. 
+#  
+#  Things to potential add to ancible script for this server:
+#  yum install of both zip and unzip
+#  use wget to download the test rail source, then unzip it in /var/www/
+#  $ wget "https://secure.gurock.com/downloads/testrail/testrail-5.0.0.3367-ion53.zip" -P /var/www/
+#  then cd /var/www/; unzip testrail-5.0.0.3367-ion53.zip
+#  create writeable folders for test rail: logs, attachments, reports. I put it in the DocumentRoot, but these should go elsewhere, as mentioned above.
+#  Change the DocumentRoot in /etc/php.ini
+#   DocumentRoot "/var/www/testrail"
+#  there’s a more elegant way to do this in Ubuntu using sites-enabled & sites-available, but CentOS has a different flavor of apache that doesn’t support this as far as I could see.
+#  ioncube configuration
+#  CentOS differs from Ubuntu on this too. For ioncube, you’ll need to copy the correct version for the corresponding php version to the php extensions directory
+#  Find the php extensions folder by running: [root@TESTRAIL-TOOLS-005122071eecf58fe conf]# php -i | grep extension
+#  extension_dir => /usr/lib64/php/modules => /usr/lib64/php/modules
+#  Now copy the extension file to the extension_dir. For PHP 5.3.x, I did:  cp /opt/ioncube/ioncube_loader_lin_5.3.so /usr/lib64/php/modules
+#  then add the following line to /etc/php.ini: 
+#  zend_extension=/usr/lib64/php/modules/ioncube_loader_lin_5.3.so
+#  run php –v to confirm it’s working (# php -v
+#  PHP Warning:  PHP Startup: Unable to load dynamic library '/usr/lib64/php/modules/xsl.so' - libexslt.so.0: cannot open shared object file: No such file or directory in Unknown on line 0
+#  PHP 5.3.3 (cli) (built: Aug 11 2016 20:33:53) 
+#  Copyright (c) 1997-2010 The PHP Group
+#  Zend Engine v2.3.0, Copyright (c) 1998-2010 Zend Technologies
+#      with the ionCube PHP Loader (enabled) + Intrusion Protection from ioncube24.com (unconfigured) v6.0.8, Copyright (c) 2002-2016, by ionCube Ltd.
+

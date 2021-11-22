@@ -1,0 +1,27 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "*"
+      },
+      "Action": "es:*",
+      "Resource": "arn:aws:es:us-east-1:416386939808:domain/*",
+      "Condition": {
+        "IpAddress": {
+          "aws:SourceIp": [
+            "204.11.203.10",
+            "65.117.84.84",
+            "52.70.18.78",
+            "52.70.133.15",
+            "52.90.121.124",
+            "52.86.175.133",
+            "52.7.11.120"
+          ]
+        }
+      }
+    }
+  ]
+}

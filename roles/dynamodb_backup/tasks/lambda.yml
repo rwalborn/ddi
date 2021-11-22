@@ -1,0 +1,22 @@
+# idempotent
+
+# TODO: lambda version
+
+- name: prep a local zip instead of using s3
+  archive:
+    path=../roles/dynamodb_backup/files/dynamodbbackup.py
+    dest=/tmp/dynamodbbackup.zip
+    format=zip
+
+- name: create lamda function for dynamodb on-demand backup
+  lambda:
+    name: dynamodbbackup
+    description: 'create and keep dynamodb backup by retention policy'
+    state: present
+    zip_file: "/tmp/dynamodbbackup.zip"
+    runtime: 'python3.6'
+    role: 'arn:aws:iam::143177584759:role/dynamodbbackup'
+    handler: dynamodbbackup.lambda_handler
+
+- name: enforce tags
+  shell: aws lambda tag-resource --resource arn:aws:lambda:us-east-1:143177584759:function:dynamodbbackup --tags app=DDC,env=tools

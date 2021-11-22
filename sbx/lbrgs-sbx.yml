@@ -1,0 +1,26 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/sbx
+  vars:
+    app_tag: rgs-server-unfiltered
+    env_tag: sbx
+    sg: SG_LBRGS_SBX
+    service_tag: RGS
+    resource_path: /rgslite/rgs-running
+    service_port: 8080
+    service_fqdn: rgs.sbx.doubledowncasino.com
+    instance_type: c3.large
+    update_service_fqdn: true
+    private_lb: true
+    policy_routing: true
+  roles:
+    - { role: lb, name_tag: 'LBRGS-SBX 01', az: az1, fqdn: lbrgs01.use1.sbx.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs01.use1.sbx.ddc.io }
+    - { role: lb, name_tag: 'LBRGS-SBX 02', az: az2, fqdn: lbrgs02.use1.sbx.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs02.use1.sbx.ddc.io }
+

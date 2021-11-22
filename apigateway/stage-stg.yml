@@ -1,0 +1,42 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# you need awscli 1.10.22 and above
+
+- name: release to stg
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../host_vars/capi
+  vars:
+    env: stg
+    repo: capi-config
+    localdir: /Users/ichen/src/git
+    filename: "production/services-dev-swagger-integrations,authorizers.json"
+  tasks:
+    - name: git pull
+      git: 
+        repo="ssh://git@bitbucket.org/ddi/{{ repo }}.git"
+        dest="{{ localdir }}"
+        clone=no
+        update=yes
+      tags: git
+
+    - name: import overwrite
+      command: aws apigateway put-rest-api --region "{{ region }}" --rest-api-id "{{ api_id }}" --mode overwrite --body "file://{{ localdir }}/{{ repo }}/{{ filename }}"
+      tags: import
+
+    - name: create stage
+      command: aws apigateway create-deployment --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --variables emsddc=emsddc.use1."{{ env }}".doubledowncasino.com,dwsddc=dwsddc.use1."{{ env }}".doubledowncasino.com,lytddc=lytddc.use1."{{ env }}".doubledowncasino.com
+      tags: create
+
+    - name: turn on logging
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/logging/loglevel,value=INFO,from=OFF
+      tags: log
+
+    - name: enable metrics
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/metrics/enabled,value=true,from=false
+      tags: metrics
+
+    - name: cloudwatch logs retention
+      command: "aws logs put-retention-policy --region {{ region }} --log-group-name API-Gateway-Execution-Logs_{{ api_id }}/{{ env }} --retention-in-days 7"
+      tags: retention

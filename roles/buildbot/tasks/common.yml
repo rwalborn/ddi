@@ -1,0 +1,225 @@
+---
+# Common buildbot tasks
+- include_vars: common.yml
+- include_vars: secrets.yml
+
+- name: install system libs
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - gcc
+    - rubygems
+    - ruby-devel
+    - freetype
+    - fontconfig
+
+- name: install ddi system libs
+  yum:
+    name: "{{ item }}"
+    state: present
+    enablerepo: epel
+  with_items:
+    - mercurial-3.3.3
+  when: ddi-mobileweb is defined
+  ignore_errors: yes
+
+- name: create autobldr account
+  user:
+    name: "{{ autobldr_username }}"
+    state: present
+    shell: /bin/bash
+    home: "{{ autobldr_home }}"
+  register: autobldr_user_created
+  ignore_errors: yes
+
+- name: link autobldr home
+  file:
+    src: "{{ autobldr_home }}"
+    dest: /home/{{ autobldr_username }}
+    state: link
+  ignore_errors: yes
+
+##### BEGIN CHANGED JAVA INSTALL METHOD from el jeffe'd to straight ansible
+#
+#- name: check java version
+#  # javac is set with alternatives but java is not
+#  command: javac -version
+#  become_user: "{{ autobldr_username }}"
+#  ignore_errors: yes
+#  register: java_ver
+#
+#- name: install java 8
+#  script: install_java8.sh {{ setup_src_dir }} {{ setup_install_dir }} {{ autobldr_home }} creates=/tmp/install_java8.sh
+#  when: java_ver|failed or (java_ver.stderr.find('1.8') == -1)
+#
+# THE HORRIBLE VARS OF EL JEFFE
+#autobldr_home: /mnt/ephemeral/home/autobldr
+#setup_src_dir: /tmp/buildbot
+#setup_install_dir: /usr/local
+#jdk_dir: /usr/local/jdk1.8.0_31
+#
+#- name: java 8 the right way
+#  shell: 'wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u31-b13/jdk-8u31-linux-x64.tar.gz" -O /root/jdk-8u31-linux-x64.tar.gz'
+#
+#- name: unarchive java 8
+#  unarchive:
+#    src: /root/jdk-8u31-linux-x64.tar.gz
+#    dest: /usr/local
+#    remote_src: True  
+#
+#- name: cleanup jdk-8u31-linux-x64.tar.gz
+#  file:
+#    path: /root/jdk-8u31-linux-x64.tar.gz
+#    state: absent
+
+- name: java yet another way because oracle broke the above, as they should have
+  yum:
+    name: jdk1.8.0_45
+    state: installed 
+
+#- name: install into /usr/local/<jdk-version>
+#  shell: 'alternatives --install /usr/bin/java java /usr/local/jdk1.8.0_31/bin/java 2'
+
+#- name: install into /usr/local/<jdk-version>
+#  shell: 'alternatives --install /usr/bin/jar jar /usr/local/jdk1.8.0_31/bin/jar 2'
+
+#- name: install into /usr/local/<jdk-version>
+#  shell: 'alternatives --install /usr/bin/javac javac /usr/local/jdk1.8.0_31/bin/javac 2'
+
+#- name: install into /usr/local/<jdk-version>
+#  shell: 'alternatives --set jar /usr/local/jdk1.8.0_31/bin/jar'
+
+#- name: install into /usr/local/<jdk-version>
+#  shell: 'alternatives --set javac /usr/local/jdk1.8.0_31/bin/javac'
+
+#- name: export java home
+#  shell: 'echo "export JAVA_HOME=/usr/local/jdk1.8.0_31" >> /mnt/ephemeral/home/autobldr/.bashrc'
+
+#- name: export java home
+#  shell: 'echo "export JRE_HOME=/usr/local/jdk1.8.0_31/jre" >> /mnt/ephemeral/home/autobldr/.bashrc'
+
+#- name: export java home
+#  shell: 'echo "export PATH=/usr/local/jdk1.8.0_31/bin:/usr/local/jdk1.8.0_31/jre/bin:\$PATH" >> /mnt/ephemeral/home/autobldr/.bashrc'
+
+####### END CHANGED JAVA INSTALL METHOD
+
+- name: update autobldr path
+  lineinfile:
+    dest: "{{ autobldr_home }}/.bashrc"
+    line: 'export PATH=/usr/local/bin:$PATH'
+    create: yes
+
+- name: dl node
+  get_url:
+    url: https://nodejs.org/dist/v4.2.4/node-v4.2.4-linux-x64.tar.gz
+    dest: /tmp
+
+- name: unpack node
+  unarchive:
+    src: /tmp/node-v4.2.4-linux-x64.tar.gz
+    dest: /tmp
+    copy: no
+
+- name: install node
+  shell: cp -r /tmp/node-v4.2.4-linux-x64/{{ item }}/* /usr/{{ item }}
+  with_items:
+    - bin
+    - include
+    - lib
+    - share
+  ignore_errors: true
+
+- name: install node modules
+  npm:
+    name: "{{ item.name }}"
+    version: "{{ item.version }}"
+    global: yes
+    state: present
+  with_items:
+    - { name: csslint, version: 0.10.0 }
+    - { name: jshint, version: 2.6.1 }
+
+# sass 3.5 does not support ruby 1.87
+- name: install gem via cli as ansible gem module fails, not a core module
+  shell: 'gem install sass --version 3.4.23'
+
+- name: Check for phantomjs
+  stat:
+    path: /usr/local/bin/phantomjs
+  register: phantomjs
+
+- name: Download phantomjs
+  get_url:
+    url: https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-1.9.8-linux-x86_64.tar.bz2
+    dest: /tmp
+  when: phantomjs.stat.exists == false
+
+- name: Make phantomjs dir
+  file:
+    path: "{{ setup_src_dir }}/phantomjs"
+    state: directory
+
+- name: Unpack phantomjs
+  command: "tar -xjvf /tmp/phantomjs-1.9.8-linux-x86_64.tar.bz2 --strip-components 1 -C {{ setup_src_dir }}/phantomjs"
+  when: phantomjs.stat.exists == false
+
+- name: Link phantomjs binary
+  file:
+    src: "{{ setup_src_dir }}/phantomjs/bin/phantomjs"
+    dest: /usr/local/bin/phantomjs
+    state: link
+  when: phantomjs.stat.exists == false
+
+- name: Create ssh dir
+  file:
+    path: "{{ autobldr_home }}/.ssh"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    state: directory
+    mode: 0700 
+
+- name: create id_rsa
+  file:
+    path: "{{ autobldr_home }}/.ssh/id_rsa"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    state: touch
+
+
+- name: Mr. Bilder I presume
+  blockinfile:
+    dest: "{{ autobldr_home }}/.ssh/id_rsa"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0400
+    block: |
+      {{ autobldr_private_key }}
+
+- name: Add hgrc
+  copy:
+    src: dot_hgrc
+    dest: "{{ autobldr_home }}/.hgrc"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0755
+
+- name: Add ssh config
+  copy:
+    src: ssh_config
+    dest: "{{ autobldr_home }}/.ssh/config"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0644
+
+- name: copy hg_rsa that belongs to maugerm2
+  copy:
+    src: hg_rsa
+    dest: "{{ autobldr_home }}/.ssh/hg_rsa"
+    owner: "{{ autobldr_username }}"
+    group: "{{ autobldr_username }}"
+    mode: 0400
+
+- name: Register repository known host
+  shell: ssh-keyscan bitbucket.org >> /etc/ssh/ssh_known_hosts
+

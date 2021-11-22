@@ -1,0 +1,12 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv lyt-sbx-dynamodb.yml
+
+- name: create dynamodb table
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/lyt
+  roles:
+    - { role: dynamodb, name: LYTCONFIG-USE1-SBX }
+    - { role: dynamodb, name: LYTUSER-USE1-SBX }
+    - { role: dynamodb, name: LYTACK-USE1-SBX }

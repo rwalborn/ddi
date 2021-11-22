@@ -1,0 +1,32 @@
+---
+# cbjpt-dev vars file
+
+sg: SG_LAN_DEV
+key_name: ops-config
+profile_name: cbjpt-dev
+fqdn_prefix: cbjpt
+fqdn_suffix: ddc.io
+rt53_zone: ddc.io
+prefix: CBJPT
+env: DEV
+dd_env: dev
+ic_env: development
+app_tag: DDC
+service_tag: jpt
+icinga_profile: Couchbase
+
+instance_type: m3.xlarge
+
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: ddi-jackpot
+bucket1_num_replicas: 1
+bucket1_ram_quota: 256
+
+bucket2_name: ddi-jackpot-configs
+bucket2_num_replicas: 1
+bucket2_ram_quota: 12573
+
+
+

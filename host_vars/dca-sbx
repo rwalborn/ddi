@@ -1,0 +1,25 @@
+# DCA-SBX VARS FILE
+
+name_tag: DCA-SBX
+
+app_tag: DDC
+rpm_tag: daily-challenge-admin
+app_ami: ami-18e7790e
+instance_type: t2.medium
+sg: SG_DCA_SBX
+fqdn: dca.sbx.doubledowncasino.com
+env: sbx
+key_name: dev-ops-config
+# Yep, we're re-using the dch iam role
+profile_name: dch-sbx
+service: DCH
+
+# prefix needed for role tag for this to service to work
+prefix: DCHDDC
+
+ud_env: sbx
+
+instance_port_1: 8080
+webapp_port: 8080
+config_port: 80
+

@@ -1,0 +1,62 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: jmpvpc
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - group_vars/dev
+  vars:
+    name_tag: 'JMPOPS 01'
+    fqdn: jmpops.ddc.io
+    sg: Jump
+  tasks:
+    - name: launch instance
+      ec2:
+        key_name: ops-config
+        instance_type: c3.large
+        image: "{{ centos_7_ebs_hvm }}"
+        group: "{{ sg }}"
+        zone: "{{ az1 }}"
+        region: "{{ region }}"
+        instance_profile_name: jmpvpc
+        instance_tags:
+          Name: "{{ name_tag }}"
+          app: jumphost
+          env: ec2classic
+          service: OPS
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn }}"
+        wait: yes
+      register: ec2
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: ddc.io
+        record: "{{ fqdn }}"
+        type: A
+        ttl: 300
+        value: "{{ ec2.instances.0.public_ip }}"
+    - name: add new instance to host group
+      add_host: hostname="{{ ec2.instances.0.public_ip }}" groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.public_ip }} port=22 delay=60 timeout=420 state=started
+    - name: add classiclink, after state is running
+      shell: "aws ec2 attach-classic-link-vpc --instance-id {{ ec2.instances.0.id }} --vpc-id {{ vpc_id }} --groups {{ classiclink_sg }}"
+    - name: wait for cloud-init
+      pause: seconds=15
+
+- name: Configure instances
+  hosts: launched
+  vars_files:
+    - group_vars/dev
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: true
+  roles:
+    - { role: ldap_client, sshd_additional_groups: 'centos operations' }
+    - { role: jumpbox }

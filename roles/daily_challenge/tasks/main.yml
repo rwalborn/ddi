@@ -1,0 +1,100 @@
+---
+
+- name: install a truly silly number of prereqs
+  yum: name={{ item }} state=installed
+  with_items:
+    - alsa-lib
+    - at
+    - atk
+    - axis
+    - bcel
+    - cairo
+    - classpathx-jaf
+    - classpathx-mail
+    - cvs
+    - db4-cxx
+    - db4-devel
+    - ecj
+    - ed
+    - fontconfig
+    - freetype
+    - gdbm-devel
+    - gdk-pixbuf2
+    - gettext
+    - glibc-devel
+    - glibc-headers
+    - gtk2
+    - hicolor-icon-theme
+    - jakarta-commons-collections
+    - jakarta-commons-daemon
+    - jakarta-commons-dbcp
+    - jakarta-commons-discovery
+    - jakarta-commons-httpclient
+    - jakarta-commons-logging
+    - jakarta-commons-pool
+    - jasper-libs
+    - java-1.5.0-gcj
+    - java_cup
+    - jdk
+    - jdk1.8.0_45
+    - jpackage-utils
+    - kernel-headers
+    - libICE
+    - libSM
+    - libX11
+    - libX11-common
+    - libXau
+    - libXcomposite
+    - libXcursor
+    - libXdamage
+    - libXext
+    - libXfixes
+    - libXft
+    - libXi
+    - libXinerama
+    - libXrandr
+    - libXrender
+    - libXtst
+    - libart_lgpl
+    - libgcj
+    - libgomp
+    - libthai
+    - libxcb
+    - log4j
+    - mailx
+    - mx4j
+    - pango
+    - patch
+    - pax
+    - perl-CGI
+    - perl-ExtUtils-MakeMaker
+    - perl-ExtUtils-ParseXS
+    - perl-Test-Harness
+    - perl-Test-Simple
+    - perl-devel
+    - pixman
+    - redhat-lsb-core
+    - regexp
+    - sinjdoc
+    - time
+    - tomcat6
+    - tomcat6-el-2.1-api
+    - tomcat6-jsp-2.1-api
+    - tomcat6-lib
+    - tomcat6-servlet-2.5-api
+    - wsdl4j
+    - xml-commons-apis
+    - xml-commons-resolver
+    - zip
+
+- name: upgrade some more
+  yum: name={{ item }} state=latest
+  with_items:
+    - db4
+    - db4-utils
+    - perl
+    - perl-Module-Pluggable
+    - perl-Pod-Escapes
+    - perl-Pod-Simple
+    - perl-libs
+    - perl-version

@@ -1,0 +1,35 @@
+# Runs as ansible-playbook -vvvv SG_TESTRAIL_TOOLS.yml
+---
+- name: Creation of TESTRAIL sec group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    sg: SG_TESTRAIL_TOOLS
+  tasks:
+    - name: Create all open ports security group for internal VPC LAN in Tools 
+      ec2_group:
+        name: "{{ sg }}"
+        description: All open ports security group for internal VPC LAN in Tools
+        vpc_id: "{{ vpc_id }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 0
+            to_port: 65535
+            cidr_ip: 0.0.0.0/0
+          # ping from icinga slave in vpc
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: "{{ vpc_cidr }}"
+      register: ec2_group
+
+    - name: tag the fraker!
+      command: aws ec2 create-tags --region "{{ region }}" --resources "{{ ec2_group.group_id }}" --tags Key=Name,Value="{{ sg }}"
+

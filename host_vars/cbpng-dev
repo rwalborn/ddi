@@ -1,0 +1,26 @@
+---
+# cbpng-dev vars file
+
+sg: SG_LAN_DEV
+key_name: ops-config
+profile_name: cbpng-dev
+fqdn_prefix: cbpng
+fqdn_suffix: ddc.io
+rt53_zone: ddc.io
+prefix: CBPNG
+env: DEV
+dd_env: dev
+ic_env: development
+app_tag: DDC
+service_tag: png
+icinga_profile: Couchbase
+
+instance_type: m3.xlarge
+
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 12829
+

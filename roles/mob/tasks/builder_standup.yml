@@ -1,0 +1,101 @@
+- name: builder vars
+  include_vars: builder.yml
+
+- name: get regional subdomain
+  set_fact: env_domain="{{ fqdn.split('.')[2] }}"
+
+- name: when fqdn has bad value
+  fail: msg="fqdn does not end with dev.doubledowncasino.com"
+  when: env_domain != 'dev'
+
+- name: get host sequence
+  set_fact: seq="{{ fqdn.split('.')[0] | regex_replace('^[a-z]+(\\d+)$', '\\1') }}"
+
+- name: get name_tag
+  set_fact: name_tag="{{ (service_tag + '-' + env_domain)|upper }} {{ seq }}"
+
+- name: Launch instances
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    region: "{{ region }}"
+    vpc_subnet_id: "{{ subnet_pub_1c }}"
+    assign_public_ip: true
+    zone: "{{ az1 }}"
+    group: "{{ sg }}"
+    image: "{{ app_ami }}"
+    instance_profile_name: "{{ role }}"
+    volumes:
+      - device_name: /dev/xvdf
+        volume_size: 200
+        device_type: gp2
+        delete_on_termination: true
+    instance_tags:
+      Name: "{{ name_tag }}"
+      app: "{{ app_tag }}"
+      env: "{{ env_tag }}"
+      rpm: "{{ rpm_tag }}"
+      service: "{{ service_tag }}"
+    user_data: |
+      #cloud-config
+      hostname: {{ fqdn }}
+      disk_setup:
+        /dev/xvdf:
+          table_type: mbr
+          layout: True
+          overwrite: True
+      fs_setup:
+        - label: ebs1
+          filesystem: xfs
+          device: /dev/xvdf1
+      mounts:
+          - [ /dev/xvdf1, /mnt/ebs1, xfs, defaults, '0', '2' ]
+      runcmd:
+        - mkdir -p /mnt/ebs1/log
+        - touch /mnt/ebs1/log//mobileClientLog.txt
+        - chown apache:apache /mnt/ebs1/log/mobileClientLog.txt
+        - rm -rf /mnt/ephemeral; ln -s /mnt/ebs1 /mnt/ephemeral
+        - /bin/echo -e '\nappend domain-search "ec2.internal", "use1.{{ env_domain }}.doubledowncasino.com", "use1.{{ env_domain }}.ddc.io";' >> /etc/dhcp/dhclient-eth0.conf
+        - sed -i 's/^search.*ec2.internal$/search ec2.internal use1.{{ env_domain }}.doubledowncasino.com use1.{{ env_domain }}.ddc.io/' /etc/resolv.conf
+        - rm -f /tmp/icinga_vars.yml /tmp/zones.j2
+        - yum -y erase icinga2 icinga2-common icinga2-bin icinga2-libs
+        - userdel icinga
+        - cd /usr/local/share/DDI/ddi-ops && git pull
+        - /root/bin/sysconfig
+        - ln -s /usr/local/share/DDI/ddi-ops/{{ env_domain }}/mobile/conf/httpd.conf /etc/httpd/conf/httpd.conf
+        - ln -s /usr/local/share/DDI/ddi-ops/{{ env_domain }}/mobile/conf.d/m.doubledowncasino.com.conf /etc/httpd/conf.d/m.doubledowncasino.com.conf
+        - echo "SetEnv APPLICATION_ENV {{ env_tag }}" > /etc/httpd/conf.d/env.conf
+        - /usr/bin/geoipupdate
+  register: ec2
+
+- name: aws often does not return public_ip and ansible does not have a way to wait for the value
+  ec2_instance_facts:
+    instance_ids:
+      - "{{ ec2.instances.0.id }}"
+  register: ec2if
+
+- name: add new instances to host group
+  add_host:
+    hostname: "{{ ec2.instances.0.private_ip }}"
+    groupname: launched
+
+- name: traffic record
+  route53:
+    command: create
+    zone: doubledowncasino.com
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ ec2if.instances.0.public_ip_address }}"
+    overwrite: true
+
+- name: wait for SSH to come up
+  wait_for:
+    host: "{{ ec2.instances.0.private_ip }}"
+    port: 22
+    delay: 60
+    timeout: 300
+    state: started
+
+- name: allow cloud-init to execute
+  pause: seconds=60

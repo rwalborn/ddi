@@ -1,0 +1,84 @@
+---
+
+- name: partition /dev/xvdb
+  shell: 'echo \; | sfdisk /dev/xvdb'
+
+- name: format /dev/xvdb1 as ext4
+  filesystem: fstype=ext4
+              dev=/dev/xvdb1
+
+- name: mount /home
+  mount: name=/home
+         src=/dev/xvdb1
+         fstype=ext4
+         opts=noatime,relatime
+         state=mounted
+
+- name: create /mnt/ephemeral
+  file: path=/mnt/ephemeral
+        state=directory
+        mode=0755
+
+- name: symlink home to the mount
+  file: src=/home
+        dest=/mnt/ephemeral/home
+        state=link
+
+- name: install needful
+  yum: name={{ item }} state=installed
+  with_items:
+    - gcc
+    - openssl-devel
+    - python-devel
+
+- name: upgrade pip
+  shell: pip install -U pip
+
+- name: install ansible
+  pip: name=ansible
+
+- name: set hostname
+  shell: "hostname {{ host_name }}"
+
+- name: create /etc/ansible
+  file: path=/etc/ansible
+        state=directory
+        mode=0755
+
+- name: copy dynamic inventory
+  copy: src=ec2.py
+        dest=/etc/ansible/hosts
+        owner=root
+        mode=0755
+
+- name: copy dynamic inventory .ini
+  template: src=ec2.ini
+            dest=/etc/ansible/ec2.ini
+            owner=root
+            mode=0644
+
+- name: create /etc/skel/.ansible.cfg
+  copy: src=ansible.cfg
+        dest=/etc/skel/.ansible.cfg
+        owner=root
+        mode=0644
+
+- name: create /etc/skel/.boto
+  copy: src=boto
+        dest=/etc/skel/.boto
+        owner=root
+        mode=0600
+
+- name: create /etc/skel/.vault_pass.txt
+  copy: src=vault_pass.txt
+        dest=/etc/skel/.vault_pass.txt
+        owner=root
+        mode=0600
+
+- name: copy custom .vimrc
+  copy: src=vimrc
+        dest=/etc/skel/.vimrc
+        owner=root
+        mode=0644
+
+

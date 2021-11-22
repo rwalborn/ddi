@@ -1,0 +1,19 @@
+---
+- name: bake an MOB AMI
+  include: ami.yml
+  when: do == 'ami'
+
+- name: builder standup
+  include: builder_standup.yml
+  when: do == 'builder_standup'
+
+- name: config management
+  include: builder_config.yml
+  when: do == 'builder_config'
+
+# long hg session tends to fail
+# not intended to run with config management
+- name: checkout code
+  include: builder_code.yml
+  when: do == 'builder_code'
+

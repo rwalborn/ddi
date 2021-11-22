@@ -1,0 +1,49 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Stmt1413309738008",
+            "Effect": "Allow",
+            "Action": [
+                "s3:AbortMultipartUpload",
+                "s3:GetBucketAcl",
+                "s3:GetBucketCORS",
+                "s3:GetBucketLocation",
+                "s3:GetObject",
+                "s3:GetObjectAcl",
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads",
+                "s3:ListBucketVersions",
+                "s3:ListMultipartUploadParts",
+                "s3:PutBucketCORS",
+                "s3:PutObject",
+                "s3:PutObjectAcl",
+                "s3:PutObjectVersionAcl"
+            ],
+            "Resource": [
+                "arn:aws:s3:::ddc-edc-qa",
+                "arn:aws:s3:::ddc-edc-qa/*",
+                "arn:aws:s3:::ddc-edc-staging",
+                "arn:aws:s3:::ddc-edc-staging/*",
+                "arn:aws:s3:::ddc-edc-production",
+                "arn:aws:s3:::ddc-edc-production/*",
+                "arn:aws:s3:::ddc-cdn",
+                "arn:aws:s3:::ddc-cdn/*",
+                "arn:aws:s3:::ddc-cdn-dev",
+                "arn:aws:s3:::ddc-cdn-dev/*",
+                "arn:aws:s3:::ddc-cdn-qa",
+                "arn:aws:s3:::ddc-cdn-qa/*",
+                "arn:aws:s3:::ddc-cdn-staging",
+                "arn:aws:s3:::ddc-cdn-staging/*",
+                "arn:aws:s3:::ddc-mobile-marketing",
+                "arn:aws:s3:::ddc-mobile-marketing/*",
+                "arn:aws:s3:::ddi-releases-repo-nonprod",
+                "arn:aws:s3:::ddi-releases-repo-nonprod/*",
+                "arn:aws:s3:::ddc-mobile-builds",
+                "arn:aws:s3:::ddc-mobile-builds/*",
+                "arn:aws:s3:::ddc-jenkins-test",
+                "arn:aws:s3:::ddc-jenkins-test/*"
+            ]
+        }
+    ]
+}

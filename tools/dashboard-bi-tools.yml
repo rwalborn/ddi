@@ -1,0 +1,64 @@
+# Runs as ansible-playbook -vvvv dashboard-bi-tools.yml --ask-vault
+
+# This spins up the BI Dashboard instance
+- name: dashboard server
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/dashboard-tools
+  vars:
+    role: bi-dashboard
+  tasks:
+    - name: launch instance
+      ec2:
+        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        group: "{{ sg }}"
+        instance_type: "{{ instance_type }}"
+        instance_profile_name: "{{ role }}"
+        image: "{{ centos_7_ebs_hvm }}"
+        vpc_subnet_id: "{{ subnet_pri_3 }}"
+        zone: "{{ az1 }}"
+        volumes:
+          - device_name: /dev/xvdb
+            volume_type: gp2
+            volume_size: 100
+            delete_on_termination: yes
+        instance_tags:
+          Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "{{ app_tag }}"
+          service: "{{ service_tag }}"
+          icinga-profile: "{{ service_tag }}"
+      register: ec2
+
+    - name: add new instance to host group
+      add_host: hostname={{ ec2.instances.0.private_ip }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=180 state=started
+
+# This part configures the instance and grants Raini Robinson sudo access
+- name: configure instances
+  hosts: launched
+  remote_user: root
+  gather_facts: true
+  vars_files:
+    - ../group_vars/tools
+    - ../group_vars/vaults/tools
+  vars:
+    sudoers_user:
+      - username: 'rrobinson'
+        disable_requiretty: false
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+  roles:
+    - ddiuser
+    - sudoers_user
+  #  - splunkforwarder
+    - { role: newfs, blkdev: 'xvdb', mountpoint: '/mnt/data'}
+    - dashboard
+    - { role: ldap_client, sshd_additional_groups: BI }
+    - { role: icinga, local_zone: "tools" }
+    - spacewalk

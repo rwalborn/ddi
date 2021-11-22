@@ -1,0 +1,3 @@
+dig: true
+timeout: 200
+ssl: true

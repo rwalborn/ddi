@@ -1,0 +1,37 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv ems-sbx-asg.yml
+---
+- name: create autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/ems
+  vars:
+    name_tag: EMS-SBX
+    cfghost_tag: cfg.ddc-sbx.ddims.cc 
+    env: sbx
+    hc_type: EC2
+    desired_capacity: 2
+    min_size: 1
+    max_size: 2
+  tasks:
+    - name: autoscaling group
+      ec2_asg:
+        name: "{{ name_tag }}"
+        region: "{{ region }}"
+        availability_zones: [ "{{ az1 }}", "{{ az2 }}" ]
+        vpc_zone_identifier: [ "{{ subnet_pri_1 }}", "{{ subnet_pri_2 }}" ]
+        launch_config_name: "{{ sbx_lc }}"
+        desired_capacity: "{{ desired_capacity }}"
+        min_size: "{{ min_size }}"
+        max_size: "{{ max_size }}"
+        load_balancers: [ "{{ name_tag }}" ]
+        health_check_type: "{{ hc_type }}"
+        wait_for_instances: yes
+        tags:
+          - Name: "{{ name_tag }}"
+            env: "{{ env }}"
+            rpm: "{{ rpm_tag }}"
+            app: "{{ app_tag }}"
+            service: "{{ service_tag }}"
+            cfghost: "{{ cfghost_tag }}"

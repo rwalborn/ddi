@@ -1,0 +1,62 @@
+# Runs as ansible-playbook -i 'localhost,' ans.yml
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+  - name: ANS ec2 security group
+    ec2_group:
+      name: SG_ANS
+      description: ANS security group
+      vpc_id: vpc-a04986c4
+      region: us-east-1
+      state: present
+      purge_rules: true
+      purge_rules_egress: true
+      rules:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 443
+          to_port: 443
+          cidr_ip: 0.0.0.0/0
+      rules_egress:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 443
+          to_port: 443
+          cidr_ip: 0.0.0.0/0
+    register: aws_sg
+  - name: Tag the SG_ANS
+    ec2_tag:
+      resource: "{{aws_sg.group_id}}"
+      region: us-east-1
+      state: present
+      tags:
+        Name: "SG_ANS"
+  - name: Create the ANS Instance
+    ec2:
+      key_name: ops-config
+      group: SG_ANS
+      region: us-east-1
+      instance_type: c4.2xlarge
+      image: ami-935928f6
+      vpc_subnet_id: subnet-fb0a25a2
+      assign_public_ip: yes
+      wait: yes
+      instance_tags:
+        Name: ANS
+        Count: 1

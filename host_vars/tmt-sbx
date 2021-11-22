@@ -1,0 +1,32 @@
+# TMT-SBX VARS FILE
+
+name_tag: TMT-SBX
+service_tag: TMT
+icinga_profile: TMT
+hzcastsbx: hzsbx_tmnt
+
+app_tag: DDC
+rpm_tag: ddi-tournament-server
+app_ami: ami-1836580e
+instance_type: c3.xlarge
+fqdn: tmt.sbx.doubledowncasino.com
+spot_price: 0.225
+sg: SG_TMT_SBX
+
+env: sbx
+profile_name: tmt-sbx
+
+key_name: dev-ops-config
+role: tmt-sbx
+
+lc: TMT-SBX-001
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11020
+instance_port_2: 11021
+instance_port_3: 11024

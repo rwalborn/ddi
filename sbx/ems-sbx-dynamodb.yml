@@ -1,0 +1,28 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv ems-sbx-dynamodb.yml
+
+# global secondary index is not supported yet by ansible 2.0.1.0
+# see https://github.com/ansible/ansible-modules-extras/pull/1443
+
+- name: create dynamodb table
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/ems
+  vars:
+    table1: EMSADDR-USE1-SBX
+    table2: EMSTOKEN-USE1-SBX
+    read: 5
+    write: 5
+  tasks:
+    - name: create dynamodb table 1
+      command: aws --profile "{{ aws_profile }}" dynamodb create-table --table-name "{{ table1 }}" --attribute-definitions AttributeName=dealer_id,AttributeType=S AttributeName=email_address,AttributeType=S --key-schema AttributeName=dealer_id,KeyType=HASH AttributeName=email_address,KeyType=RANGE --global-secondary-indexes IndexName=email_address_index,KeySchema="{AttributeName=email_address,KeyType=HASH}",Projection="{ProjectionType=ALL}",ProvisionedThroughput="{ReadCapacityUnits={{ read }},WriteCapacityUnits={{ write }}}" --provisioned-throughput ReadCapacityUnits="{{ read }}",WriteCapacityUnits="{{ write }}" --stream-specification StreamEnabled=true,StreamViewType="NEW_AND_OLD_IMAGES"
+
+    - name: create dynamodb table 2
+      command: aws --profile "{{ aws_profile }}" dynamodb create-table --table-name "{{ table2 }}" --attribute-definitions AttributeName=validation_token,AttributeType=S AttributeName=email_address,AttributeType=S --key-schema AttributeName=validation_token,KeyType=HASH --global-secondary-indexes IndexName=email_address_index,KeySchema="{AttributeName=email_address,KeyType=HASH}",Projection="{ProjectionType=ALL}",ProvisionedThroughput="{ReadCapacityUnits={{ read }},WriteCapacityUnits={{ write }}}" --provisioned-throughput ReadCapacityUnits="{{ read }}",WriteCapacityUnits="{{ write }}"
+
+- name: set tags
+  command: "aws --profile {{ aws_profile }} dynamodb tag-resource --resource-arn arn:aws:dynamodb:us-east-1:{{ aws_acct }}:table/{{ table1 }} --tags Key=Name,Value={{ name }} Key=service,Value={{ service_tag }}"
+
+- name: set tags
+  command: "aws --profile {{ aws_profile }} dynamodb tag-resource --resource-arn arn:aws:dynamodb:us-east-1:{{ aws_acct }}:table/{{ table2 }} --tags Key=Name,Value={{ name }} Key=service,Value={{ service_tag }}"

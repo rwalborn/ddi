@@ -1,0 +1,36 @@
+# ansible-playbook -vvvv ccp-qa-lc.yml
+---
+- name: create "{{ name_tag }}" launch configuration
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/ccp-qa
+  tasks:
+    - name: create "{{ sg }}" security group
+      include: ../sec_groups/{{ sg }}_INC.yml
+
+    - name: launch configuration
+      ec2_lc:
+        name: "{{ lc }}"
+        image_id: "{{ app_ami }}"
+        key_name: "{{ key_name }}"
+        security_groups: [ "{{ ec2_group.group_id }}" ]
+        instance_profile_name: "{{ profile_name }}"
+        instance_type: "{{ instance_type }}"
+        instance_monitoring: false
+        volumes:
+        - device_name: /dev/sda1
+          volume_size: 8
+          device_type: gp2
+          delete_on_termination: true
+        region: "{{ region }}"
+        assign_public_ip: false
+        user_data: |
+                    #!/bin/bash
+                    hg -q --cwd /usr/local/share/DDI/ops pull -u
+                    /root/bin/sysconfig
+                    sed -i "2 i search use1.{{ ud_env }}.doubledowncasino.com use1.{{ ud_env }}.ddc.io" /etc/resolv.conf
+                    echo PEERDNS=no >> /etc/sysconfig/network
+                    sed -i 's/dbddc.use1.dev.doubledowncasino.com/dbddc.use1.{{ ud_env }}.doubledowncasino.com/g' /ddi/etc/{{ ddi_cpddc_config.service_name }}/context.xml
+                    sed -i 's/environment=dev/environment={{ ud_env }}/g' /ddi/etc/{{ ddi_cpddc_config.service_name }}/env.properties

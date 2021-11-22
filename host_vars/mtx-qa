@@ -1,0 +1,5 @@
+svc_fqdn: carbon.use1.qa.ddc.io
+sg: SG_MTX_QA
+az: us-east-1d
+role: ddc-nagios-qa
+instance_type: m4.large

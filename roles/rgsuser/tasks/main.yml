@@ -1,0 +1,36 @@
+# this role should run before ldap
+# ldap uidNumber 502 is ddiadmin
+
+- file:
+    path=/mnt/rgs
+    state=directory 
+
+- group:
+    name=rgs
+    gid=502
+
+- user:
+    name=rgs
+    uid=502
+    group=rgs
+    createhome=true
+    home=/mnt/rgs/
+    force=yes
+
+- file:
+    path=/mnt/rgs/.ssh
+    state=directory 
+    mode=0700
+    owner=rgs
+    group=rgs
+
+- name: drop authorized keys
+  copy:
+    src=authorized_keys
+    dest=/mnt/rgs/.ssh/authorized_keys
+    mode=644
+
+- lineinfile:
+    dest=/mnt/rgs/.ssh/authorized_keys
+    state=present 
+    line="ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEAva8MhB1BozrvCKmRsXIM6n560VHN+c4XIKwmiHF1AUt5erNhvXn64Gp5o5kXh+VJLX5RR/fxcKqtYpgYqV9c++pyy+FOlb3pU2HSU0RioJo0dRtvjuXGxNu6mFUnC6K5qxizFjNeMwvcFz0jDNg5EvPpfVKXcDz9VtGyb6N6b9s= codebldr@sf-build05.corp.wagerworks.com"

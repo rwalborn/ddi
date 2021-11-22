@@ -1,0 +1,10 @@
+---
+
+- name: install clippie deployer
+  yum: name=clippie-deployer state=installed
+
+- name: set clippie deployer to run
+  lineinfile:
+    dest=/etc/rc.d/rc.local
+    state=present
+    line='test -x /usr/sbin/clippie_deploy  && /usr/sbin/clippie_deploy'

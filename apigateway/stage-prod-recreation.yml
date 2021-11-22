@@ -1,0 +1,29 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# you need awscli 1.10.22 and above
+
+- name: recreate prod stage
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../host_vars/capi
+  vars:
+    upstream: stg
+    env: prod
+  tasks:
+    - name: get the deploymentId that is validated in upstream environment
+      command: aws apigateway get-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage "{{ upstream }}" --query 'deploymentId' --output text
+      register: deploymentid
+      tags: getupstream
+
+    - name: create stage
+      command: aws apigateway create-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --deployment-id "{{ deploymentid.stdout }}" --variables emsddc=emsddc.use1."{{ env }}".doubledowncasino.com,dwsddc=dwsddc.use1."{{ env }}".doubledowncasino.com,lytddc=lytddc.use1."{{ env }}".doubledowncasino.com
+      tags: create
+
+    - name: turn on logging
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/logging/loglevel,value=INFO,from=OFF
+      tags: log
+
+    - name: enable metrics
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ stage }}" --patch-operations op=replace,path=/*/*/metrics/enabled,value=true,from=false
+      tags: metrics

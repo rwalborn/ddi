@@ -1,0 +1,11 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv SG_PHP_DEV.yml
+- name: PHP security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/php
+    - ../host_vars/php-qa
+  tasks:
+    - include: "{{ sg }}_INC.yml"

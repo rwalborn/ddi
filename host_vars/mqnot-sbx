@@ -1,0 +1,24 @@
+---
+# MQNOT-SBX VARS FILE
+
+sg: SG_LAN_SBX
+key_name: dev-ops-config
+profile_name: mqnot-sbx
+prefix: MQNOT
+app_tag: DDC
+service_tag: mqnot
+env: SBX
+dd_env: sbx
+
+fqdn_prefix: mqnot
+host1: 801
+host2: 802
+host3: 803
+fqdn_suffix: use1.sbx.doubledowncasino.com
+
+instance_type: m3.xlarge
+
+lbname: LBMQNOT
+
+rt53_zone: sbx.doubledowncasino.com
+

@@ -1,0 +1,50 @@
+# ansible-playbook -vvvv -i "localhost," --tags=migrate foo.yml
+# ansible-playbook -vvvv -i "localhost," --tags=rollback foo.yml
+
+- hosts: all
+  gather_facts: no
+  connection: local
+  tasks:
+    - name: migrate
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ item.cname }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.fqdn }}"
+      with_items:
+        - { cname: sfsddc01.use1.qa.doubledowncasino.com, fqdn: ec2-52-90-172-16.compute-1.amazonaws.com }
+        - { cname: sfsddc02.use1.qa.doubledowncasino.com, fqdn: ec2-52-205-139-232.compute-1.amazonaws.com }
+        - { cname: sfsddc03.use1.qa.doubledowncasino.com, fqdn: ec2-34-229-182-169.compute-1.amazonaws.com }
+        - { cname: sfsddc04.use1.qa.doubledowncasino.com, fqdn: ec2-52-91-10-1.compute-1.amazonaws.com }
+        - { cname: sfsddc05.use1.qa.doubledowncasino.com, fqdn: ec2-34-228-215-183.compute-1.amazonaws.com }
+        - { cname: sfsddc06.use1.qa.doubledowncasino.com, fqdn: ec2-34-230-25-82.compute-1.amazonaws.com }
+        - { cname: smartfox.qa.doubledowncasino.com,      fqdn: sfsddc01.use1.qa.doubledowncasino.com }
+        - { cname: smartfox2.qa.doubledowncasino.com,     fqdn: sfsddc02.use1.qa.doubledowncasino.com }
+        - { cname: smartfox3.qa.doubledowncasino.com,     fqdn: sfsddc03.use1.qa.doubledowncasino.com }
+        - { cname: smartfox4.qa.doubledowncasino.com,     fqdn: sfsddc04.use1.qa.doubledowncasino.com }
+        - { cname: smartfox5.qa.doubledowncasino.com,     fqdn: sfsddc05.use1.qa.doubledowncasino.com }
+        - { cname: smartfox6.qa.doubledowncasino.com,     fqdn: sfsddc06.use1.qa.doubledowncasino.com }
+      tags:
+        - migrate
+
+    - name: rollback
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ item.cname }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.fqdn }}"
+      with_items:
+        - { cname: sfsddc01.use1.qa.doubledowncasino.com, fqdn: ec2-54-167-37-182.compute-1.amazonaws.com }
+        - { cname: sfsddc02.use1.qa.doubledowncasino.com, fqdn: ec2-54-147-17-83.compute-1.amazonaws.com }
+        - { cname: sfsddc03.use1.qa.doubledowncasino.com, fqdn: ec2-54-144-93-53.compute-1.amazonaws.com }
+        - { cname: sfsddc04.use1.qa.doubledowncasino.com, fqdn: ec2-54-226-199-221.compute-1.amazonaws.com }
+        - { cname: sfsddc05.use1.qa.doubledowncasino.com, fqdn: ec2-54-160-161-188.compute-1.amazonaws.com }
+        - { cname: sfsddc06.use1.qa.doubledowncasino.com, fqdn: ec2-54-87-7-75.compute-1.amazonaws.com }
+      tags:
+        - rollback

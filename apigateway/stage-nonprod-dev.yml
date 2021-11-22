@@ -1,0 +1,24 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# you need awscli 1.10.22 and above
+
+- name: create stage
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../host_vars/capi-nonprod
+  vars:
+    env: dev
+    aws_profile: nonprod_admins
+  tasks:
+    - name: create stage
+      command: aws --profile "{{ aws_profile }}" apigateway create-deployment --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --variables emsddc=emsddc.use1."{{ env }}".doubledowncasino.com,dwsddc=dwsddc.use1."{{ env }}".doubledowncasino.com,lytddc=lytddc.use1."{{ env }}".doubledowncasino.com
+      tags: create
+
+    - name: turn on logging
+      command: aws --profile "{{ aws_profile }}" apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/logging/loglevel,value=INFO,from=OFF
+      tags: log
+
+    - name: logging full requests
+      command: aws --profile "{{ aws_profile }}" apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/logging/dataTrace,value=true,from=false
+      tags: trace

@@ -1,0 +1,10 @@
+SHELL=/bin/bash
+
+MAILTO=poovizhi.ashokkumar@doubledown.com
+
+PIDFILE="/ddi/services/ddi-kinesis-s3-archiver/logs/CloudwatchEmit.pid"
+STATUSFILE="/ddi/services/ddi-kinesis-s3-archiver/logs/CloudwatchEmitStatus"
+
+0 0 * * * ddiuser PARENT_PID=`cat "${PIDFILE}" 2>/dev/null`; ALL_PIDS=`pstree -np $PARENT_PID | head -2 | sed 's/[\\\`\^*+.$-]\+/\n/g'|sed 's/^.*(\([0-9]\+\)).*$/\1/'|paste -s -d" "`; kill ${ALL_PIDS}
+02 0 * * * ddiuser PID=`/ddi/services/ddi-kinesis-s3-archiver/logs/CloudwatchEmit > $STATUSFILE 2>&1 & echo $!`; echo "${PID}" > "${PIDFILE}"
+0 9 * * * ddiuser /ddi/services/ddi-kinesis-s3-archiver/logs/logrotate > /ddi/services/ddi-kinesis-s3-archiver/logs/logrotateStatus

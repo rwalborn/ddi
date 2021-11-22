@@ -1,0 +1,83 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: elb for loyalty admin
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/lta
+  vars:
+    fqdn: lytadm.dev.doubledowncasino.com
+    name_tag: LTA-DEV
+    sg: SG_LBLTA_DEV
+    cert: "arn:aws:iam::143177584759:server-certificate/dev.doubledowncasino.com"
+  tasks:
+    - name: create security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        vpc_id: "{{ vpc_id }}"
+        region: us-east-1
+        rules:
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ sea_office_1 }}/32"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ sea_office_2 }}/32"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ jump_eip_1c }}/32"
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: "{{ jump_eip_1d }}/32"
+      register: ec2_group
+
+    - name: launch elb
+      ec2_elb_lb:
+        name: "{{ name_tag }}"
+        state: present
+        security_group_ids: "{{ ec2_group.group_id }}"
+        region: us-east-1
+        connection_draining_timeout: 30
+        cross_az_load_balancing: true
+        subnets:
+          - "{{ subnet_pub_1c }}"
+          - "{{ subnet_pub_1d }}"
+        listeners:
+          - protocol: https
+            load_balancer_port: 443
+            instance_protocol: http
+            instance_port: "{{ instance_port }}"
+            ssl_certificate_id: "{{ cert }}"
+        health_check:
+          ping_protocol: http
+          ping_port: "{{ instance_port }}"
+          ping_path: "{{ ping_path }}"
+          response_timeout: 5
+          interval: 10
+          unhealthy_threshold: 2
+          healthy_threshold: 2
+        tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+          app: "{{ app_tag }}"
+          env: "{{ env }}"
+      register: ec2_elb_lb 
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ fqdn }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ ec2_elb_lb.elb.dns_name }}"
+      tags:
+        - route53

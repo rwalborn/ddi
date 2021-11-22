@@ -1,0 +1,79 @@
+# ansible-playbook -vvvv -i 'localhost,' --vault-password-file ~/.vaultpass foo.yml
+
+# the volume_size is increased to allow paging by rabbitmq
+
+---
+- name: rabbitmq AMI
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    name_tag: RABBITMQ335-AMI
+    sg: SG_LAN_DEV
+    role: mqddc-dev
+    instance_type: c3.large
+    key_name: ops-config
+    service_tag: TMT
+  tasks: 
+    - name: launch instances
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        region: "{{ region }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        group: "{{ sg }}"
+        image: "{{ centos_68_base }}"
+        instance_profile_name: "{{ role }}"
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 40
+            delete_on_termination: true
+        instance_tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        wait: yes
+      register: ec2
+    - name: add new instances to host group
+      add_host:
+        hostname: "{{ ec2.instances.0.private_ip }}"
+        groupname: launched
+    - name: wait for SSH to come up
+      wait_for:
+        host: "{{ ec2.instances.0.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+    - name: allow cloud-init to execute
+      pause: seconds=30
+
+- name: Configure instances
+  hosts: launched
+  become: yes
+  become_user: root
+  become_method: sudo
+  remote_user: centos
+  gather_facts: True
+  vars_files:
+    - ../group_vars/dev
+  roles:
+    - ddiuser
+    - { role: ldap_client, baking: true }
+    - { role: ops, code_deploy: false, repo: git }
+    - { role: icinga, baking: true }
+    - { role: spacewalk, baking: true }
+    - { role: rabbitmq, do: ami, version: 3.3.5 }
+    - { role: bake, distro: nada }
+
+- name: Bake AMI
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    service_tag: TMT
+    svc: RABBITMQ335
+  roles:
+    - { role: bake, bake: true }

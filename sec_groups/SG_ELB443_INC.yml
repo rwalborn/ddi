@@ -1,0 +1,14 @@
+---
+- name: create security group
+  ec2_group:
+    name: "{{ elb_sg }}"
+    description: "{{ elb_sg }} via SG_ELB443_INC"
+    vpc_id: "{{ vpc_id }}"
+    region: us-east-1
+    rules:
+      - proto: tcp
+        from_port: 443
+        to_port: 443 
+        cidr_ip: 0.0.0.0/0
+  register: ec2_group
+

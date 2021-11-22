@@ -1,0 +1,26 @@
+# BAL-SBX VARS FILE
+
+name_tag: BAL-SBX
+lb: BAL-SBX
+service_tag: BAL
+
+app_tag: DDC
+rpm_tag: ddc-balance-webapp
+app_ami: ami-81d56b97
+instance_type: c3.2xlarge
+spot_price: .42
+sg: SG_BAL_SBX
+elb_sg: SG_LBBAL_SBX
+elb_fqdn: bal.use1.sbx.doubledowncasino.com
+env: sbx
+profile_name: bal-sbx
+prefix: BAL
+deployment: SBX
+
+ud_env: sbx
+
+lc: BAL-SBX-004
+hc_type: EC2
+instance_port_1: 11050
+ping_path_1: /status
+

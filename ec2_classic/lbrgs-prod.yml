@@ -1,0 +1,29 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# Sadly, all RGS-PROD instances are in us-east-1c
+
+- name: new haproxy lb
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+  vars:
+    app_tag: rgs
+    env_tag: production
+    sg: production
+    az: us-east-1c
+    resource_path: /rgslite/rgs-running
+    service_port: 8080
+    service_fqdn: rgs.doubledowncasino.com
+    healthcheck: true
+    policy_routing: true
+    update_service_fqdn: true
+    private_lb: true
+  roles:
+    - { role: lb, name_tag: 'LBRGS-PROD 01', az: us-east-1c, fqdn: lbrgs01.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs01.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBRGS-PROD 02', az: us-east-1d, fqdn: lbrgs02.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs02.use1.prod.ddc.io }
+    - { role: lb, name_tag: 'LBRGS-PROD 03', az: us-east-1e, fqdn: lbrgs03.use1.prod.ddc.io }
+    - { role: cloudwatch, alarm: route53, recordset: lbrgs03.use1.prod.ddc.io }

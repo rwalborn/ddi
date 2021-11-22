@@ -1,0 +1,61 @@
+
+- name: file out /ddi/etc/service directory
+  file: dest=/ddi/etc/{{ ddi_cpddc_config.service_name }}
+        state=directory
+        owner=ddiuser
+        group=ddiuser
+
+- name: template out env.properties.j2
+  template: src=env.properties.j2
+            dest=/ddi/etc/{{ ddi_cpddc_config.service_name }}/env.properties
+            owner=ddiuser
+            group=ddiuser
+#  notify: restart cp
+           
+- name: copy out server.xml
+  copy: src=server.xml
+        dest=/ddi/etc/{{ ddi_cpddc_config.service_name }}/server.xml
+        owner=ddiuser
+        group=ddiuser
+#  notify: restart cp
+
+- name: template out context.xml.j2
+  template: src=context.xml.j2
+            dest=/ddi/etc/{{ ddi_cpddc_config.service_name }}/context.xml
+            owner=ddiuser
+            group=ddiuser
+#  notify: restart cp
+
+- name: template out configListener.properties.j2
+  template: src=configListener.properties.j2
+            dest=/ddi/etc/{{ ddi_cpddc_config.service_name }}/configListener.properties
+            owner=ddiuser
+            group=ddiuser
+#  notify: restart cp
+
+# THIS FINE SNOWFLAKE CAME FROM BANG AND WE LIKELY STILL NEED IT CAUSE 
+# NOTHING EVER ACTUALLY GETS FIXED OR GOES AWAY
+# fake out having the old notification service so that components that still
+# talk to it don't end up stacking up timeout-ing connections
+- yum: name=nginx
+       state=installed
+
+- copy: src=nginx-404.conf
+        dest=/etc/nginx/nginx.conf
+
+- name: restart nginx
+  service: name=nginx
+           state=restarted
+           enabled=yes
+
+
+#- file: src=/etc/nginx/nginx-404.conf
+#        dest=/etc/nginx/nginx.conf
+#        state=link
+#        force=yes
+#
+#- name: restart nginx
+#  service: name=nginx
+#           state=restarted
+#           enabled=yes
+

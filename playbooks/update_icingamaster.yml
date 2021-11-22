@@ -1,0 +1,39 @@
+---
+- name: icinga
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "ICINGA-MASTER*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=master
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+- name: update icinga master instances
+  hosts: master
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars:
+    name_tag: 'ICINGA-MASTER 01'
+    fqdn: icinga-master01.ddc.io
+    mountpoint: '/mnt/icinga-mount'
+    db_host: db-ops-general-cluster.cluster-cmgtqqi0jns8.us-east-1.rds.amazonaws.com
+    agent: false
+    master: true
+    local_zone: 'master'
+    blkdev: 'xvdb'
+    fstype: xfs
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/icinga
+  roles:
+    - {
+        role: icinga, icinga_db_host: "{{ db_host }}", director_db_host: "{{ db_host }}",
+        icinga_master_fqdn: "{{ fqdn }}", icinga-mount: "{{ mountpoint }}", update: true
+      }

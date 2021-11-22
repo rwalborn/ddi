@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBJPT_LT.yml
+---
+- name: LBJPT_LT security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+    - ../host_vars/jpt-lt
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

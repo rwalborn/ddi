@@ -1,0 +1,97 @@
+#!/bin/bash
+#
+# crucible    Startup script for the Atlassian Fisheye/Crucible
+# chkconfig: - 86 15
+
+# Source function library.
+
+# RUN_AS: The user to run fisheye as. Its recommended that you create a separate user account for security reasons
+RUN_AS=fisheye
+
+FISHEYE_HOME=/mnt/atlassian/fecru-3.7.0
+
+fisheyectl() {
+        if [ "x$USER" != "x$RUN_AS" ]; then
+                su - "$RUN_AS" -c "$FISHEYE_HOME/bin/fisheyectl.sh $1"
+        else
+                "$FISHEYE_HOME/bin/fisheyectl.sh" "$1"
+        fi
+}
+
+
+
+start () {
+	#Adding ulimit to increase max open files - Marc Riddell
+	ulimit -n 1000000
+
+	if [ -f /var/lock/subsys/crucible ]
+	then
+		pid=`cat /var/lock/subsys/crucible`
+		running=`ps -ef | grep $pid`
+		if [ "$running" != "" ]
+		then
+			echo "Crucible already running!"
+			exit 1
+		else
+			echo "Crucible not running but lockfile found. Cleaning up stale lockfile..."
+			rm /var/lock/subsys/crucible
+		fi
+	fi
+	echo "Starting crucible..."
+	fisheyectl start &>/dev/null
+	pid=`ps -ef | grep fish | grep -v grep | awk '{print $2}'`
+	echo $pid > /var/lock/subsys/crucible
+	echo "Crucible started with pid ${pid}"
+}
+stop () {
+	echo "Stopping crucible..."
+	fisheyectl stop &>/dev/null
+	rm /var/lock/subsys/crucible
+}
+status () {
+	lock=`cat /var/lock/subsys/crucible`
+	pid=`ps -ef | grep fish | grep -v grep | awk '{print $2}'`
+	if [ "$lock" != "" ]
+	then
+		if [ "$pid" != "$lock" ]
+		then
+			echo "Crucible is running but doesn't match the lockfile!  Updating lockfile..."
+			echo $pid > /var/lock/subsys/crucible
+		elif [ "$pid" != "" ]
+		then
+			echo "Crucible is running! PID $pid"
+		else
+			echo "Crucible not running but lockfile found.  Cleaning up stale lockfile..."
+		fi
+	else
+		if [ "$pid" != "" ]
+		then
+			echo "Crucible running but no lockfile found.  Updating lockfile..."
+			echo $pid > /var/lock/subsys/crucible
+		else
+			echo $"Crucible is not currently running."
+		fi
+	fi
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+	status
+	;;
+  restart|reload)
+	stop
+	start
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart|reload}"
+	exit 1
+esac
+
+exit $?

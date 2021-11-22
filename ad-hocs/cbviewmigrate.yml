@@ -1,0 +1,245 @@
+# this will migrate the couchbase views from host nametag1 to host nametag2
+# RUN IN PROD AS ansible-playbook -vvvv cbviewmigrate.yml -e 'nametag1="CBJPT-SBX-801" nametag2="CBJPT-SBX 01"' --vault-password-file ~/.vault_pass.txt
+# RUN IN NONPROD AS export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv cbviewmigrate.yml -e 'nametag1="CBJPT-SBX-801" nametag2="CBJPT-SBX 01"' --vault-password-file ~/.vault_pass.txt
+
+---
+- name: gather the facts, just the facts
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../group_vars/sbx
+  vars:
+    region: "{{ region }}"
+  tasks:
+    - name: get facts 1
+      ec2_remote_facts:
+        region: "{{ region }}"
+        filters:
+          "tag:Name": "{{ nametag1 }}"
+      register: ec2_facts1
+
+    - name: Add node1 instance to host group
+      add_host:
+        hostname: "{{ item.private_ip_address }}"
+        groupname: node1
+      with_items: "{{ec2_facts1.instances}}"
+
+    - name: remove any existing host1 file before running just in case
+      file:
+        path: ./host1
+        state: absent
+
+    - name: write private ip of the instance to local host1 file
+      lineinfile:
+        dest: ./host1
+        line: "{{ item.private_ip_address }}"
+        create: yes
+      with_items: "{{ec2_facts1.instances}}"
+
+    - name: get facts 2
+      ec2_remote_facts:
+        region: "{{ region }}"
+        filters:
+          "tag:Name": "{{ nametag2 }}"
+      register: ec2_facts2
+
+    - name: Add node2 instances to host group
+      add_host:
+        hostname: "{{ item.private_ip_address }}"
+        groupname: node2
+      with_items: "{{ec2_facts2.instances}}"
+
+    - name: remove any existing host2 file before running just in case
+      file:
+        path: ./host2
+        state: absent
+
+    - name: write private ip of the instance to local host2 file
+      lineinfile:
+        dest: ./host2
+        line: "{{ item.private_ip_address }}"
+        create: yes
+      with_items: "{{ec2_facts2.instances}}"
+
+
+- name: configure instance
+  hosts: node1
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/sbx
+    - ../group_vars/vaults/sbx
+  vars:
+    host1: "{{ lookup('file', './host1') }}"
+    host2: "{{ lookup('file', './host2') }}"
+  tasks:
+    - name: start clean on backups
+      file:
+        path: /opt/couchbase/backups
+        state: absent
+
+    - name: create backup dir
+      file:
+        path: /opt/couchbase/backups
+        state: directory
+        mode: 0755
+
+    - name: create backup of just views
+      shell: /opt/couchbase/bin/cbbackup http://127.0.0.1:8091 /opt/couchbase/backups -x design_doc_only=1 -u {{ cb_admin_user }} -p {{ cb_admin_pw }}
+
+    - name: remove any existing keys so keygen does not fail
+      file:
+        path: /root/.ssh/id_rsa
+        state: absent
+
+    - name: remove any existing keys so keygen does not fail
+      file:
+        path: /root/.ssh/id_rsa.pub
+        state: absent
+
+    - name: create ssh key
+      shell: ssh-keygen -N '' -f /root/.ssh/id_rsa
+
+    - name: remove any existing file before running just in case
+      file:
+        path: /tmp/id_rsa.pub
+        state: absent
+
+    - name: fetch the pub key
+      fetch:
+        src: /root/.ssh/id_rsa.pub
+        dest: /tmp/id_rsa.pub
+        flat: yes
+
+
+- name: configure instance
+  hosts: node2
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/sbx
+    - ../group_vars/vaults/sbx
+  vars:
+    host1: "{{ lookup('file', './host1') }}"
+    host2: "{{ lookup('file', './host2') }}"
+  tasks:
+    - name: add to auth keys
+      authorized_key:
+        user: root
+        key: "{{ lookup('file', '/tmp/id_rsa.pub') }}"
+        state: present
+
+
+- name: configure instance
+  hosts: node1
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/sbx
+    - ../group_vars/vaults/sbx
+  vars:
+    host1: "{{ lookup('file', './host1') }}"
+    host2: "{{ lookup('file', './host2') }}"
+  tasks:
+    - name: rsync backup to host2
+      shell: rsync -av -e "ssh -o StrictHostKeyChecking=no" /opt/couchbase/backups {{ host2 }}:/opt/couchbase/
+
+- name: configure instance
+  hosts: node2
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/sbx
+    - ../group_vars/vaults/sbx
+  vars:
+    host1: "{{ lookup('file', './host1') }}"
+    host2: "{{ lookup('file', './host2') }}"
+  tasks:
+    - name: create a list of buckets
+      shell: ls /opt/couchbase/backups/ > /tmp/bucketlist
+
+    - name: remove word bucket-
+      shell: sed -i 's/bucket-//' /tmp/bucketlist
+
+    - name: fetch the list of buckets
+      fetch:
+        src: /tmp/bucketlist
+        dest: /tmp/bucketlist
+        flat: yes
+
+    - name: register list
+      shell: cat /tmp/bucketlist
+      register: blist
+
+    - name: restore backup
+      shell: /opt/couchbase/bin/cbrestore /opt/couchbase/backups http://127.0.0.1:8091 -x design_doc_only=1 -b {{ item }} -B {{ item }} -u {{ cb_admin_user }} -p {{ cb_admin_pw }}
+      with_items: "{{ blist.stdout_lines }}"
+
+    - name: remove backups
+      file:
+        path: /opt/couchbase/backups/
+        state: absent
+
+    - name: remove from auth keys
+      authorized_key:
+        user: root
+        key: "{{ lookup('file', '/tmp/id_rsa.pub') }}"
+        state: absent
+
+- name: configure instance
+  hosts: node1
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/sbx
+    - ../group_vars/vaults/sbx
+  vars:
+    host1: "{{ lookup('file', './host1') }}"
+    host2: "{{ lookup('file', './host2') }}"
+  tasks:
+    - name: tidy up host1
+      file:
+        path: /opt/couchbase/backups
+        state: absent
+
+    - name: tidy up host1
+      file:
+        path: /root/.ssh/id_rsa
+        state: absent
+
+    - name: tidy up host1
+      file:
+        path: /root/.ssh/id_rsa.pub
+        state: absent
+
+- name: cleanup local files
+  hosts: localhost
+  gather_facts: no
+  vars_files:
+    - ../group_vars/sbx
+  tasks:
+    - name: remove tmp files
+      file:
+        path: ./host1
+        state: absent
+      
+    - name: remove tmp files
+      file:
+        path: ./host2
+        state: absent
+      
+    - name: remove /tmp/bucketlist
+      file:
+        path: /tmp/bucketlist
+        state: absent
+
+    - name: remove /tmp/id_rsa.pub
+      file:
+        path: /tmp/id_rsa.pub
+        state: absent
+

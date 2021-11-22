@@ -1,0 +1,39 @@
+- authorized_key: user=root
+                  manage_dir=yes
+                  state=present
+                  key='ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCfimrI6TH/HeFlkzLv5PNx09b1aRJOrITjFuomFVDY4p86sXgEEzBzeWwFcZ1rYGpWr5xtsgn3LkXTEBaF1oYZqw4SJYk4wtRkLIx+w6QLmRU7pQCE2vQx+EVl3lHnZpA3wXgXIJfKVusIZNNaFt/FKzSO7KkCYvzGAC137P1SX/mJ3Tu90QXWdDNV37R8G6uJxMdjuGrTFXPNC6khZFyl5cc1WZKFsfXU2+hpPQJFgXVDh0mrnUN9YZd++SuJ/MBQLkVg7nVSZZtDfo3eJoMZh/8xvQWO0hxqy89zymFVA3F1vqNRWXFp8A1H0Pqv4cN+37QbsqsWfZ4Ai3vpXlN5 AUTOBLDR_NEW'
+  when: key != 'private'
+
+- include_vars: vaults.yml
+  when: key == 'private'
+
+- name: home dir 1
+  file: path="/mnt/ephemeral/home"
+        state=directory
+        recurse=yes
+        mode=0755
+  when: key == 'private'
+
+- name: home dir 2
+  file: path="/mnt/ephemeral/home/{{ user }}"
+        state=directory
+        owner="{{ user }}"
+        group="{{ group }}"
+        mode=0755
+  when: key == 'private'
+
+- name: ssh dir
+  file: path="/mnt/ephemeral/home/{{ user }}/.ssh"
+        state=directory
+        owner="{{ user }}"
+        group="{{ group }}"
+        mode=0700
+  when: key == 'private'
+
+- name: plant private key
+  copy: dest="/mnt/ephemeral/home/{{ user }}/.ssh/id_rsa"
+        content="{{ autobldr_private_key }}"
+        owner="{{ user }}"
+        group="{{ group }}"
+        mode=0600
+  when: key == 'private'

@@ -1,0 +1,61 @@
+# DDI nodejs is packaged inside RPM, no need to install nodejs rpm
+# and /var/log/nodejs is a symlink
+# haproxy is used to mask availability issues in case a nodejs process dies
+# see UR-6247 for supervisor issue 
+
+- name: install rpm
+  yum:
+    name="{{ item }}"
+    state=installed
+  with_items:
+    - haproxy
+    - "supervisor-{{ supervisor_version }}"
+
+- name: make sure /etc/haproxy is writable by ddiuser
+  file:
+    path=/etc/haproxy
+    state=directory
+    mode=0775
+    owner=root
+    group=ddiuser
+
+# actually, will be replaced by symlink by application rpm
+- name: make sure /etc/haproxy/haproxy.cfg is writable by ddiuser
+  file:
+    path=/etc/haproxy/haproxy.cfg
+    state=file
+    mode=0664
+    owner=root
+    group=ddiuser
+
+- name: supervisord.conf
+  template:
+    src=supervisord.conf.j2
+    dest=/etc/supervisord.conf
+    mode=0644
+    owner=root
+    group=root
+
+- name: ensure /etc/supervisord.d for the following files
+  file:
+    path=/etc/supervisord.d
+    state=directory
+    mode=0775
+    owner=root
+    group=ddiuser
+
+- name: socket
+  template:
+    src=00-unix-socket.ini.j2
+    dest=/etc/supervisord.d/00-unix-socket.ini
+    mode=0644
+    owner=root
+    group=root
+
+- name: enable service
+  service:
+    name="{{ item }}"
+    enabled=yes
+  with_items:
+    - haproxy
+    - supervisor

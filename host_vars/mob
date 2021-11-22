@@ -1,0 +1,8 @@
+app_ami: ami-68f8e213
+app_tag: DDC
+rpm_tag: mobileweb
+service_tag: MOB
+svc: MOB
+instance_type: c3.xlarge
+instance_port: 80
+ping_path: "/ddchealthchk.html"

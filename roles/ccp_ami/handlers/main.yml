@@ -1,0 +1,5 @@
+- name: restart cp
+  service: name=casino-config state=restarted
+
+- name: start cp
+  service: name=casino-config state=started

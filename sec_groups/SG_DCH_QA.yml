@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_DCH_QA.yml
+
+- name: "{{ name_tag }} security group"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/dch-qa
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

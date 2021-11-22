@@ -1,0 +1,95 @@
+# Runs as export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv mob-sbx.yml --vault-password-file ~/.vaultpass --extra-vars "www_prefix=m-sbx-1 ENVIRONMENT=use1 VPC=sbx DOMAIN=doubledowncasino.com buildslave_name=M-SBX-1"
+
+# 7/18/2017
+# relevant vaults previously encrypted by .vault_mobile.txt is now using the standard vaultpass
+---
+- name: Mobile dev/build slave
+  hosts: localhost
+  vars_files:
+    - ../group_vars/sbx
+  tasks:
+    - name: Launch instances
+      ec2:
+        key_name: dev-ops-config
+        instance_type: c3.xlarge
+        region: "{{ region }}"
+        instance_profile_name: mob-sbx
+        image: ami-baa11fac
+        group: SG_LAN_SBX
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        count: 1
+        wait: yes
+        user_data: |
+                   #cloud-config
+                   write_files:
+                     - path: /etc/sudoers.d/pfernandes
+                       owner: root
+                       permissions: 0400
+                       content: |
+                                pfernandes         ALL=(ALL)       NOPASSWD: ALL
+      register: ec2
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: "{{ zone }}"
+        record: "{{ www_prefix }}.use1.{{ zone }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.private_dns_name }}"
+      with_items: "{{ ec2.instances }}"
+
+
+    - name: Add instances to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=ec2launched
+      with_items: "{{ec2.instances}}"
+
+    - name: Add tag to instances
+      local_action: ec2_tag resource={{ item.id }} region=us-east-1 state=present
+      args:
+        tags:
+          Name: "{{ buildslave_name }}"
+          env: sbx
+      with_items: "{{ ec2.instances }}"
+
+    - name: wait for SSH to come up
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: "{{ ec2.instances }}"
+
+
+- name: configure and deploy the webservers and application code
+  hosts: ec2launched
+  become: yes
+  remote_user: root
+  become_user: root
+  become_method: sudo
+  vars:
+    hosts_template: mobile_web_hosts
+    buildmaster_host: "{{ groups['tag_Name_MOBILEFOOLS'][0] }}"
+##
+    http_vhost_conf: mobile.dev.apache.conf
+    scm: svn
+    svn_branch: default
+    repo_name: https://ddimobile.slsapp.com/source/mobile-deploy/branches/default
+    # These are needed for the www directory
+    virtual_www_root: /home/webapps/casino
+    current_www_dir: /home/webapps/casino/repo/mobile/www
+    www_repo_link_dest: /home/webapps/casino/repo
+    www_repo_dir: /mnt/ephemeral/repo
+    www_document_root: /home/webapps/casino/current/content
+    webapp_install_path: /mnt/ephemeral/repo/mobile/www
+    
+    mobile_repo_dir: /mnt/ephemeral/repo
+    
+    http_ver: 2.2.31
+    php_ver: php55w
+    php_conf_dir: /etc/php.d
+
+  roles:
+    - web
+    - memcached
+    - { role: buildbot, slave_only: true }
+    - { role: mobileweb, task: configure }
+

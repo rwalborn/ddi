@@ -1,0 +1,8 @@
+- name: Configure provisioned servers
+  hosts: all
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - { role: bake, distro: centos6, setupansible: false }

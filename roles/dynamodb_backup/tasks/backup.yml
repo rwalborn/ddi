@@ -1,0 +1,19 @@
+# idempotent
+
+- cloudwatchevent_rule:
+    name: "{{ table }}-Backup"
+    schedule_expression: "{{ schedule_expression }}"
+    description: "DynamoDB {{ table }} Backup"
+    targets:
+      - id: "{{ table }}-Backup"
+        arn: "arn:aws:lambda:us-east-1:143177584759:function:dynamodbbackup"
+        input: "{{ lookup('template', 'input_constant.json.j2') | to_json }}"
+
+- name: create lambda triggers, cli equiv is add-permission
+  lambda_policy:
+    state: "{{ state | default('present') }}"
+    function_name: dynamodbbackup
+    statement_id: "{{ table }}-Backup"
+    action: lambda:InvokeFunction
+    principal: events.amazonaws.com
+    source_arn: "arn:aws:events:us-east-1:143177584759:rule/{{ table }}-Backup"

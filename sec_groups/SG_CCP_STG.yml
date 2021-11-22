@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_CCP_LT.yml
+
+- name:  security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/lt
+    - ../host_vars/ccp-lt.yml
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

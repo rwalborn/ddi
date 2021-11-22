@@ -1,0 +1,22 @@
+---
+- name: get spacewalk certificate
+  shell: rpm -ivh 'http://{{ spacewalk_host }}/pub/rhn-org-trusted-ssl-cert-1.0-1.noarch.rpm' --force
+
+- name: install packages
+  yum: state=latest name={{ item }}
+  with_items:
+    - rhn-client-tools
+    - rhn-check
+    - rhn-setup
+    - rhnsd
+    - m2crypto
+    - yum-rhn-plugin
+
+- name: register with spacewalk
+  shell: "rhnreg_ks --serverUrl='https://{{ spacewalk_host }}/XMLRPC' --sslCACert=/usr/share/rhn/RHN-ORG-TRUSTED-SSL-CERT --activationkey=1-centos{{ ansible_distribution_major_version }}-x86_64-{{ this_env }} --force"
+  when: registerme
+
+- name: enable extra channels
+  shell: "spacewalk-channel -a -c {{ item }} -u {{ spacewalk_admin_user }} -p {{ spacewalk_admin_pw }}"
+  with_items: "{{ extra_channels }}"
+  when: extra_channels|length > 0

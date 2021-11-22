@@ -1,0 +1,33 @@
+# ansible-playbook -vv --extra-vars 'username=test' --private-key ~/.ssh/ops_config
+---
+- name: gather the facts, just the facts
+  hosts: localhost
+  gather_facts: no
+  vars:
+    region: us-east-1
+    nametag: "OPENVPNAS-TOOLS 01"
+  tasks:
+    - name: get facts
+      ec2_remote_facts:
+        region: "{{ region }}"
+        filters:
+          "tag:Name": "{{ nametag }}"
+      register: ec2_facts
+
+    - name: Add EP2 instances to host group
+      local_action: add_host hostname={{ item.private_ip_address }} groupname=node
+      with_items: "{{ec2_facts.instances}}"
+
+- name: openvpn
+  hosts: node
+  become: yes
+  remote_user: openvpnas
+  become_method: sudo
+  become_user: root
+  gather_facts: false
+  tasks:
+    - fail: msg="Bailing out, no username defined"
+      when: username is not defined
+
+    - name: "reset gauth for {{ username }}"
+      shell: "/usr/local/openvpn_as/scripts/sacli -u {{ username }} GoogleAuthRegen"

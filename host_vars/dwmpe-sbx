@@ -1,0 +1,44 @@
+# DWMPE-SBX VARS FILE
+
+name_tag: DWMPE-SBX
+lb: DWMPE-SBX
+service_tag: DWMPE
+
+app_tag: DDC
+rpm_tag: ddc-player-engine-service-sa
+app_ami: ami-4630e950
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_DWMPE_SBX
+elb_sg: SG_DWLBMPE_SBX
+elb_fqdn: dwmpe.use1.sbx.doubledowncasino.com
+env: sbx
+key_name: dev-ops-config
+profile_name: dwmpe-sbx
+
+lc: DWMPE-SBX-001
+
+ud_env: sbx
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2
+  hc_type: EC2
+
+instance_port_1: 11432
+#instance_port_2: 11509
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /HealthCheck
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+
+

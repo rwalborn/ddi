@@ -1,0 +1,67 @@
+# useful commands
+# aws route53 list-tags-for-resource
+# aws route53 list-health-checks
+# aws route53 get-health-check --health-check-id
+
+- name: Check if fqdn is defined
+  fail: msg="Please provide fqdn"
+  when: fqdn is not defined
+
+- name: Check if service_port is defined
+  fail: msg="Please provide service_port"
+  when: service_port is undefined
+
+- name: Check if resource_path is defined
+  fail: msg="Please provide resource_path"
+  when: resource_path is undefined
+
+- name: instance fact
+  ec2_instance_facts:
+    filters:
+      "tag:Name": "{{ name_tag }}"
+  register: ec2if
+
+- name: create route53 health check
+  route53_health_check:
+    region: "{{ region }}"
+    state: present
+    ip_address: "{{ ec2if.instances.0.public_ip_address }}"
+    port: "{{ service_port }}"
+    type: HTTP
+    resource_path: "{{ resource_path }}"
+    request_interval: 10
+    failure_threshold: 2
+  register: hc
+
+- name: add tags to healthcheck
+  command: aws --profile "{{ aws_profile }}" route53 change-tags-for-resource --region "{{ region }}" --resource-type healthcheck --resource-id "{{ hc.health_check.id }}" --add-tags Key=Name,Value="{{ fqdn }}" Key=service,Value="{{ service_tag }}"
+  when: hc.health_check.id is defined
+
+- name: limit health checkers to US regions, minimum 3 regions
+  command: aws --profile "{{ aws_profile }}" route53 update-health-check --region "{{ region }}" --health-check-id "{{ hc.health_check.id }}" --regions us-east-1 us-west-1 us-west-2
+  when: hc.health_check.id is defined
+
+- name: create alarm for route53 health check
+  ec2_metric_alarm:
+    state: present
+    region: "{{ region }}"
+    name: "{{ fqdn }}"
+    metric: HealthCheckStatus
+    namespace: "AWS/Route53"
+    statistic: Minimum
+    comparison: "<"
+    threshold: 1.0
+    period: "{{ period_length }}"
+    evaluation_periods: 5
+    description: "Route53 {{ fqdn }} health check"
+    dimensions: { 'HealthCheckId':"{{ hc.health_check.id }}" }
+    alarm_actions: ["{{ ops_topic_arn }}", "{{ pagerduty_topic_arn }}"]
+  when: state != 'absent' and hc.health_check.id is defined
+
+- name: removal if so defined
+  ec2_metric_alarm:
+    state: absent
+    region: "{{ region }}"
+    name: "{{ fqdn }}"
+  when: state == 'absent'
+

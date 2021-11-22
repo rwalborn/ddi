@@ -1,0 +1,22 @@
+---
+# cbtls-qa vars file
+
+sg: SG_LAN_QA
+key_name: ops-config
+profile_name: cbtls-qa
+fqdn_prefix: cbtls
+prefix: CBTLS
+env: QA
+dd_env: qa
+
+instance_type: m3.xlarge
+
+memory_quota: 13915
+cluster_ram_quota: 13915
+cluster_index_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 13659
+
+

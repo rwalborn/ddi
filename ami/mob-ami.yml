@@ -1,0 +1,80 @@
+# ansible-playbook -vvvv -i 'localhost,' --vault-password-file ~/.vaultpass foo.yml
+
+# this playbook shall be renamed normally
+
+---
+- name: MOB AMI
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/mob
+  vars:
+    name_tag: MOB-AMI
+    sg: SG_LAN_DEV
+    role: mob-dev
+    key_name: ops-config
+  tasks: 
+    - name: launch instances
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        region: "{{ region }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        group: "{{ sg }}"
+        image: "{{ centos_7_ebs_hvm }}"
+        instance_profile_name: "{{ role }}"
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 8
+            delete_on_termination: true
+        instance_tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        wait: yes
+      register: ec2
+    - name: add new instances to host group
+      add_host:
+        hostname: "{{ ec2.instances.0.private_ip }}"
+        groupname: launched
+    - name: wait for SSH to come up
+      wait_for:
+        host: "{{ ec2.instances.0.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+    - name: allow cloud-init to execute
+      pause: seconds=30
+
+- name: Configure instances
+  hosts: launched
+  become: yes
+  become_user: root
+  become_method: sudo
+  remote_user: centos
+  gather_facts: True
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/mob
+  roles:
+    - ddiuser
+    - { role: ldap_client, baking: true }
+    - { role: ops, repo: git }
+    - { role: splunkforwarder, vpc: true, baking: true }
+    - { role: icinga, baking: true }
+    - repo_S3_releases
+    - auth_autobldr
+    - { role: mob, do: ami }
+    - { role: bake, distro: nada }
+
+- name: Bake AMI
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../host_vars/mob
+  roles:
+    - { role: bake, bake: true }

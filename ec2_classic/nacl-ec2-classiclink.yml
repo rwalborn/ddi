@@ -1,0 +1,17 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vv -i 'localhost,' nacl-ec2-classiclink.yml
+
+- name: nacl test box
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/cc2
+  vars:
+    name_tag: NACL-EC2
+    location: classiclink
+    sg: SG_NACLTEST_EC2
+    instance_type: m3.medium
+    vpc: false
+    scanner: true
+  roles:
+    - naclpop

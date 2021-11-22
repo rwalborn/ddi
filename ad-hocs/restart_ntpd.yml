@@ -1,0 +1,9 @@
+---
+- name: restart ntpd
+  hosts: all
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: restart ntpd service
+      service: name=ntpd state=restarted

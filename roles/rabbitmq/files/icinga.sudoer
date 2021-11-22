@@ -1,0 +1,1 @@
+icinga ALL=NOPASSWD: /usr/sbin/rabbitmqctl

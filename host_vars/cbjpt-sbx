@@ -1,0 +1,41 @@
+---
+# cbjpt-sbx vars file
+
+sg: SG_LAN_SBX
+key_name: dev-ops-config
+profile_name: cbjpt-sbx
+fqdn_prefix: cbjpt
+service_tag: jpt
+fqdn_suffix: ddc.io
+rt53_zone: sbx.ddc.io
+prefix: CBJPT
+env: SBX
+dd_env: sbx
+app_tag: jpt
+icinga_profile: Couchbase
+
+instance_type: m3.xlarge
+
+# this is needed if using the curl
+#memory_quota: 13914
+# when creating the first node as index node these are combinded but not combined without the index node
+#cluster_ram_quota: 13914
+# and with all the services installed as must do on comm edition this needs used
+#cluster_ram_quota: 13659
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: ddi-jackpot
+bucket1_num_replicas: 1
+# as above so below
+#bucket1_ram_quota: 13659
+bucket1_ram_quota: 256
+
+bucket2_name: ddi-jackpot-configs
+bucket2_num_replicas: 1
+# as above so below
+#bucket1_ram_quota: 13659
+bucket2_ram_quota: 12573
+
+
+

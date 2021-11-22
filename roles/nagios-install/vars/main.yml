@@ -1,0 +1,36 @@
+python:
+  pip_pkgs:
+  - requests
+  - numpy
+  - pymongo
+  - argparse
+  - awscli
+ssl_cert: /etc/httpd/ssl/server.crt
+ssl_key: /etc/httpd/ssl/server.key
+nagios:
+  ssl_selfsigned: true
+  yum_pkgs:
+  - nagios.x86_64
+  - nagios-plugins-all.x86_64
+  - nagios-plugins-nrpe.x86_64
+  - perl-Nagios-Plugin
+  - perl-DBI
+  - perl-DBD-mysql
+  - libstdc++.so.6
+  - libev.so.4
+  - gcc
+  - python-devel
+  - python-pip
+  - nrpe
+#  - couchbase-server
+  - nc
+  - s3cmd
+  - postfix
+  - httpd
+  - mod_fcgid
+  - mod_ssl
+  - subversion
+#  - mod_dav_svn
+#Commented out till we figure out how to get jenkins gpg key signing of rpms to work right.
+#We install this by itself in tasks with gpg disabled
+#  - ddi-nrpe

@@ -1,0 +1,57 @@
+# ansible-playbook -vvvv -i 'localhost,' --tags=up mw-launchpad-prod.yml
+# ansible-playbook -vvvv -i 'localhost,' --tags=down mw-launchpad-prod.yml
+
+- name: set maintenance window in launchpad
+  hosts: localhost
+  connection: local
+  vars:
+    env: prod
+    cfid: EWWKDCAJ6DX3Y
+  tasks:
+    - name: stat maintenance.html
+      stat:
+        path=../roles/nginx/files/maintenance.html
+      register: maintenance
+      tags:
+        - up
+    - name: copy maintenance.html, idempotent
+      shell: "aws s3 cp ../roles/nginx/files/maintenance.html s3://ddc-launchpad/{{ env }}/maintenance.html"
+      tags:
+        - up
+    - name: copy index.html to local to stat
+      shell: "aws s3 cp s3://ddc-launchpad/{{ env }}/index.html /tmp/index.html"
+      tags:
+        - up
+    - name: stat index.html
+      stat:
+        path=/tmp/index.html
+      register: index
+      tags:
+        - up
+    - name: stop execution if index.html is already overwritten by maintenance.html
+      fail:
+        msg='Maintenance window is already up. Perhaps you meant to put it down?'
+      when: maintenance.stat.checksum == index.stat.checksum
+      tags:
+        - up
+    - name: backup index.html only when it is not overwritten by maintenance.html
+      shell: "aws s3 cp s3://ddc-launchpad/{{ env }}/index.html s3://ddc-launchpad/{{ env }}/original_index.html"
+      when: maintenance.stat.checksum != index.stat.checksum
+      tags:
+        - up
+    - name: overwrite index.html with maintenance.html, idempotent
+      shell: "aws s3 cp s3://ddc-launchpad/{{ env }}/maintenance.html s3://ddc-launchpad/{{ env }}/index.html"
+      tags:
+        - up
+
+    - name: original_index.html is supposedly protected by the logic above
+      shell: "aws s3 cp s3://ddc-launchpad/{{ env }}/original_index.html s3://ddc-launchpad/{{ env }}/index.html"
+      tags:
+        - down
+
+    - name: invalidate cloudfront cache either up or down, idempotent
+      shell: "aws cloudfront create-invalidation --distribution-id {{ cfid }} --paths /index.html"
+      tags:
+        - up
+        - down
+

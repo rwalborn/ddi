@@ -1,0 +1,35 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -i /etc/ansible/inventory_by_nametag/LT ems-lt.yml
+
+# This playbook does not build instances.
+# It configures pre-production environments, such as sudo
+
+- name: Configure instance(s)
+  hosts: EMS
+  user: root
+  gather_facts: True
+  vars:
+    sshd_additional_groups: 'dev qa'
+    sudoers_user:
+      - username: jfletcher
+        disable_requiretty: false
+        cmd_list:
+          - '(ddiuser) NOPASSWD: ALL'
+          - '(root) NOPASSWD: /sbin/service, /usr/bin/supervisorctl, /bin/netstat, /usr/sbin/tcpdump, /usr/bin/yum, /root/bin/code_deploy.sh, /usr/bin/vim /etc/hosts'
+      # IFPRJ-358 for code coverage
+      - username: qaansible
+        disable_requiretty: true
+        cmd_list:
+          - '(root) NOPASSWD: ALL'
+  roles:
+    - sudoers_user
+  tasks:
+    - name: sshd_config AllowGroups
+      lineinfile:
+        dest=/etc/ssh/sshd_config
+        regexp='^AllowGroups (.*)$'
+        line="AllowGroups root ldap_all {{ sshd_additional_groups }}"
+        backrefs=yes
+      register: sshdconfig
+    - name: bounce sshd
+      service: name=sshd state=reloaded
+      when: sshdconfig.changed

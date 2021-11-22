@@ -1,0 +1,72 @@
+global
+  chroot /var/empty/haproxy
+  maxconn 10000
+  stats socket /var/run/haproxy.sock
+  log 127.0.0.1:514 local0 debug
+  user haproxy
+  group haproxy
+  quiet
+  daemon
+  # 1 child (parent does not count), then set the child on 2nd cpu
+  # parent handles config, child handles traffic
+  nbproc 1
+  cpu-map 1 1
+
+#mailers mymailers
+#  mailer postfix 127.0.0.1:25
+
+defaults
+  mode http
+  bind-process 1
+  timeout connect 10s
+  timeout client {{ timeout}}s
+  timeout server {{ timeout}}s
+  timeout http-request {{ timeout }}s
+  timeout http-keep-alive {{ timeout }}s
+  log global
+  balance leastconn
+  option dontlognull
+  option log-health-checks
+  option http-ignore-probes
+  stats enable
+  stats uri /haproxy-status
+  stats auth admin:ddi4ever
+#  email-alert mailers mymailers
+#  email-alert from donotreply@ddc.io
+#  email-alert to bayerqgibcl+ops-doggy-park@in.mailroom.hipch.at
+
+# 8080 and 9339 should still be exposed directly for non-ssl
+# but 443 should forward traffic correctly
+
+frontend https
+  bind :80
+  bind :443 ssl crt /etc/haproxy/combined.pem no-sslv3 no-tls-tickets
+  mode tcp
+  use_backend bluebox_backend if !HTTP
+  default_backend smartfox_backend
+
+backend bluebox_backend
+  option httpchk GET /
+  server {{ svc_hostname }} {{ svc_ip }}:8080 check
+
+listen bluebox_listener
+  bind :8080
+  option httpchk GET /
+  server {{ svc_hostname }} {{ svc_ip }}:8080 check
+
+backend smartfox_backend
+  mode tcp
+  option tcp-check
+  server {{ svc_hostname }} {{ svc_ip }}:9339 check
+
+listen smartfox_listener
+  bind :9339
+  mode tcp
+  option tcp-check
+  server {{ svc_hostname }} {{ svc_ip }}:9339 check
+
+listen console_listener
+  bind :88
+  http-check expect status 401
+  option httpchk GET /system/console/logs
+  server {{ svc_hostname }} {{ svc_ip }}:88 check

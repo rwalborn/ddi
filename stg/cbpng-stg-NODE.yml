@@ -1,0 +1,138 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' cbpng-stg-NODE.yml --vault-password-file ~/.vault_pass.txt
+---
+
+- name: Creation of "{{ prefix }}-{{ env }}" Couchbase node
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+    - ../group_vars/vaults/stg
+    - ../host_vars/cbpng-stg
+  vars:
+    region: "{{ region }}"
+    ami: "{{ cb_45_ami }}"
+    number: "07"  # CHANGE THIS TO AN UNUSED CLUSTER NODE NUMBER
+    az: "{{ az2 }}"  # CHANGE THIS TO MATCH THE AZ OF NODE BEING REPLACED
+    sub_id: "{{ subnet_pri_2 }}" # CHANGE THIS BASED ON AZ - 1c = az1 and 1d = az2
+    cb_profile: data # NEEDS TO BE WHAT THE DEAD NODE WAS, DATA OR INDEX
+  tasks:
+    - name: Launch instance for master node
+      ec2:
+        region: "{{ region }}"
+        key_name: "{{ key_name }}"
+        group: "{{ sg }}"
+        instance_type: "{{ instance_type }}"
+        instance_profile_name: "{{ profile_name }}"
+        image: "{{ ami }}"
+        vpc_subnet_id: "{{ sub_id }}"
+        zone: "{{ az }}"
+        count: 1
+        volumes:
+          - device_name: /dev/xvdb
+            volume_size: 40
+            ephemeral: ephemeral0
+            delete_on_termination: true
+          - device_name: /dev/xvdc
+            volume_size: 40
+            ephemeral: ephemeral1
+            delete_on_termination: true
+        instance_tags:
+          Name: "{{ prefix }}-{{ env }} {{ number }}"
+          app: "{{ app_tag }}"
+          env: "{{ ic_env }}"
+          couchbase-profile: "{{ cb_profile }}"
+          icinga-profile: "{{ icinga_profile }}"
+        user_data: |
+                    #cloud-config
+                    mounts:
+                      - [ ephemeral0, null ]
+                      - [ ephemeral1, null ]
+                    runcmd:
+                      - mdadm --create /dev/md0 --name=0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc -R
+                      - mdadm --detail --brief /dev/md0 > /etc/mdadm.conf
+                      - parted /dev/md0 mklabel gpt
+                      - parted /dev/md0 mkpart primary xfs 0% 100%
+                      - /bin/echo -e '\nappend domain-search "ec2.internal", "{{ dd_env }}.doubledowncasino.com", "{{ dd_env }}.ddc.io";' >> /etc/dhcp/dhclient-eth0.conf
+                      - service network restart
+                      - cd /usr/local/share/DDI/ddi-ops && git pull
+                      - /root/bin/aws_hostname_by_tag.sh
+                      - /root/bin/sysconfig setup_icinga_agent
+        wait: yes
+      register: ec2
+
+    - debug:
+        var: ec2
+
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: "{{ rt53_zone }}"
+        record: "{{ fqdn_prefix }}{{ number }}.{{ env }}.ddc.io"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.private_dns_name }}"
+      with_items: "{{ ec2.instances }}"
+
+    - name: Add EP2 instances to host group
+      add_host:
+        hostname: "{{ item.private_ip }}"
+        groupname: couchbase-main
+      with_items: "{{ ec2.instances }}"
+
+    - name: wait for SSH to come up
+      wait_for:
+        host: "{{ item.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+      with_items:
+        - "{{ ec2.instances }}"
+
+    - name: Pause for cloud-init to catch up
+      pause:
+        seconds: 30
+
+- name: add raid and install couchbase
+  vars_files:
+    - ../group_vars/stg
+    - ../group_vars/vaults/stg
+    - ../host_vars/cbpng-stg
+  hosts: couchbase-main
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: format /dev/md0 as xfs
+      filesystem:
+        fstype: xfs
+        dev: /dev/md0
+
+    - name: mount /opt/couchbase
+      mount:
+        name: /opt/couchbase
+        src: /dev/md0
+        fstype: xfs
+        opts: noatime,relatime
+        state: mounted
+
+    - name: install the pre-downloaded couchbase
+      yum:
+        name: /root/couchbase-server-community-4.5.1-centos7.x86_64.rpm
+        state: present
+        disablerepo: '*'
+
+- name: wait to be sure all couchbases are listening on 8091
+  hosts: couchbase-main
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: ensure healthy couchbase service
+      wait_for:
+        port: 8091
+

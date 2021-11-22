@@ -1,0 +1,7 @@
+aws_profile: default
+s3bucket: ddi-vpc
+s3prefix: flowlogs
+log_group: /aws/kinesisfirehose/VPCFlowLogsToS3
+deliver_arn: arn:aws:iam::143177584759:role/flowlogs
+enable: true
+remove_old_flowlogs: true

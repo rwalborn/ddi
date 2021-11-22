@@ -1,0 +1,9 @@
+[ldap-groups]
+resource = "icingaweb_ldap"
+user_backend = "icingaweb2"
+base_dn = "ou=Groups,dc=doubledowncasino,dc=com"
+backend = "ldap"
+group_filter = "!(objectClass=computer)"
+group_class = "posixGroup"
+group_name_attribute = "cn"
+group_member_attribute = "memberUid"

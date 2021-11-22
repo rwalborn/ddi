@@ -1,0 +1,46 @@
+# XPA-SBX VARS FILE
+
+name_tag: XPA-SBX
+service_tag: XPT
+icinga_profile: XPA
+lb: XPA-SBX
+
+app_tag: DDC
+rpm_tag: ddi-experiment-config-service ddi-experiment-config-webapp
+app_ami: ami-382bb62e
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_XPA_SBX
+elb_sg: SG_LBXPA_SBX
+elb_fqdn: xpa.sbx.doubledowncasino.com
+env: sbx
+key_name: dev-ops-config
+profile_name: xpa-sbx
+prefix: XPADDC
+deployment: SBX
+
+lc: XPA-SBX-005
+
+ud_env: sbx
+
+ec2_asg:
+  desired_capacity: 1
+  min_size: 1
+  max_size: 1
+  hc_type: EC2
+
+instance_port_1: 11520
+instance_port_2: 11525
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /admin/ping
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+

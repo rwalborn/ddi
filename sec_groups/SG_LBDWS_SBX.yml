@@ -1,0 +1,13 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv SG_LBDWS_SBX.yml
+---
+- name: security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/dws
+  vars:
+    elb_sg: SG_LBDWS_SBX
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

@@ -1,0 +1,11 @@
+- include_vars: secrets.yml
+
+- name: Create tournaments directory
+  file: path=/ddi/services/tournaments state=directory owner=ddiuser group=ddiuser
+
+- name: copy config.j2 file to aws.properties
+  template:
+    src: aws.properties.j2
+    dest: /ddi/services/tournaments/aws.properties
+    owner: ddiuser
+    group: ddiuser

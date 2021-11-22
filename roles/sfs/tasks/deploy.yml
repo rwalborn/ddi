@@ -1,0 +1,74 @@
+- name: Add sfs-bundles directory
+  file:
+    path={{ sfs_deploy_deploy_path }}
+    state=directory
+    owner=ddiuser
+    group=ddiuser
+
+- name: Setup the bundle symlinks
+  copy:
+    src: symlink_sfs.sh
+    dest: /var/tmp/symlink_sfs.sh
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Grab the md5sum for the artifact from s3 
+  shell: "/usr/bin/aws s3 cp s3://{{ sfs_deploy_bucket_name }}/{{ sfs_deploy_artifact_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz.md5 {{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz.md5"
+  register: md5_result
+  changed_when: md5_result.rc != 0
+
+- name: check if artifact already exists locally
+  stat: path={{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz
+  register: stat_results
+
+- name: Grab the tar artifact from s3 
+  shell: "/usr/bin/aws s3 cp s3://{{ sfs_deploy_bucket_name }}/{{ sfs_deploy_artifact_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz {{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz"
+  when: stat_results.stat.exists != True
+
+- name: Check to make sure the downloaded file's md5 matches the downloaded one
+  shell: "md5sum -c {{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz.md5
+         chdir={{ sfs_deploy_deploy_path }}"
+  register: md5_checkresult
+  changed_when: md5_checkresult.rc != 0
+  ignore_errors: True
+
+- name:  cleanup results
+  shell: "rm -rf {{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz.md5 && rm -rf {{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz"
+  register: cleanup_results
+  failed_when: cleanup_results|changed
+  when: md5_checkresult|failed 
+
+- name: create dir
+  file:
+    path={{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_version }}
+    state=directory
+    owner=ddiuser
+    group=ddiuser
+  when: md5_checkresult|success
+
+- name: Extract the tar if the there are changes and the md5s checked out
+  unarchive:
+    src={{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_name }}-{{ sfs_deploy_artifact_version }}.tar.gz
+    dest={{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_version }}
+    copy=False
+    group=ddiuser
+    owner=ddiuser
+  register: unarchive_result
+  when: md5_checkresult|success
+
+#- name: Stop smartfox
+#  service: name=sfs state=stopped
+#  when: unarchive_result|changed
+
+- name: Re-symlink
+  shell: /var/tmp/symlink_sfs.sh
+  when: unarchive_result|changed
+
+# this logic is not needed any more
+#- name: Update the smartfox license
+#  lineinfile:
+#    dest={{ sfs_deploy_sfs_root }}/config.xml
+#    regexp="^ *<!-- License server -->"
+#    line='<LicenseServer><ip>{{ sfs_deploy_licenses_server_ip }}</ip><license>{{ sfs_deploy_licenses_server_class }}</license></LicenseServer>'
+#  when:  unarchive_result|changed and sfs_deploy_licenses_server_class is defined 

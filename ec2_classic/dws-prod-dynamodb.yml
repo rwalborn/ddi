@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create dynamodb table
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/dws
+  roles:
+    - { role: dynamodb, name: DWSDDC-USE1-PROD, read_cap: '300', write_cap: '240' }
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: DWSDDC-USE1-PROD }

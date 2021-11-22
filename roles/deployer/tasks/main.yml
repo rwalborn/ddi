@@ -1,0 +1,38 @@
+# installation by steps, by different users
+
+- name: install maven repo
+  copy: dest=/etc/yum.repos.d/epel-apache-maven.repo
+        src=epel-apache-maven.repo
+        owner=root group=root mode=0644
+
+- name: install packages
+  yum: name={{ item }} state=installed
+  with_items:
+    - apache-maven
+    - subversion
+    - tomcat
+
+- name: directories
+  file: path=/ddi/workspace state=directory
+
+- template: dest=/root/.ssh/config
+            src=ssh_config.j2
+            force=yes
+
+- name: clone buildinfo-web
+  hg: repo=ssh://hg@bitbucket.org/ddi/buildinfo-web
+      dest=/root/buildinfo-web
+
+- name: directories
+  file: path=/root/.m2 state=directory
+
+- name: maven settings.xml
+  copy: dest=/root/.m2/settings.xml
+        src=settings.xml
+
+
+# localinstall.sh
+# mvn package
+# copy /root/buildinfo-web/install/tomcatDependencies/* to /usr/share/java/tomcat
+# edit /etc/tomcat/server.xml
+# edit /etc/tomcat/tomcat.conf

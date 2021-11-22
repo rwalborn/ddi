@@ -1,0 +1,93 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vv SG_NACLTEST_EC2.yml
+
+- name: security group
+  hosts: localhost
+  connection: local
+  vars:
+    sg: SG_NACLTEST_EC2
+    service_tag: nacl
+  tasks:
+    - name: security group
+      ec2_group:
+        name: "{{ sg }}"
+        description: "{{ sg }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 25
+            to_port: 25
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 443
+            to_port: 443
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 993
+            to_port: 993
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 5439
+            to_port: 5439
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 6379
+            to_port: 6379
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 7734
+            to_port: 7734
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 7752
+            to_port: 7752
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 8089
+            to_port: 8089
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 8095
+            to_port: 8095
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 9997
+            to_port: 9997
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 123
+            to_port: 123
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 7351
+            to_port: 7351
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 9350
+            to_port: 9350
+            cidr_ip: 0.0.0.0/0
+          - proto: udp
+            from_port: 40000
+            to_port: 40000
+            cidr_ip: 0.0.0.0/0
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: 0.0.0.0/0
+      register: ec2_group
+
+    - name: Tag the security group with a name
+      ec2_tag:
+        resource: "{{ ec2_group.group_id }}"
+        region: "{{ region }}"
+        state: present
+        tags:
+          Name: "{{ sg }}"
+          service: "{{ service_tag }}"

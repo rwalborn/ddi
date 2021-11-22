@@ -1,0 +1,64 @@
+- name: get local facts
+  set_fact:
+    svc_code="{{ ansible_local.local.svcproxy.svc_code }}"
+    svc_fqdn="{{ ansible_local.local.svcproxy.svc_fqdn }}"
+
+- name: ssl and other values come from include
+  include_vars: "{{ svc_code }}.yml"
+
+- name: get svc_hostname from svc_fqdn
+  set_fact:
+    svc_hostname="{{ svc_fqdn.split('.')[0] }}"
+    env_subdomain="{{ ansible_fqdn.split('.')[2] }}"
+    cn_subdomain="{{ ansible_fqdn.split('.')[2] }}"
+
+- name: resolve svc_ip when dig is true
+  set_fact:
+    svc_ip="{{ lookup('dig', svc_fqdn)}}"
+  when: dig
+
+- name: ssl, staging is an exception
+  set_fact:
+    cn_subdomain='stg'
+  when: ssl and env_subdomain == 'staging'
+
+- name: ssl, there is no prod.doubledowncasino.com CN
+  set_fact:
+    cn_subdomain='prod'
+  when: ssl and env_subdomain == 'doubledowncasino'
+
+- name: ssl, construct cn_path
+  set_fact:
+    cn_path="{{ ('/usr/local/share/DDI/ddi-ops/' + cn_subdomain + '/nginx/ssl/') }}"
+  when: ssl
+
+- name: ssl, get cert_key from ddi-ops repo
+  set_fact:
+    cert_body_chain="{{ lookup('file', cn_path + 'server.crt') }}"
+    cert_key="{{ lookup('file', cn_path + 'server.key') }}"
+  no_log: true
+  when: ssl
+
+- name: ssl, assemble certs into a single file
+  copy:
+    content="{{ cert_body_chain + '\n' + cert_key }}"
+    dest=/etc/haproxy/combined.pem
+    owner=root
+    group=root
+    mode=0400
+  no_log: true
+  register: cert
+  when: ssl
+
+- name: haproxy.cfg
+  template:
+    src="{{ svc_code }}.j2"
+    dest=/etc/haproxy/haproxy.cfg
+    owner=root
+    group=root
+    mode=0644
+    validate='haproxy -c -f %s'
+  register: cfg
+
+- service: name=haproxy state=restarted
+  when: cfg.changed or cert.changed

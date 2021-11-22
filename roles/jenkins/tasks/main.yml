@@ -1,0 +1,40 @@
+---
+- include_vars: jenkins.yml
+
+- name: Install Jenkins
+  yum: name={{ item }} state=installed
+  with_items:
+    - jenkins
+    - java-1.8.0-openjdk-headless
+    - java-1.8.0-openjdk-javadoc
+    - sendmail
+    - mailx
+  register: packages_installed
+
+- name: Write Jenkins Config file
+  template: src=jenkins-config.xml dest=/var/lib/jenkins/config.xml mode=0644 owner=jenkins group=jenkins
+  when: packages_installed|success
+  register: jenkins_config
+
+## todo: ansibilize jenkins credentials plugin creds
+## todo: ansibilize jenkins config file provider files
+## todo: ansibilize maven installations config
+## todo: ansibilize rpm signing key config
+## todo: ansibilize publish over ssh config
+
+- name: Create plugin dir
+  file: path=/var/lib/jenkins/plugins state=directory owner=jenkins group=jenkins
+  register: plugin_dir_created
+
+- name: Install Jenkins plugins
+  include: plugins.yml
+  when: (packages_installed|success and plugin_dir_created|success)
+  register: plugins_installed
+
+- name: Setup crowd certificate
+  include: crowd.yml
+  when: auth == 'crowd'
+
+- name: Enable/Restart Jenkins Service
+  service: name=jenkins enabled=yes state=restarted
+  when: plugins_installed|success

@@ -1,0 +1,3 @@
+jenkins_url: 'http://mobilejenkins01.use1.tools.ddc.io:8080'
+jnlp_user: mobile_jenkins_slave
+jnlp_pass: "{{ vault_jnlp_pass }}"

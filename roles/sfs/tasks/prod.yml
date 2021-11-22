@@ -1,0 +1,13 @@
+# pusher.sh is now a single env-aware script
+# it has been moved to the ops repo
+# it uses IAM role instead of 'sfs_inout' IAM user originally
+# it does not need s3cfg
+
+# /home/SFS_PRO_1.6.6/Server/server.config is needed by Smartfox
+# though I modified pusher.sh to not use the file
+
+- name:
+  cron:
+    name="Push last hour's inout log to BI S3 bucket"
+    job="/root/bin/pusher.sh"
+    minute="10"

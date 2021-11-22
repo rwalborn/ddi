@@ -1,0 +1,51 @@
+---
+- name: find existing volume
+  shell: aws ec2 describe-volumes --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }} {{ mountpoint }}" --query "Volumes[].VolumeId" --output text
+  become: no
+  delegate_to: localhost
+  register: volume
+  when: rebuild
+
+- name: snapshot volume
+  ec2_snapshot:
+    volume_id: "{{ volume.stdout }}"
+    description: "{{ name_tag }} {{ mountpoint }}"
+    region: "{{ region }}"
+  register: snapshot
+
+- name: wait for snapshot
+  shell: aws ec2 wait snapshot-completed --snapshot-ids "{{ snapshot.snapshot_id }}"
+  when: rebuild
+
+- name: create volume from snapshot
+  become: no
+  delegate_to: localhost
+  ec2_vol:
+    name: "{{ name_tag }} {{ mountpoint }} Rebuild"
+    instance: "{{ instance_id }}"
+    device_name: "{{ blkdev }}"
+    volume_type: gp2
+    zone: "{{ az2 }}"
+    region: "{{ region }}"
+    snapshot: "{{ snapshot.snapshot_id }}"
+    delete_on_termination: true
+  register: created
+  when: snapshot.snapshot_id is defined and instance_id is defined and rebuild
+
+- name: create volume if not found, and attach
+  become: no
+  delegate_to: localhost
+  ec2_vol:
+    name: "{{ name_tag }} {{ mountpoint }}"
+    instance: "{{ instance_id }}"
+    device_name: "{{ blkdev }}"
+    volume_size: 300
+    volume_type: gp2
+    zone: "{{ az2 }}"
+    region: "{{ region }}"
+    delete_on_termination: true
+  register: created
+  when: volume.stdout|length == 0 and instance_id is defined and not rebuild
+
+- name: pause for volume to create/attach
+  pause: seconds=30

@@ -1,0 +1,103 @@
+---
+- name: find existing volume
+  shell: aws ec2 describe-volumes --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}_{{ blkdev }}" --query "Volumes[].VolumeId" --output text
+  become: no
+  delegate_to: localhost
+  register: volume
+
+- name: snapshot volume if found
+  shell: aws ec2 create-snapshot --volume-id "{{ volume.stdout }}" --description "{{ name_tag }} {{ icinga_mount }}" --region "{{ region }}" --output text
+  become: no
+  delegate_to: localhost
+  when: volume.stdout|length > 0
+  register: snapshot
+
+# this bit not ready yet
+
+#- name: wait for snapshot
+#  shell: aws ec2 wait snapshot-completed --snapshot-ids "{{ snapshot.}}
+
+
+#- name: attach snapshot
+#  shell: aws ec2 attach-volume --region "{{ region }}" --volume-id "{{ volume.stdout }}"  --instance-id "{{ instance_id }}" --device "/dev/{{ blkdev }}" --output text
+#  become: no
+#  delegate_to: localhost
+#  when: snapshot|success and volume.stdout|length > 0
+#  register: attach
+
+- name: create volume if not found, and attach
+  become: no
+  delegate_to: localhost
+  ec2_vol:
+    name: "{{ name_tag }}_{{ blkdev }}"
+    instance: "{{ instance_id }}"
+    device_name: "{{ blkdev }}"
+    volume_size: 300
+    volume_type: gp2
+    zone: "{{ az2 }}"
+    region: "{{ region }}"
+    delete_on_termination: true
+  register: created
+  when: volume.stdout|length == 0 and instance_id is defined
+
+- name: pause for volume to create/attach
+  pause: seconds=30
+
+- name: create one partition
+  shell: parted -s -a optimal "/dev/{{ blkdev }}" mklabel gpt mkpart primary 0% 100%
+  when: created|success
+
+- name: make file system
+  filesystem: fstype="{{ fstype }}" dev="/dev/{{ blkdev }}1"
+  when: created|success
+
+- name: Mount EBS volume
+  mount:
+    name: "{{ icinga_mount }}"
+    src: "/dev/{{ blkdev }}1"
+    fstype: "{{ fstype }}"
+    state: mounted
+  when: attach|success or created|success
+
+#- name: Remove existing icinga2 and var/lib/icinga2 directories for ebs symlinking
+#  file:
+#    path: "{{ item }}"
+#    state: absent
+#  when: attach|success or created|success
+#  with_items:
+#    - /etc/icinga2
+#    - /var/lib/icinga2
+
+#- name: Set ownership of volume directories
+#  file:
+#    path: "{{ icinga_mount }}"
+#    state: directory
+#    owner: icinga
+#    group: icinga
+#    recurse: true
+
+- name: create ebs volume directories
+  file:
+    path: "{{ icinga_mount }}/{{ item.src }}"
+    state: directory
+  with_items:
+   - { src: 'etc/icinga2', dst: '/etc/icinga2' }
+   - { src: 'etc/icingaweb2', dst: '/etc/icingaweb2' }
+   - { src: 'var/lib/icinga2', dst: '/var/lib/icinga2' }
+   - { src: 'var/lib/pnp4nagios', dst: '/var/lib/pnp4nagios' }
+  when: created|success
+
+- name: Symlink EBS volume directories
+  file:
+    src: "{{ icinga_mount }}/{{ item.src }}"
+    dest: "{{ item.dst }}"
+#    owner: icinga
+#    group: icinga
+    force: true
+    state: link
+  when: attach|success or created|success
+  with_items:
+   - { src: 'etc/icinga2', dst: '/etc/icinga2' }
+   - { src: 'etc/icingaweb2', dst: '/etc/icingaweb2' }
+   - { src: 'var/lib/icinga2', dst: '/var/lib/icinga2' }
+   - { src: 'var/lib/pnp4nagios', dst: '/var/lib/pnp4nagios' }

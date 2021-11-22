@@ -1,0 +1,11 @@
+app_ami: ami-4365b655
+app_tag: DDC
+rpm_tag: ddi-login-service
+service_tag: LGN
+instance_type: c4.xlarge
+instance_port: 8080
+ping_path: /api/v1/ping
+sbx_lc: LGN-SBX-008
+lt_lc: LGN-LT-003
+stg_lc: LGN-STG-002
+prod_lc: LGN-PROD-001

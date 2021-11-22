@@ -1,0 +1,20 @@
+---
+- name: service config
+  template:
+    src={{ template }}.yaml
+    dest=/etc/dd-agent/conf.d/{{ template }}.yaml
+    owner=root
+    group=root
+    mode=0644
+  when: svc is undefined
+  notify: datadog_restart
+
+- name: service config for specific service
+  template:
+    src={{ template }}.yaml.{{ svc }}
+    dest=/etc/dd-agent/conf.d/{{ template }}.yaml
+    owner=root
+    group=root
+    mode=0644
+  when: svc is defined
+  notify: datadog_restart

@@ -1,0 +1,14 @@
+# ansible-playbook -vvvv -i /etc/ansible/inventory_by_nametag/TOOLS  atf_crons.yml
+
+- hosts: ATF
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  tasks:
+    - name: age elastic search index for apigateway
+      cron:
+        name='age elastic search index for apigateway'
+        minute=1
+        hour=9
+        job='/root/bin/es_index_apigateway'

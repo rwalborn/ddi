@@ -1,0 +1,10 @@
+# export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv dws-sbx-dynamodb.yml
+
+- name: create dynamodb table
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/dws
+  roles:
+    - { role: dynamodb, name: DWSDDC-USE1-SBX }

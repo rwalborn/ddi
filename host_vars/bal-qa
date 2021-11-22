@@ -1,0 +1,28 @@
+# BAL-QA VARS FILE
+
+name_tag: BAL-QA
+lb: BAL-QA
+service_tag: BAL
+
+
+app_tag: DDC
+rpm_tag: ddc-balance-webapp
+app_ami: ami-81d56b97
+instance_type: c3.2xlarge
+spot_price: .42
+sg: SG_BAL_QA
+elb_sg: SG_LBBAL_QA
+elb_fqdn: bal.use1.qa.doubledowncasino.com
+env: qa
+key_name: ops-config
+profile_name: bal-qa
+prefix: BAL
+deployment: QA
+
+ud_env: qa
+
+lc: BAL-QA-003
+hc_type: EC2
+instance_port_1: 11050
+ping_path_1: /status
+

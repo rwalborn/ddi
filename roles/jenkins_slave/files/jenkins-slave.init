@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# chkconfig: - 85 15
+# description: Init script for jenkins-slave
+
+[ -f /etc/sysconfig/jenkins-slave ] && . /etc/sysconfig/jenkins-slave
+
+[ -n "${JENKINS_URL}" ] || exit 1
+[ -n "${JENKINS_WORKDIR}" ] || exit 1
+[ -n "${JENKINS_USER}" ] || exit 1
+[ -n "${JENKINS_NODENAME}" ] || exit 1
+[ -n "${JNLP_USER}" ] || exit 1
+[ -n "${JNLP_PASS}" ] || exit 1
+[ -x /usr/bin/java ] || exit 1
+
+create_logdir()
+{
+    if [ ! -d /var/log/jenkins-slave ];
+    then
+        mkdir -p /var/log/jenkins-slave
+        chown -R ${JENKINS_USER}:${JENKINS_USER} /var/log/jenkins-slave
+    fi
+}
+
+download_jar()
+{
+    curl -s -o ${JENKINS_WORKDIR}/bin/agent.jar ${JENKINS_URL}/jnlpJars/agent.jar || exit 1
+    chown -R ${JENKINS_USER}:${JENKINS_USER} ${JENKINS_WORKDIR}
+}
+
+start()
+{
+    create_logdir
+    cd ${JENKINS_WORKDIR}
+    [ -f bin/agent.jar ] || download_jar
+    echo -e $"Starting Jenkins BuildSlave..."
+    su - ${JENKINS_USER} -c \
+            "/usr/bin/java -jar ${JENKINS_WORKDIR}/bin/agent.jar \
+            -jnlpUrl ${JENKINS_URL}/computer/${JENKINS_NODENAME}/slave-agent.jnlp \
+            -jnlpCredentials ${JNLP_USER}:${JNLP_PASS} \
+            -agentLog /var/log/jenkins-slave/jenkins-slave.log &"
+}
+
+stop()
+{
+    echo -e $"Shutting down Jenkins BuildSlave..."
+    pkill -f 'java.*agent.jar'
+}
+
+# See how we were called.
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart|reload)
+        stop
+        start
+        ;;
+    status)
+        status java
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart|reload}"
+        exit 1
+esac
+
+exit 0

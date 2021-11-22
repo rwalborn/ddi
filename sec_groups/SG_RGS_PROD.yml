@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_RGS_STG.yml
+
+- name: "{{ name_tag }} security group"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/rgs-prod
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

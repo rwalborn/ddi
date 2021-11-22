@@ -1,0 +1,19 @@
+# ansible-playbook -vv -i 'localhost,' QA-vpc-pvt.yml
+
+# naclversion automatically increases by 1
+# but you must specify naclversion to remove, such as:
+#    - { role: cloudformation, type: nacl, naclversion: '007', state: absent }
+
+# commit locally before running the playbook so that commit hash tracks correctly
+
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/qa
+  vars:
+    vpcname: QA
+    subnettype: vpc-pvt
+    env: qa
+  roles: 
+    - { role: cloudformation, type: nacl }

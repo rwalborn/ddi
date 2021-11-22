@@ -1,0 +1,66 @@
+- name: install
+  yum: name={{ item }} state=installed
+  with_items:
+    - collectd
+
+- name: install
+  yum: name={{ item }} state=installed
+  with_items:
+    - collectd-curl
+  when: do == 'perfmon'
+
+- name: collectd.conf
+  template:
+    src=collectd.conf.j2
+    dest=/etc/collectd.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: collectd_restart
+
+- name: /etc/collectd.d
+  file:
+    path=/etc/collectd.d
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: start services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - collectd
+
+- name: unixsock plugin
+  copy:
+    src=unixsock.conf
+    dest=/etc/collectd.d/unixsock.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: collectd_restart
+
+- name: write_graphite plugin
+  template:
+    src=write_graphite.conf.j2
+    dest=/etc/collectd.d/write_graphite.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: collectd_restart
+
+- name: collectd_endpoint
+  include: collectd_endpoint.yml
+  when: collectd_endpoint
+
+- name: link config for service
+  file:
+    src="/usr/local/share/DDI/ddi-ops/collectd.d/{{ do }}.conf"
+    dest="/etc/collectd.d/{{ do }}.conf"
+    state=link
+    force=true
+  when: do != 'nothing'
+
+- name: haproxy, to be simplified
+  include: haproxy.yml
+  when: do == 'haproxy'

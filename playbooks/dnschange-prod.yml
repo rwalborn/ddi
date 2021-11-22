@@ -1,0 +1,116 @@
+# ansible-playbook -vvvv -i "localhost," --tags=migrate foo.yml
+# ansible-playbook -vvvv -i "localhost," --tags=rollback foo.yml
+
+- hosts: all
+  gather_facts: no
+  connection: local
+  tasks:
+    - name: migrate
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ item.cname }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.fqdn }}"
+      with_items:
+        - { cname: sfsddc01.use1.prod.doubledowncasino.com, fqdn: ec2-52-71-182-39.compute-1.amazonaws.com }
+        - { cname: sfsddc02.use1.prod.doubledowncasino.com, fqdn: ec2-54-211-99-209.compute-1.amazonaws.com }
+        - { cname: sfsddc03.use1.prod.doubledowncasino.com, fqdn: ec2-52-87-225-215.compute-1.amazonaws.com }
+        - { cname: sfsddc04.use1.prod.doubledowncasino.com, fqdn: ec2-52-54-171-60.compute-1.amazonaws.com }
+        - { cname: sfsddc05.use1.prod.doubledowncasino.com, fqdn: ec2-54-145-228-250.compute-1.amazonaws.com }
+        - { cname: sfsddc06.use1.prod.doubledowncasino.com, fqdn: ec2-52-201-209-221.compute-1.amazonaws.com }
+        - { cname: sfsddc07.use1.prod.doubledowncasino.com, fqdn: ec2-54-204-76-226.compute-1.amazonaws.com }
+        - { cname: sfsddc08.use1.prod.doubledowncasino.com, fqdn: ec2-54-172-57-139.compute-1.amazonaws.com }
+        - { cname: sfsddc09.use1.prod.doubledowncasino.com, fqdn: ec2-34-227-52-20.compute-1.amazonaws.com }
+        - { cname: sfsddc10.use1.prod.doubledowncasino.com, fqdn: ec2-34-228-233-247.compute-1.amazonaws.com }
+        - { cname: sfsddc11.use1.prod.doubledowncasino.com, fqdn: ec2-54-89-170-7.compute-1.amazonaws.com }
+        - { cname: sfsddc12.use1.prod.doubledowncasino.com, fqdn: ec2-52-54-172-144.compute-1.amazonaws.com }
+        - { cname: sfsddc13.use1.prod.doubledowncasino.com, fqdn: ec2-107-22-149-251.compute-1.amazonaws.com }
+        - { cname: sfsddc14.use1.prod.doubledowncasino.com, fqdn: ec2-34-201-217-115.compute-1.amazonaws.com }
+        - { cname: sfsddc15.use1.prod.doubledowncasino.com, fqdn: ec2-54-227-112-27.compute-1.amazonaws.com }
+        - { cname: sfsddc16.use1.prod.doubledowncasino.com, fqdn: ec2-34-229-212-19.compute-1.amazonaws.com }
+        - { cname: sfsddc17.use1.prod.doubledowncasino.com, fqdn: ec2-34-228-15-72.compute-1.amazonaws.com }
+        - { cname: sfsddc18.use1.prod.doubledowncasino.com, fqdn: ec2-54-165-36-204.compute-1.amazonaws.com }
+        - { cname: sfsddc19.use1.prod.doubledowncasino.com, fqdn: ec2-34-228-13-203.compute-1.amazonaws.com }
+        - { cname: sfsddc20.use1.prod.doubledowncasino.com, fqdn: ec2-54-89-17-107.compute-1.amazonaws.com }
+        - { cname: sfsddc21.use1.prod.doubledowncasino.com, fqdn: ec2-34-230-89-175.compute-1.amazonaws.com }
+        - { cname: sfsddc22.use1.prod.doubledowncasino.com, fqdn: ec2-34-204-96-168.compute-1.amazonaws.com }
+        - { cname: sfsddc23.use1.prod.doubledowncasino.com, fqdn: ec2-34-229-124-171.compute-1.amazonaws.com }
+        - { cname: sfsddc24.use1.prod.doubledowncasino.com, fqdn: ec2-52-73-146-123.compute-1.amazonaws.com }
+        - { cname: sfsddc25.use1.prod.doubledowncasino.com, fqdn: ec2-34-229-174-191.compute-1.amazonaws.com }
+        - { cname: sfsddc26.use1.prod.doubledowncasino.com, fqdn: ec2-34-228-226-99.compute-1.amazonaws.com }
+        - { cname: sfsddc27.use1.prod.doubledowncasino.com, fqdn: ec2-54-89-31-23.compute-1.amazonaws.com }
+        - { cname: sfsddc28.use1.prod.doubledowncasino.com, fqdn: ec2-54-82-166-184.compute-1.amazonaws.com }
+        - { cname: sfsddc29.use1.prod.doubledowncasino.com, fqdn: ec2-34-201-82-147.compute-1.amazonaws.com }
+        - { cname: sfsddc30.use1.prod.doubledowncasino.com, fqdn: ec2-54-237-208-185.compute-1.amazonaws.com }
+        - { cname: sfsddc31.use1.prod.doubledowncasino.com, fqdn: ec2-174-129-46-132.compute-1.amazonaws.com }
+        - { cname: sfsddc32.use1.prod.doubledowncasino.com, fqdn: ec2-52-55-236-159.compute-1.amazonaws.com }
+        - { cname: sfsddc33.use1.prod.doubledowncasino.com, fqdn: ec2-52-87-249-242.compute-1.amazonaws.com }
+        - { cname: sfsddc34.use1.prod.doubledowncasino.com, fqdn: ec2-52-55-223-164.compute-1.amazonaws.com } 
+        - { cname: sfsddc35.use1.prod.doubledowncasino.com, fqdn: ec2-34-204-14-153.compute-1.amazonaws.com }
+        - { cname: sfsddc36.use1.prod.doubledowncasino.com, fqdn: ec2-54-226-220-212.compute-1.amazonaws.com }
+        - { cname: sfsddc37.use1.prod.doubledowncasino.com, fqdn: ec2-34-233-120-139.compute-1.amazonaws.com }
+        - { cname: sfsddc38.use1.prod.doubledowncasino.com, fqdn: ec2-34-230-3-150.compute-1.amazonaws.com }
+        - { cname: sfsddc39.use1.prod.doubledowncasino.com, fqdn: ec2-34-203-13-16.compute-1.amazonaws.com }
+        - { cname: sfsddc40.use1.prod.doubledowncasino.com, fqdn: ec2-54-204-127-119.compute-1.amazonaws.com }
+        - { cname: sfsddc41.use1.prod.doubledowncasino.com, fqdn: ec2-54-234-137-184.compute-1.amazonaws.com }
+        - { cname: sfsddc42.use1.prod.doubledowncasino.com, fqdn: ec2-34-230-49-160.compute-1.amazonaws.com }
+      tags:
+        - migrate
+
+    - name: rollback
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ item.cname }}"
+        type: CNAME
+        ttl: 60
+        value: "{{ item.fqdn }}"
+      with_items:
+        - { cname: sfsddc01.use1.prod.doubledowncasino.com, fqdn: ec2-50-16-161-76.compute-1.amazonaws.com }
+        - { cname: sfsddc02.use1.prod.doubledowncasino.com, fqdn: ec2-54-224-247-136.compute-1.amazonaws.com }
+        - { cname: sfsddc03.use1.prod.doubledowncasino.com, fqdn: ec2-54-224-16-158.compute-1.amazonaws.com }
+        - { cname: sfsddc04.use1.prod.doubledowncasino.com, fqdn: ec2-54-82-26-219.compute-1.amazonaws.com }
+        - { cname: sfsddc05.use1.prod.doubledowncasino.com, fqdn: ec2-54-159-249-212.compute-1.amazonaws.com }
+        - { cname: sfsddc06.use1.prod.doubledowncasino.com, fqdn: ec2-54-159-58-105.compute-1.amazonaws.com }
+        - { cname: sfsddc07.use1.prod.doubledowncasino.com, fqdn: ec2-54-80-161-141.compute-1.amazonaws.com }
+        - { cname: sfsddc08.use1.prod.doubledowncasino.com, fqdn: ec2-184-72-139-176.compute-1.amazonaws.com }
+        - { cname: sfsddc09.use1.prod.doubledowncasino.com, fqdn: ec2-54-198-145-135.compute-1.amazonaws.com }
+        - { cname: sfsddc10.use1.prod.doubledowncasino.com, fqdn: ec2-54-147-240-127.compute-1.amazonaws.com }
+        - { cname: sfsddc11.use1.prod.doubledowncasino.com, fqdn: ec2-54-81-167-37.compute-1.amazonaws.com }
+        - { cname: sfsddc12.use1.prod.doubledowncasino.com, fqdn: ec2-54-160-154-122.compute-1.amazonaws.com }
+        - { cname: sfsddc13.use1.prod.doubledowncasino.com, fqdn: ec2-107-22-76-183.compute-1.amazonaws.com }
+        - { cname: sfsddc14.use1.prod.doubledowncasino.com, fqdn: ec2-54-147-206-181.compute-1.amazonaws.com }
+        - { cname: sfsddc15.use1.prod.doubledowncasino.com, fqdn: ec2-54-196-3-246.compute-1.amazonaws.com }
+        - { cname: sfsddc16.use1.prod.doubledowncasino.com, fqdn: ec2-54-159-189-144.compute-1.amazonaws.com }
+        - { cname: sfsddc17.use1.prod.doubledowncasino.com, fqdn: ec2-54-234-92-216.compute-1.amazonaws.com }
+        - { cname: sfsddc18.use1.prod.doubledowncasino.com, fqdn: ec2-54-145-0-11.compute-1.amazonaws.com }
+        - { cname: sfsddc19.use1.prod.doubledowncasino.com, fqdn: ec2-54-158-192-122.compute-1.amazonaws.com }
+        - { cname: sfsddc20.use1.prod.doubledowncasino.com, fqdn: ec2-54-211-219-60.compute-1.amazonaws.com }
+        - { cname: sfsddc21.use1.prod.doubledowncasino.com, fqdn: ec2-54-145-145-132.compute-1.amazonaws.com }
+        - { cname: sfsddc22.use1.prod.doubledowncasino.com, fqdn: ec2-54-166-219-210.compute-1.amazonaws.com }
+        - { cname: sfsddc23.use1.prod.doubledowncasino.com, fqdn: ec2-54-162-252-149.compute-1.amazonaws.com }
+        - { cname: sfsddc24.use1.prod.doubledowncasino.com, fqdn: ec2-54-161-87-212.compute-1.amazonaws.com }
+        - { cname: sfsddc25.use1.prod.doubledowncasino.com, fqdn: ec2-54-147-176-59.compute-1.amazonaws.com }
+        - { cname: sfsddc26.use1.prod.doubledowncasino.com, fqdn: ec2-54-90-231-56.compute-1.amazonaws.com }
+        - { cname: sfsddc27.use1.prod.doubledowncasino.com, fqdn: ec2-23-20-255-152.compute-1.amazonaws.com }
+        - { cname: sfsddc28.use1.prod.doubledowncasino.com, fqdn: ec2-54-83-113-251.compute-1.amazonaws.com }
+        - { cname: sfsddc29.use1.prod.doubledowncasino.com, fqdn: ec2-54-225-32-97.compute-1.amazonaws.com }
+        - { cname: sfsddc30.use1.prod.doubledowncasino.com, fqdn: ec2-54-211-74-188.compute-1.amazonaws.com }
+        - { cname: sfsddc31.use1.prod.doubledowncasino.com, fqdn: ec2-54-80-160-13.compute-1.amazonaws.com }
+        - { cname: sfsddc32.use1.prod.doubledowncasino.com, fqdn: ec2-54-221-12-144.compute-1.amazonaws.com }
+        - { cname: sfsddc33.use1.prod.doubledowncasino.com, fqdn: ec2-23-23-44-43.compute-1.amazonaws.com }
+        - { cname: sfsddc34.use1.prod.doubledowncasino.com, fqdn: ec2-54-144-6-145.compute-1.amazonaws.com }
+        - { cname: sfsddc35.use1.prod.doubledowncasino.com, fqdn: ec2-54-161-250-48.compute-1.amazonaws.com }
+        - { cname: sfsddc36.use1.prod.doubledowncasino.com, fqdn: ec2-54-144-45-233.compute-1.amazonaws.com }
+        - { cname: sfsddc37.use1.prod.doubledowncasino.com, fqdn: ec2-54-166-220-124.compute-1.amazonaws.com }
+        - { cname: sfsddc38.use1.prod.doubledowncasino.com, fqdn: ec2-54-211-239-139.compute-1.amazonaws.com }
+        - { cname: sfsddc39.use1.prod.doubledowncasino.com, fqdn: ec2-54-87-71-218.compute-1.amazonaws.com }
+        - { cname: sfsddc40.use1.prod.doubledowncasino.com, fqdn: ec2-54-91-141-185.compute-1.amazonaws.com }
+        - { cname: sfsddc41.use1.prod.doubledowncasino.com, fqdn: ec2-54-166-238-35.compute-1.amazonaws.com }
+        - { cname: sfsddc42.use1.prod.doubledowncasino.com, fqdn: ec2-54-205-252-214.compute-1.amazonaws.com }
+      tags:
+        - rollback

@@ -1,0 +1,11 @@
+# ansible-playbook -vvvv SG_LBRGS_STG.yml
+---
+- name: "{{ name_tag }} security group"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/rgs-stg
+  tasks:
+    - include: "{{ elb_sg }}_INC.yml"

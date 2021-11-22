@@ -1,0 +1,5 @@
+- name: comment out all shell aliases
+  lineinfile:
+    dest=/root/.bashrc
+    state=absent
+    regexp='^alias .*'

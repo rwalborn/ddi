@@ -1,0 +1,11 @@
+region: us-east-1
+version:  5.1
+nonprod: false
+aws_profile: default
+policy_doc: access.json
+instance_type: m4.large.elasticsearch
+master_type: m3.medium.elasticsearch
+dedicated_master: false
+instance_count: 3
+master_count: 2
+snaphour: 6

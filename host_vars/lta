@@ -1,0 +1,14 @@
+app_ami: ami-5463b842
+app_tag: DDC
+rpm_tag: ddi-loyalty-admin
+service_tag: LYT
+instance_type: m3.large
+instance_port: 8080
+ping_path: /
+sbx_lc: LTA-SBX-003
+lt_lc: LTA-LT-001
+stg_lc: LTA-STG-002
+prod_lc: LTA-PROD-001
+lt_sg_id: sg-8ca951f4
+stg_sg_id: sg-29eb1852
+prod_sg_id: sg-b002d1cb

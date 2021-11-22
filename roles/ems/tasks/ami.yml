@@ -1,0 +1,6 @@
+---
+- name: install
+  yum: name={{ item }} state=installed
+  with_items:
+    - java-1.8.0-openjdk
+    - jakarta-commons-daemon-jsvc

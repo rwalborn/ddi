@@ -1,0 +1,18 @@
+app_ami: ami-52777c29
+instance_type: c3.large
+
+sg: SG_PHP_QA
+elb_sg: SG_LBPHP_QA
+
+env_domain: qa
+env: qa
+application_env: qa
+deployment: QA
+dd_env: qa
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2 
+  hc_type: EC2
+

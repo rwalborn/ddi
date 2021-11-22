@@ -1,0 +1,41 @@
+---
+# cbjpt-prod vars file
+
+sg: SG_LAN_PROD
+key_name: ops-config
+profile_name: cbjpt-prod
+fqdn_prefix: cbjpt
+fqdn_suffix: ddc.io
+rt53_zone: ddc.io
+prefix: CBJPT
+env: PROD
+dd_env: prod
+ic_env: production
+app_tag: DDC
+icinga_profile: Couchbase-Paged
+
+instance_type: i2.xlarge
+
+
+#cluster_ram_quota: 12829
+#cluster_index_ramsize: 256
+
+#cluster_ram_quota: 29584
+#cluster_ram_quota: 29328
+cluster_ram_quota: 28724
+cluster_index_ramsize: 256
+cluster_fts_ramsize: 256
+
+bucket1_name: ddi-jackpot
+bucket1_num_replicas: 1
+#bucket1_ram_quota: 256
+bucket1_ram_quota: 20402
+
+bucket2_name: ddi-jackpot-configs
+bucket2_num_replicas: 1
+#bucket2_ram_quota: 12573
+#bucket2_ram_quota: 9182
+bucket2_ram_quota: 8322
+
+
+

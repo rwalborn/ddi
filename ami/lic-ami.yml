@@ -1,0 +1,70 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: sfs license server AMI
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - group_vars/tools
+  vars:
+    name_tag: LIC-AMI
+    service_tag: SFS
+    sg: SG_LAN_TOOLS
+    role: lic
+    keypair: ops-config
+    instance_type: t2.medium
+  tasks:
+    - name: launch instance
+      ec2:
+        key_name: "{{ keypair }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ centos_68_base }}"
+        group: "{{ sg }}"
+        vpc_subnet_id: "{{ subnet_pri_3 }}"
+        zone: "{{ az1 }}"
+        region: "{{ region }}"
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          service: "{{ service_tag }}"
+        wait: yes
+      register: ec2
+    - name: add new instances to host group
+      add_host:
+        hostname: "{{ ec2.instances.0.private_ip }}"
+        groupname: launched
+    - name: wait for SSH to come up
+      wait_for:
+        host: "{{ ec2.instances.0.private_ip }}"
+        port: 22
+        delay: 60
+        timeout: 300
+        state: started
+    - name: allow cloud-init to execute
+      pause: seconds=15
+
+- name: configure instance
+  hosts: launched
+  become: yes
+  become_user: root
+  become_method: sudo
+  remote_user: centos
+  gather_facts: True
+  vars_files:
+    - group_vars/tools
+  roles:
+    - ddiuser
+    - { role: ops, code_deploy: false, legacy: false, repo: git }
+    - { role: ldap_client, sshd_additional_groups: centos, baking: true }
+    - { role: sfsls, do: ami }
+    - { role: bake, distro: nada }
+
+- name: make AMI and terminate instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars
+    service_tag: SFS
+    svc: LIC
+  roles:
+    - { role: bake, bake: true }

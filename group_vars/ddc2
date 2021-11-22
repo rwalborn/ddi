@@ -1,0 +1,2 @@
+ansible_port: 33817
+ansible_user: ec2-user

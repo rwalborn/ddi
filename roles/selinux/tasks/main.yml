@@ -1,0 +1,13 @@
+---
+- name: install libselinux-python for ntp to work
+  yum: name=libselinux-python
+       state=present
+- name: replace the centos 6x selinux config 
+  copy: src=centos6x.config
+        dest=/etc/selinux/config
+        owner=root
+        mode=644
+
+- name: disable selinux before reboot
+  shell: setenforce 0
+

@@ -1,0 +1,29 @@
+# Runs as ansible-playbook -vvvv bal-prod-asg.yml
+---
+- name: create autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/bal-prod
+  tasks:
+  - name: autoscaling group
+    ec2_asg:
+      name: "{{ name_tag }}"
+      region: "{{ region }}"
+      availability_zones: [ "{{ az1 }}", "{{ az2 }}" ]
+      vpc_zone_identifier: [ "{{ subnet_pri_1 }}", "{{ subnet_pri_2 }}" ]
+      launch_config_name: "{{ lc }}"
+      desired_capacity: 5
+      min_size: 5
+      max_size: 5
+      load_balancers: [ "{{ lb }}" ]
+      health_check_type: "{{ hc_type }}"
+      wait_for_instances: yes
+      tags:
+        - Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          rpm: "{{ rpm_tag }}"
+          app: "{{ app_tag }}"
+          service: "{{ service_tag }}"
+          icinga-profile: BAL-Paged

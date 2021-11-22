@@ -1,0 +1,15 @@
+# ansible-playbook -i /etc/ansible/inventory_by_nametag/QA --vault-password-file ~/.vaultpass mob-qa.yml
+
+# for maintaining configuration on MOB-QA
+# run any time
+
+# note that MOB-QA can only be single instance because
+# mobile group QA one project at a time
+# jenkins is configured to talk to one slave with 'qa' label
+
+- hosts: MOB
+  remote_user: root
+  become: no
+  gather_facts: yes
+  roles:
+    - { role: jenkins_slave, extra: mob-qa }

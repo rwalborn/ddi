@@ -1,0 +1,27 @@
+---
+# cbmet-qa vars file
+
+sg: SG_LAN_QA
+key_name: ops-config
+profile_name: cbmet-qa
+fqdn_prefix: cbmet
+fqdn_suffix: ddc.io
+rt53_zone: ddc.io
+prefix: CBMET
+env: QA
+service_tag: MET
+dd_env: qa
+ic_env: qa
+app_tag: DDC
+icinga_profile: Couchbase
+
+instance_type: m3.xlarge
+
+cluster_ram_quota: 12829
+cluster_index_ramsize: 256
+
+bucket1_name: default
+bucket1_num_replicas: 1
+bucket1_ram_quota: 12829
+
+

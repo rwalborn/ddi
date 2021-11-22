@@ -1,0 +1,8 @@
+collectd_endpoint: false
+do: nothing
+#haproxy: false
+env: missing
+region: us-east-1
+reg_domain: use1
+prefix: missing
+baking: false

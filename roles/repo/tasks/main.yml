@@ -1,0 +1,124 @@
+---
+- include_vars: vault.yml
+- include_vars: main.yml
+
+- name: install packages
+  yum: name={{ item }} state=installed
+  with_items:
+    - python-virtualenv
+    - python-pip
+    - libxslt
+    - nginx
+    - createrepo
+
+- name: install pyinotify
+  sudo: yes
+  pip: name=pyinotify
+  when: repotype == "repomaster"
+
+- name: symlinks for repowatcher service
+  file: dest="/etc/init.d/repowatch" src="/usr/local/share/DDI/ops/repowatcher/repowatch" state=link
+  when: repotype == "repomaster"
+
+- name: symlinks for repowatcher script
+  file: dest="/usr/local/bin/repo_watcher.py" src="/usr/local/share/DDI/ops/repowatcher/repo_watcher.py" state=link
+  when: repotype == "repomaster"
+
+- name: symlinks for repowatcher script wrapper
+  file: dest="/usr/local/bin/repo_watcher_wrapper.sh" src="/usr/local/share/DDI/ops/repowatcher/repo_watcher_wrapper.sh" state=link
+  when: repotype == "repomaster"
+
+- name: make repowatcher logs directory
+  file: path="/mnt/ephemeral/log" state=directory
+
+- name: releases repo root directory
+  file: path="/mnt/ephemeral/repo/releases/6/DDI-RELEASES" state=directory
+
+- name: link to releases repo root directory
+  file: dest="/mnt/ephemeral/repo/releases/6/x86_64" src="/mnt/ephemeral/repo/releases/6/DDI-RELEASES" state=link
+
+- name: bad RPM jail
+  file: path="/mnt/ephemeral/repo/releases/6/bad_rpm_jail" state=directory
+  when: repotype == "repomaster"
+
+- name: ops repo root directory
+  file: path="/mnt/ephemeral/repo/DDI/DDI" state=directory
+
+- name: ops repo root directory, centos7
+  file: path="/mnt/ephemeral/repo/DDI/7/x86_64" state=directory
+
+- name: ops repo root directory, centos6
+  file: path="/mnt/ephemeral/repo/DDI/6/x86_64" state=directory
+
+- name: link repo into /mnt/ephemeral
+  file: dest="/mnt/repo" src="/mnt/ephemeral/repo" state=link
+
+- name: sync down s3 releases repo
+  command: /usr/bin/aws s3 sync s3://ddi-releases-repo/x86_64 . 
+  args: 
+    chdir: /mnt/ephemeral/repo/releases/6/DDI-RELEASES/
+
+- name: sync down s3 ops repo
+  command: /usr/bin/aws s3 sync s3://ddi-ops-repo/x86_64 . 
+  args:
+    chdir: /mnt/ephemeral/repo/DDI/DDI/ 
+
+- name: sync down s3 ops repo, centos7
+  command: /usr/bin/aws s3 sync s3://ddi-ops-repo/7/x86_64 . 
+  args:
+    chdir: /mnt/ephemeral/repo/DDI/7/x86_64
+
+- name: sync down s3 ops repo, centos6
+  command: /usr/bin/aws s3 sync s3://ddi-ops-repo/6/x86_64 . 
+  args:
+    chdir: /mnt/ephemeral/repo/DDI/6/x86_64
+
+- name: install instance repo synchronizer
+  copy: src=update_local_repo.sh
+        dest=/mnt/ephemeral/repo/update_local_repo.sh
+        mode=755
+  when: repotype == "repo"
+
+- name: cron for syncing down repos and updating repo metadata
+  cron: name="sync down ops repo" 
+        minute="*" 
+        job="/mnt/ephemeral/repo/update_local_repo.sh > /dev/null"
+  when: repotype == "repo"
+
+- name: put down the private key for the releases repo
+  copy: content="{{ releases_pgp_key }}"
+        dest=/root/releases.private.key
+
+- name: put down the private key for the ops repo
+  copy: content="{{ ddi_pgp_key }}"
+        dest=/root/repo.private.key
+
+- name: put down the gpg key for the releases repo
+  copy: content="{{ releases_pgp_key_public }}"
+        dest=/mnt/ephemeral/repo/RPM-GPG-KEY-DDI-RELEASES 
+
+- name: put down the gpg key for the ops repo
+  copy: content="{{ ddi_pgp_key_public }}"
+        dest=/mnt/ephemeral/repo/RPM-GPG-KEY-DDI
+
+- name: place the repo configuration for nginx
+  copy: src=repo.conf
+        dest=/etc/nginx/conf.d/repo.conf
+
+- name: get rid of the default nginx config
+  file: path=/etc/nginx/conf.d/default.conf state=absent
+
+- name: restart nginx
+  service: name=nginx
+           state=restarted
+
+- name: start repo watcher
+  service: name=repowatch
+           state=started
+  when: repotype == "repomaster"
+
+- name: put in jenkins pubkey 
+  lineinfile: dest=/root/.ssh/authorized_keys
+              state=present
+              line="{{ jenkins_pub_key }}"
+  when: repotype == "repomaster"

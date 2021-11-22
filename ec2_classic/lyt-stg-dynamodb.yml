@@ -1,0 +1,17 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+# idempotent
+
+# existing table gets update instead of being 'recreated'
+
+- name: dynamodb table
+  hosts: localhost
+  connection: local
+  roles:
+    - { role: dynamodb, name: LYTCONFIG-USE1-STG, read_cap: '5', write_cap: '5' }
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: LYTCONFIG-USE1-STG, state: absent }
+    - { role: dynamodb, name: LYTACK-USE1-STG, read_cap: '5', write_cap: '5' }
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: LYTACK-USE1-STG, state: absent }
+    - { role: dynamodb, name: LYTUSER-USE1-STG, read_cap: '5', write_cap: '5' }
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: LYTUSER-USE1-STG, state: absent }
+    - { role: dynamodb, name: NOTDDC-USE1-STG, read_cap: '5', write_cap: '5' }
+    - { role: cloudwatch, alarm: dynamodb, dynamodb_table: NOTDDC-USE1-STG, state: absent }

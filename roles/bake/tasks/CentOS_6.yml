@@ -1,0 +1,84 @@
+---
+- name: repo
+  include: repo.yml
+
+- name: upgrade distro
+  yum: name=*
+       state=latest
+
+- name: install via yum
+  yum: name={{ item }}
+       state=installed
+  with_items:
+    - htop 
+    - git
+    - mercurial
+    - wget
+    - bind-utils
+    - tcpdump
+    - sysstat
+    - vim
+    - curl
+    - libselinux-python
+    - python-pip
+    - s3cmd
+    - lsof
+    - mlocate
+    - strace
+    - screen
+    - man-pages
+    - xfsprogs
+    - bwm-ng
+    - psmisc
+    - chrony
+    - dracut-modules-growroot
+    - cloud-utils-growpart
+    - mysql
+    - parted
+    - unzip
+    - mdadm
+
+- name: disable services
+  service: name={{ item }}
+           enabled=no
+  with_items:
+    - iptables
+    - ip6tables
+    - postfix
+    - acpid
+
+- name: copy custom .bashrc
+  copy: src=.bashrc
+        dest=/root/.bashrc
+        owner=root
+        mode=0644
+
+- name: copy custom .vimrc
+  copy: src=.vimrc
+        dest=/root/.vimrc
+        owner=root
+        mode=0644
+
+- name: ansible
+  include: ansible.yml
+
+- name: awscli
+  include: awscli.yml
+
+- name: cloudinit
+  include: cloudinit.yml
+
+- name: maxid
+  include: maxid.yml
+
+- name: sudo
+  include: sudo.yml
+
+- name: selinux
+  include: selinux.yml
+
+- name: sysctl
+  include: sysctl.yml
+
+- name: time
+  include: time.yml

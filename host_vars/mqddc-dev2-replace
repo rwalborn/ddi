@@ -1,0 +1,26 @@
+---
+# MQDDC-DEV2REPLACE VARS FILE
+
+sg: SG_LAN_DEV
+key_name: ops-config
+profile_name: mqddc-dev
+prefix: MQDDC
+env: DEV2
+dd_env: dev
+
+fqdn_prefix: mqddc
+# these will need to be different from what is in use at the time of cluster replacement
+host1: 701
+host2: 702
+host3: 703
+fqdn_suffix: use1.dev2.ddc.io
+
+instance_type: m3.xlarge
+
+# this will need to be different from what is in use at the time of cluster replacement
+lbname: LBMQDDC-TEST4
+# this will need to remain the same for the new LB to get the org LB DNS record
+org_lbname: LBMQDDC-TEST2
+
+rt53_zone: ddc.io
+

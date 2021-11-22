@@ -1,0 +1,140 @@
+# ansible-playbook -vvvv mpe-ami.yml --vault-password-file ~/.vault_pass.txt
+# Make AMI for service
+
+- name: mpe service
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+  vars:
+    # no app/env tags b/c we don't want service rpm in base ami
+    name_tag: MPE-AMI
+    service_tag: MPE
+    sg: SG_LAN_TOOLS
+    az: "{{ az1 }}"
+    role: ami_base_centos
+    instance_type: m3.xlarge
+    key_name: ops-config
+  tasks:
+    - name: launch instance
+      ec2:
+        region: us-east-1
+        key_name: "{{ key_name }}"
+        group: "{{ sg }}"
+        instance_type: "{{ instance_type }}"
+        instance_profile_name: "{{ role }}"
+        image: "{{ centos_68_base }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az }}"        
+        wait: yes
+      register: ec2
+
+    - name: Add EP2 instances to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=launched
+      with_items: "{{ ec2.instances }}"
+
+    - name: Add tag to instances
+      local_action: ec2_tag resource={{ item.id }} region=us-east-1 state=present
+      with_items: "{{ ec2.instances }}"
+      args:
+        tags:
+          Name: "{{ name_tag }}"
+
+    - name: Wait for SSH to be available
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: "{{ ec2.instances }}"
+
+- name: Configure instance(s)
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: True
+  vars_files:
+    - ../group_vars/vaults/dev
+    - ../group_vars/dev
+  roles:
+    - ddiuser
+    - { role: ldap_client, baking: true }
+    - { role: ops, repo: git }
+    - { role: splunkforwarder, baking: true }
+    - { role: icinga, baking: true }
+    - repo_ops
+    - repo_S3_releases
+    - auth_autobldr
+
+  tasks:
+    - name: update distro
+      yum:
+        name: "*"
+        state: latest
+
+    - yum: name={{ item }} state=installed
+      with_items:
+        - jdk1.8.0_45
+        - unzip
+#        - java-1.8.0-openjdk
+#        - jakarta-commons-daemon-jsvc
+
+    - name: alts
+      shell: "sed -i 's/#networkaddress.cache.ttl=-1/networkaddress.cache.ttl=zero/' /usr/java/latest/jre/lib/security/java.security"
+
+    - name: alts
+      shell: "alternatives --install /usr/bin/java java /usr/java/latest/jre/bin/java 20000"
+    - name: alts
+      shell: "alternatives --install /usr/bin/javaws javaws /usr/java/latest/jre/bin/javaws 20000"
+    - name: alts
+      shell: "alternatives --install /usr/bin/javac javac /usr/java/latest/bin/javac 20000"
+    - name: alts
+      shell: "alternatives --install /usr/bin/jar jar /usr/java/latest/bin/jar 20000"
+
+    - name: alts
+      shell: echo 'export JAVA_HOME="/usr/java/latest"' >> /etc/profile
+
+- name: Configure instance(s)
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: True
+  vars_files:
+    - group_vars/tools
+  roles:
+    - { role: bake, distro: nada }
+
+- name: make AMI and terminate instance
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ami_name: MPE-003
+    service_tag: MPE
+    ami_desc: MPE CENTOS 6.8 AMI
+  tasks:
+    - name: create image
+      ec2_ami:
+        instance_id: "{{ ec2.instances.0.id }}"
+        region: us-east-1
+        name: "{{ ami_name }}"
+        description: "{{ ami_name }}"
+        wait: yes
+        tags:
+          Name: "{{ ami_name }}"
+          service: "{{ service_tag }}"
+        launch_permissions:
+          user_ids: ['416386939808']
+      register: ec2_ami
+      tags:
+        - ami
+    - name: terminate instance
+      ec2:
+        instance_ids: "{{ ec2.instances.0.id }}"
+        region: us-east-1
+        state: absent
+      when: ec2_ami.state == 'available'
+      tags:
+        - ami
+        - terminate

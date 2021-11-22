@@ -1,0 +1,69 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: jenkins
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/crucible
+  vars:
+    name_tag: 'CRUCIBLE-TOOLS 01'
+    fqdn: crucible.doubledowninteractive.com
+    sg: SG_CRUCIBLE_TOOLS
+    role: atlassian-crucible
+    env: tools
+    service: OPS
+  tasks:
+    - include: sec_groups/{{ sg }}_INC.yml
+    - name: launch instance
+      ec2:
+        key_name: ops-config
+        instance_type: "{{ instance_type }}"
+        image: "{{ centos_7_ebs_hvm }}"
+        group: "{{ sg }}"
+        vpc_subnet_id: "{{ subnet_pri_4 }}"
+        assign_public_ip: false
+        zone: "{{ az2 }}"
+        region: "{{ region }}"
+        instance_profile_name: "{{ role }}"
+        volumes:
+          - device_name: /dev/xvdb
+            volume_size: 200
+        instance_tags:
+          Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "atlassian-crucible"
+          service: "{{ service }}"
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn }}"
+        wait: yes
+      register: ec2
+    - name: Add instances to host group
+      local_action: add_host hostname={{ ec2.instances.0.private_ip }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=420 state=started
+    - name: allow cloud-init to execute
+      pause: seconds=15
+#    - name: register dns
+#      route53:
+#        command: create
+#        overwrite: true
+#        zone: doubledowninteractive.com
+#        record: "{{ fqdn }}"
+#        type: A
+#        ttl: 300
+#        value: "{{ ec2.instances.0.private_ip }}"
+
+
+- name: configure instance
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+    - { role: ops, code_deploy: false, legacy: false }
+    - { role: newfs, blkdev: xvdb, mountpoint: '/mnt/atlassian', fstype: xfs }
+    - { role: updates }

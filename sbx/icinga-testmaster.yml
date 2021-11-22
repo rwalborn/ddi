@@ -1,0 +1,91 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: icinga-master
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/icinga
+  vars:
+    name_tag: 'ICINGA-TESTMASTER 01'
+    fqdn: icinga-testmaster01.sbx.ddc.io
+    sg: SG_ICINGA_SBX
+    role: icinga-nonprod
+    env: sbx
+
+  tasks:
+    - include: sec_groups/{{ sg }}_INC.yml
+    - name: launch instance
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ centos_7_ebs_hvm }}"
+        group: "{{ sg }}"
+        vpc_subnet_id: "{{ subnet_pri_2 }}"
+        assign_public_ip: false
+        zone: "{{ az2 }}"
+        region: "{{ region }}"
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          app: "icinga"
+          service: "OPS"
+        user_data: |
+                   #cloud-config
+                   hostname: "{{ fqdn }}"
+        wait: yes
+      register: ec2
+    - name: Add instances to host group
+      local_action: add_host hostname={{ ec2.instances.0.private_ip }} instanceid={{ ec2.instances.0.id }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=420 state=started
+    - name: allow cloud-init to execute
+      pause: seconds=15
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: sbx.ddc.io
+        record: "{{ fqdn }}"
+        type: A
+        ttl: 300
+        value: "{{ ec2.instances.0.private_ip }}"
+
+
+- name: configure instance
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars:
+    name_tag: 'ICINGA-TESTMASTER 01'
+    fqdn: icinga-testmaster01.sbx.ddc.io
+
+    mountpoint: '/mnt/icinga-mount'
+    # leave out db_host if you want to use local install of mariadb, default is 'localhost'
+    # this only points the database to the proper place (update=true), or initializes the database (update!=true)
+    # if you want to migrate you must prep the database beforehand by hand
+    db_host: ops-icingatest.cluster-c9iaisqblmii.us-east-1.rds.amazonaws.com
+    agent: false
+    master: true
+    local_zone: 'master'
+    blkdev: 'xvdb'
+    fstype: xfs
+    zones:
+      - sbxtest
+    satellites:
+      sbxtest:
+        - icingasbxtest-slave01.sbx.ddc.io
+        - icingasbxtest-slave02.sbx.ddc.io
+  vars_files:
+    - ../group_vars/sbx
+    - ../host_vars/icinga
+  roles:
+    - {
+        role: icinga, icinga_db_host: "{{ db_host }}", director_db_host: "{{ db_host }}",
+        icinga_master_fqdn: "{{ fqdn }}", icinga-mount: "{{ mountpoint }}"
+      }
+    - ldap_client

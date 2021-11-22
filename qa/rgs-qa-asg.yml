@@ -1,0 +1,28 @@
+# Runs as ansible-playbook -vvvv rgs-qa-asg.yml
+---
+- name: create "{{ name_tag }}" autoscaling group
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/rgs-qa
+  tasks:
+    - name: autoscaling group
+      ec2_asg:
+        name: "{{ name_tag }}"
+        region: "{{ region }}"
+        availability_zones: [ "{{ az1 }}" ]
+        vpc_zone_identifier: [ "{{ subnet_pri_1 }}" ]
+        launch_config_name: "{{ lc }}"
+        desired_capacity: "{{ ec2_asg.desired_capacity }}"
+        min_size: "{{ ec2_asg.min_size }}"
+        max_size: "{{ ec2_asg.max_size }}"
+        load_balancers: [ "{{ lb }}" ]
+        health_check_type: "{{ ec2_asg.hc_type }}"
+        wait_for_instances: yes
+        tags:
+          - Name: "{{ name_tag }}"
+            env: "{{ env }}"
+            app: "{{ app_tag }}"
+            role: "{{ prefix }}"
+            DNS: "{{ this_env }}"

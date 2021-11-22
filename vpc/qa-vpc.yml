@@ -1,0 +1,122 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' qa-vpc.yml
+# best practice is to watch this launch in the AWS console to verify there are no errors
+# after running you must configure the vpc peering connection and change/add/verify
+# vpc id in /etc/ansible/ec2.ini on the ansible server to enable dynamic inventory on vpc
+---
+- hosts: localhost
+  connection: local
+  gather_facts: False
+  vars:
+    vpc_name: QA
+    tools_cidr: 192.168.0.0/16
+  tasks:
+    - name: launch "{{ vpc_name }}" VPC 
+      cloudformation:
+        stack_name: "{{ vpc_name }}"
+        state: "present"
+        region: "{{ region }}"
+        disable_rollback: false
+        template: "roles/cloudformation/files/{{ vpc_name }}_VPC.template"
+        tags:
+          Name: "{{ vpc_name }}"
+      register: stack
+
+    - name: show stack outputs
+      debug:
+        var: stack.stack_outputs
+
+    - name: create vpc peering connection
+      shell: aws ec2 create-vpc-peering-connection 
+             --vpc-id {{ stack.stack_outputs.VPCID }}
+             --peer-vpc-id {{ tools_vpc }}
+      register: get_vpc_peer_id
+
+    - name: show get_vpc_peer_id outputs
+      debug:
+        var: get_vpc_peer_id.stdout
+
+    - name: set set_vpc_json fact
+      set_fact:
+        set_vpc_json: "{{ get_vpc_peer_id.stdout | from_json }}"
+
+    - name: show set_vpc_json
+      debug:
+        var: set_vpc_json
+
+    - name: set VPC VpcPeeringConnectionId fact
+      set_fact:
+        vpc_peer_id: "{{ set_vpc_json.VpcPeeringConnection.VpcPeeringConnectionId }}"
+
+    - name: show vpc_peer_id
+      debug:
+        var: vpc_peer_id
+
+    - name: accept the vpc peering connection
+      shell: aws ec2 accept-vpc-peering-connection
+             --region {{ region }}
+             --vpc-peering-connection-id {{ vpc_peer_id }}
+
+    - name: describe the vpc "{{ vpc_name }}"
+      shell: aws ec2 describe-vpcs
+             --region {{ region }}
+             --filter Name=tag:Name,Values={{ vpc_name }}
+      register: describe_vpc
+
+    - name: set set_cidr_json fact
+      set_fact:
+        set_cidr_json: "{{ describe_vpc.stdout | from_json }}"
+
+    - name: show set_cidr_json
+      debug:
+        var: set_cidr_json
+
+    - name: set cidr fact
+      set_fact:
+        cidr:  "{{ set_cidr_json.Vpcs[0].CidrBlock }}"
+
+    - name: show cidr
+      debug:
+        var: cidr
+
+    - name: add route
+      shell: aws ec2 create-route
+             --region {{ region }}
+             --route-table-id {{ stack.stack_outputs.PublicRouteTable }}
+             --destination-cidr-block {{ tools_cidr }}
+             --vpc-peering-connection-id {{ vpc_peer_id }}
+
+    - name: add route
+      shell: aws ec2 create-route
+             --region {{ region }}
+             --route-table-id {{ stack.stack_outputs.PrivateRouteTable1 }}
+             --destination-cidr-block {{ tools_cidr }}
+             --vpc-peering-connection-id {{ vpc_peer_id }}
+
+    - name: add route
+      shell: aws ec2 create-route
+             --region {{ region }}
+             --route-table-id {{ stack.stack_outputs.PrivateRouteTable2 }}
+             --destination-cidr-block {{ tools_cidr }}
+             --vpc-peering-connection-id {{ vpc_peer_id }}
+
+    - name: add route
+      shell: aws ec2 create-route
+             --region {{ region }}
+             --route-table-id rtb-6f91d508
+             --destination-cidr-block {{ cidr }}
+             --vpc-peering-connection-id {{ vpc_peer_id }}
+
+    - name: add route
+      shell: aws ec2 create-route
+             --region {{ region }}
+             --route-table-id rtb-6291d505
+             --destination-cidr-block {{ cidr }}
+             --vpc-peering-connection-id {{ vpc_peer_id }}
+
+    - name: add route
+      shell: aws ec2 create-route
+             --region {{ region }}
+             --route-table-id rtb-6191d506
+             --destination-cidr-block {{ cidr }}
+             --vpc-peering-connection-id {{ vpc_peer_id }}
+

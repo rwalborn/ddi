@@ -1,0 +1,3 @@
+# PWRESET vars file
+sg: SG_PWRESET_TOOLS
+svc_cert: arn:aws:acm:us-east-1:143177584759:certificate/0d66f66f-4732-409a-8dc8-2f71b0534653

@@ -1,0 +1,9 @@
+- name: config
+  include: config.yml
+
+- name: sysctl
+  include: sysctl.yml
+
+- name: non-haproxy parts that need to go into AMI
+  include: ami.yml
+  when: do == 'ami'

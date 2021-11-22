@@ -1,0 +1,2 @@
+policy_doc: nonprod_access.json
+aws_profile: nonprod_admins

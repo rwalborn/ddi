@@ -1,0 +1,49 @@
+- ec2_ami_find:
+    owner: self
+    region: "{{ region }}"
+    ami_tags:
+      app: "{{ svc }}"
+  register: search
+
+- name: make a list of versions
+  set_fact: versions="{{ search.results | map(attribute='tags.version') | list | sort }}"
+  when: search.results is defined
+
+- name: if there is no prior version
+  set_fact: ver='001'
+  when: versions is defined and versions|length == 0
+
+- name: increment version number
+  set_fact: byone="{{ ( versions[-1] | int ) + 1 }}"
+  when: versions is defined and versions|length > 0
+
+- name: new version string
+  set_fact: ver="{{ byone.zfill(3) }}"
+  when: versions is defined and versions|length > 0
+
+- name: abort when ver is undefined
+  fail: msg="Cannot determine version of the AMI to create!"
+  when: not ver is defined
+
+- name: create image
+  ec2_ami:
+    instance_id: "{{ ec2.instances.0.id }}"
+    region: "{{ region }}"
+    name: "{{ svc }}-{{ ver }}"
+    description: "{{ svc }}-{{ ver }}"
+    wait: yes
+    tags:
+      Name: "{{ svc }}-{{ ver }}"
+      service: "{{ service_tag }}"
+      app: "{{ svc }}"
+      version: "{{ ver }}"
+    launch_permissions:
+      user_ids: ['416386939808']
+  register: ec2_ami
+
+- name: terminate instance
+  ec2:
+    instance_ids: "{{ ec2.instances.0.id }}"
+    region: "{{ region }}"
+    state: absent
+  when: ec2_ami.state == 'available'

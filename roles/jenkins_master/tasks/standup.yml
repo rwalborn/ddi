@@ -1,0 +1,45 @@
+- name: get host sequence
+  set_fact: seq="{{ fqdn.split('.')[0] | regex_replace('^[a-z]+(\\d+)$', '\\1') }}"
+
+- name: user_data
+  set_fact:
+    user_data: "{{ lookup('file', 'user-data.yml') }}"
+
+- name: launch instance
+  ec2:
+    key_name: "{{ key_name }}"
+    instance_type: "{{ instance_type }}"
+    image: "{{ image }}"
+    group: "{{ sg }}"
+    vpc_subnet_id: "{{ vpc_subnet_id }}"
+    assign_public_ip: "{{ assign_public_ip }}"
+    zone: "{{ zone }}"
+    region: "{{ region }}"
+    instance_profile_name: "{{ role }}"
+    instance_tags:
+      Name: "{{ name_tag + ' ' + seq }}"
+      env: "{{ env }}"
+      service: "{{ service_tag }}"
+    user_data: "{{ user_data }}"
+    wait: yes
+  register: ec2
+
+- name: attach instance to ELB
+  ec2_elb:
+    instance_id: "{{ ec2.instances.0.id }}"
+    ec2_elbs: "{{ name_tag }}"
+    state: present
+    region: "{{ region }}"
+  # ignore errors as it will fail healthcheck and we don't care at this point
+  ignore_errors: yes
+  when: not test_instance
+
+- name: dns record
+  route53:
+    command: create
+    zone: ddc.io
+    record: "{{ fqdn }}"
+    type: A
+    ttl: 300
+    value: "{{ ec2.instances.0.private_ip }}"
+    overwrite: true

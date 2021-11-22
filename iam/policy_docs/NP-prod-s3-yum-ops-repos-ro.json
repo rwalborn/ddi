@@ -1,0 +1,25 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::143177584759:role/nonprod-s3yum-reader"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:Get*",
+                "s3:List*"
+            ],
+            "Resource": [
+                "arn:aws:s3:::ddi-ops-repo",
+                "arn:aws:s3:::ddi-ops-repo/*",
+                "arn:aws:s3:::ddi-releases-repo",
+                "arn:aws:s3:::ddi-releases-repo/*"
+            ]
+        }
+    ]
+}
+
+

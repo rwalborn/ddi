@@ -1,0 +1,5 @@
+- name: install growpart
+  yum: name=cloud-utils-growpart state=installed
+
+- name: growpart
+  command: growpart "/dev/{{ blkdev }}" 1

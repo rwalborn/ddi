@@ -1,0 +1,39 @@
+---
+- name: create jira user
+  user:
+    name: jira
+    group: jira
+
+- name: install packages
+  yum: state=installed name={{ item }}
+  with_items:
+    - postfix
+    - mailx
+    - java-1.8.0-openjdk-headless
+
+- name: download jira package
+  get_url:
+    url: "https://www.atlassian.com/software/jira/downloads/binary/{{ item }}"
+    dest: {{ mountpoint }}/{{ item }}
+    mode: 0777
+  with_items:
+    - "{{ jira_package }}"
+    - "{{ old_jira_package }}"
+
+- name: download latest postgres connector
+  get_url:
+    url: "https://jdbc.postgresql.org/download/postgresql-42.0.0.jar"
+    dest: {{ mountpoint }}/postgresql-42.0.0.jar
+
+- name: write response file for installer
+  template: src=response.vars.j2 dest="{{ mountpoint }}/response.vars" mode=0666
+  register: vars
+
+- name: install jira
+  shell: "./{{ old_jira_package }} -q -varfile response.vars"
+  args:
+    chdir: "{{ mountpoint }}"
+  register: jira_installed
+
+- name: start postfix
+  service: name=postfix state=started

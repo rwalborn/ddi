@@ -1,0 +1,24 @@
+# RGS-DEV VARS FILE
+
+name_tag: RGA-DEV
+
+app_tag: rgs-game-data
+app_ami: ami-b74b8da1
+instance_type: t2.medium
+spot_price: .105
+sg: SG_RGS_DEV
+fqdn: rgsadmin.dev.doubledowncasino.com
+env: development
+key_name: ops-config
+profile_name: rgs-dev
+service_tag: RGS
+
+# prefix needed for role tag for this to service to work
+prefix: RGSDDC
+
+ud_env: dev
+
+instance_port_1: 8080
+webapp_port: 8080
+config_port: 80
+

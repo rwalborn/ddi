@@ -1,0 +1,27 @@
+# Spins up a new ec2 instance
+
+- name: Launch it
+  ec2:
+    key_name: "{{ ec2.key_name }}"
+    instance_type: "{{ ec2.instance_type }}"
+    count: 1
+    group_id: "{{ ec2.security_groups }}"
+    image: "{{ ec2.image }}"
+    region: "{{ ec2.region }}"
+    vpc_subnet_id: "{{ ec2.vpc_subnet_id }}"
+    user_data: "{{ ec2.user_data }}"
+    instance_profile_name: "{{ ec2.instance_profile_name }}"
+    instance_tags:
+        'Type': 'EDCDevWeb'
+        'Name': "EDCDevWeb"
+        wait: true
+        register: ec2
+
+- debug: var=ec2
+
+- name: Add instance IP to host group
+  add_host: name={{ item.private_ip }} groups=tag_Name_EDCDevWeb,tag_Type_EDCDevWeb buildslave_name="edc-dev" www_prefix="edc" server_name="edc"
+  with_items: ec2.instances
+
+- pause: minutes=4
+

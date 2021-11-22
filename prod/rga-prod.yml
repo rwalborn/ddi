@@ -1,0 +1,69 @@
+# ansible-playbook -vvvv -i "localhost," --ask-vault-pass foo.yml
+
+- name: RGS admin service
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/rga-prod
+  vars:
+    name_tag: "{{ name_tag }}"
+    fqdn: "{{ fqdn }}"
+    sg: "{{ sg }}"
+    env: "{{ env }}"
+  tasks:
+    - name: launch instance
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ app_ami }}"
+        group: "{{ sg }}"
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        assign_public_ip: no
+        zone: us-east-1c
+        region: us-east-1
+        instance_profile_name: "{{ profile_name }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          DNS: "{{ this_env }}"
+          app: "{{ app_tag }}"
+          env: "{{ env }}"
+        wait: yes
+      register: ec2
+    - name: add new instance to host group
+      add_host: hostname={{ ec2.instances.0.private_ip }} groupname=launched
+    - name: wait for SSH to come up
+      wait_for: host={{ ec2.instances.0.private_ip }} port=22 delay=60 timeout=420 state=started
+    - name: register dns
+      route53:
+        command: create
+        overwrite: true
+        zone: doubledowncasino.com
+        record: "{{ fqdn }}"
+        type: A
+        ttl: 60
+        value: "{{ ec2.instances.0.private_ip }}"
+
+- name: Configure instance(s)
+  hosts: launched
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: True
+  vars:
+    sshd_additional_groups: ''
+  roles:
+    - sudoers_user
+  tasks:
+    - name: sshd_config AllowGroups
+      lineinfile:
+        dest=/etc/ssh/sshd_config
+        regexp='^AllowGroups (.*)$'
+        line="AllowGroups root ldap_all {{ sshd_additional_groups }}"
+        backrefs=yes
+      register: sshdconfig
+    - name: bounce sshd
+      service: name=sshd state=reloaded
+      when: sshdconfig.changed
+

@@ -1,0 +1,11 @@
+# Runs as ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+- name: create kinesis stream
+  hosts: localhost
+  connection: local
+  vars:
+    name_tag: DWSDDC-USE1-PROD
+    shard: 2
+  tasks:
+    - name: create stream
+      shell: "aws kinesis create-stream --stream-name {{ name_tag }} --shard-count {{ shard }}"

@@ -1,0 +1,94 @@
+# Runs as export AWS_PROFILE=nonprod_admins; ansible-playbook -vvvv mobiletools-sbx.yml --vault-password-file ~/.vault_mobile.txt
+---
+- name: Mobile dev/build slave
+  hosts: localhost
+  vars_files:
+    - ../group_vars/sbx
+  tasks:
+    - name: launch instances
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: m3.medium
+        region: "{{ region }}"
+        instance_profile_name: mob-sbx
+        image: ami-663bc970
+        group: SG_LAN_SBX
+        vpc_subnet_id: "{{ subnet_pri_1 }}"
+        zone: "{{ az1 }}"
+        count: 1
+        wait: yes
+#        volumes:
+#          - device_name: /dev/sdf
+#            volume_size: 400
+#            delete_on_termination: true
+#          - device_name: /dev/sdg
+#            volume_size: 1000
+#            delete_on_termination: true
+      register: ec2
+
+    - debug:
+        var: ec2
+
+    - name: Add instances to host group
+      local_action: add_host hostname={{ item.private_ip }} groupname=ec2launched
+      with_items: "{{ec2.instances}}"
+
+    - name: Add tag to instances
+      local_action: ec2_tag resource={{ item.id }} region=us-east-1 state=present
+      args:
+        tags:
+          Name: MOBILEDOOM
+          env: sbx
+      with_items: "{{ ec2.instances }}"
+
+    - name: wait for SSH to come up
+      wait_for: host={{ item.private_ip }} port=22 delay=60 timeout=300 state=started
+      with_items: "{{ ec2.instances }}"
+
+
+#- name: Configure provisioned servers
+#  hosts: ec2launched
+#  remote_user: centos
+#  become: yes
+#  become_user: root
+#  become_method: sudo
+#  gather_facts: True
+#  vars_files:
+#    - ../group_vars/sbx
+##  vars:
+##    sudoers_user:
+##      - username: jclose
+##        disable_requiretty: false
+##        cmd_list:
+##          - '(ALL) NOPASSWD: ALL'
+#  roles:
+##    - sudoers_user
+#    - { role: ldap_client, sshd_additional_groups: dev }
+#    - { role: newfs, blkdev: xvdf, mountpoint: '/mnt/ephemeral', fstype: xfs }
+#    - { role: newfs, blkdev: xvdg, mountpoint: '/home/webapps', fstype: xfs }
+#
+#  tasks:
+#    - name: install centos-release-SCL
+#      yum:
+#        name: centos-release-SCL
+#        state: present
+#
+#    - name: install python27
+#      yum:
+#        name: python27
+#        state: present
+#
+#    - name: create /etc/profile.d/python27.sh for env vars to python27
+#      blockinfile:
+#    #    path: /etc/profile.d/python27.sh # dest becomes path after ansible 2.3
+#        dest: /etc/profile.d/python27.sh # need dest for ansible lower than 2.3
+#        create: yes
+#        block: |
+#          export PATH=/opt/rh/python27/root/usr/bin${PATH:+:${PATH}}
+#          export LD_LIBRARY_PATH=/opt/rh/python27/root/usr/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+#          export MANPATH=/opt/rh/python27/root/usr/share/man:${MANPATH}
+#          # For systemtap
+#          export XDG_DATA_DIRS=/opt/rh/python27/root/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}
+#          # For pkg-config
+#          export PKG_CONFIG_PATH=/opt/rh/python27/root/usr/lib64/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}
+

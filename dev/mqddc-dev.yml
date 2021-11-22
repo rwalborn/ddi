@@ -1,0 +1,17 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+---
+- name: rabbitmq server
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    vpc_sg: SG_LAN_DEV
+    env: development
+    iamrole: mqddc-dev
+    service_tag: TMT
+    icinga_profile: MQDDC
+  roles:
+    - { role: rabbitmq, do: standup, fqdn: mqddc01.use1.dev.doubledowncasino.com }

@@ -1,0 +1,231 @@
+---
+# Configures server to run as a buildbot slave
+- include_vars: common.yml
+- include_vars: secrets.yml
+- include_vars: buildslave.yml
+
+####
+
+## NOT NEEDED FOR EDC???
+#- name: link snapshot assets dir
+#  file:
+#    path: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}"
+#    owner:  "{{ autobldr_username }}"
+#    group:  "{{ autobldr_username }}"
+#    mode: 0755
+#    state: directory
+#
+#- name: link snapshot assets dir
+#  file:
+#    src: /mnt/mobile
+#    dest: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}"
+#    owner:  "{{ autobldr_username }}"
+#    group:  "{{ autobldr_username }}"
+#    mode: 0755
+#    state: link
+
+####
+
+# adding this to the spagette mess here because wtf not
+- name: Install PHP
+  yum:
+    name: "{{ php_ver }}-xml"
+    state: present
+    enablerepo: epel
+
+- name: install httpd
+  yum:
+    name: httpd
+    state: present
+
+- name: Add autobldr to apache group
+  shell: usermod -a -G apache "{{ autobldr_username }}"
+
+- name: removing this file because something bad happened someplace else to cause this to already have a value and it's all so messy already that I've abandoned all pride in regards to these playbooks
+  file:
+    path: "{{ autobldr_home }}/slave_hostname.txt"
+    state: absent
+
+# 'buildslave_name' is defined with extra vars on playbook run
+- name: Set marker for the environment
+  lineinfile:
+    dest: "{{ autobldr_home }}/slave_hostname.txt"
+    line: "{{ buildslave_name }}"
+    create: yes
+  become: yes
+  become_user: "{{ autobldr_username }}"
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+- name: update buildslave name cause more mess it is
+  replace:
+    path: "{{ autobldr_home }}/{{ buildslave_dir }}/buildbot.tac"
+    regexp: 'slavename =.*$'
+    replace: "slavename = '{{ buildslave_name }}'"
+#    regexp: 'slavename =.*$' replace="slavename = '{{ buildslave_name }}-slave'
+
+## TODO what are we doing with this now that we have the other system mounted here?
+## 777???!?!?!
+#- name: Create large volume storage dir
+#  file:
+#    path: "{{ large_volume_storage_path }}/{{ dev_dir }}"
+#    state: directory
+#    owner: "{{ autobldr_username }}"
+#    group: "{{ autobldr_username }}"
+#    mode: 0777
+#
+#- name: Setup links to large volume storage area
+#  file:
+#    src: "{{ large_volume_storage_path }}/{{ dev_dir }}"
+#    dest: "{{ autobldr_home }}/{{ dev_dir }}"
+#    owner: "{{ autobldr_username }}"
+#    group: "{{ autobldr_username }}"
+#    state: link
+#
+#- name: Create scm work directories
+#  file:
+#    path: "{{ large_volume_storage_path }}/{{ dev_dir }}/{{ item }}"
+#    owner: "{{ autobldr_username }}" 
+#    group: "{{ autobldr_username }}"
+#    state: directory
+##  sudo_user: "{{ autobldr_username }}"
+#  with_items:
+#    - "{{ merc_working_dir }}"
+##    - "{{ svn_working_dir }}"
+
+## No longer needed now that instances are spun up from AMIs
+## Keeping in case we have to recreate a server w/out AMI
+#
+#- name: Check for mobile code repo
+#  stat:
+#    path: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}/app"
+#  register: hg_repo_dir
+#
+## No longer needed now that instances are spun up from AMIs
+## Keeping in case we have to recreate a server w/out AMI
+#
+#- name: Checkout mobile source (go get some lunch)
+#  hg:
+#    repo: "{{ mobile_source_repo_name }}"
+#    dest: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}"
+#    revision: default
+#  become: yes
+#  become_user: "{{ autobldr_username }}"
+#  when: hg_repo_dir.stat.exists == false
+## TEMP FOR DEBUG
+#  ignore_errors: yes
+
+# NOT NEEDED FOR EDC
+#- name: Make prod scm repo
+#  file:
+#    src: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/mprd"
+#    dest: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}"
+#    owner: "{{ autobldr_username }}"
+#    group: "{{ autobldr_username }}"
+#    state: link
+#  when: buildslave_name == 'mstaging'
+## TEMP FOR DEBUG
+#  ignore_errors: yes
+
+# No longer needed now that instances are spun up from AMIs
+# Keeping in case we have to recreate a server w/out AMI
+#
+#- name: Create .hg dirs
+#  file:
+#    path: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}/{{ item }}/.hg"
+#    state: directory
+#  become: yes
+#  become_user: "{{ autobldr_username }}"
+#  with_items:
+#    - app
+#    - build
+#    - assets
+#
+#- name: Create .hg/hgrc
+#  lineinfile:
+#    dest: "{{ autobldr_home }}/{{ dev_dir }}/{{ merc_working_dir }}/{{ buildslave_name }}/{{ item.dir }}/.hg/hgrc"
+#    line: '[paths]\ndefault = ssh://hg@bitbucket.org/ddimobiledev/{{ item.path }}'
+#    create: yes
+#    state: present
+#    owner: "{{ autobldr_username }}"
+#    group: "{{ autobldr_username }}"
+#  with_items:
+#      - { dir: app, path: mobile-web-src }
+#      - { dir: build, path: mobile-web-build }
+#      - { dir: assets, path: mobile-web-assets }
+#
+# No longer needed now that instances are spun up from AMIs
+# Keeping in case we have to recreate a server w/out AMI
+
+
+# No longer needed now that instances are spun up from AMIs
+# Keeping in case we have to recreate a server w/out AMI
+
+#- name: Checkout svn deploy repo (~ 2 hrs)
+#  subversion: repo={{ svn_repo_url }}/{{ svn_branch }} dest={{ autobldr_home }}/{{ dev_dir }}/{{ svn_working_dir }}/{{ svn_branch }} username={{ svn_username }} password={{ svn_password }}
+#  sudo_user: "{{ autobldr_username }}"
+#  when: svn_repo_dir.stat.exists == false
+
+# NOT NEEDED FOR EDC
+#- name: Change dev dir perms
+#  file:
+#    path: "{{ large_volume_storage_path }}/{{ dev_dir }}/{{ item }}"
+#    owner: "{{ autobldr_username }}"
+#    group: "{{ autobldr_username }}"
+#    state: directory
+#    recurse: yes
+#  with_items:
+#    - "{{ merc_working_dir }}"
+##    - "{{ svn_working_dir }}"
+## TEMP FOR DEBUG
+#  ignore_errors: yes
+
+# OUT PER MARC BUT STILL NEEDED FOR MOB
+#- name: Check for buildbot scripts
+#  stat: path={{ autobldr_home }}/buildbot-scripts
+#  register: bb_scripts
+#
+#- name: Download buildbot scripts repo
+#  hg:
+#    repo: "{{ buildbot_scripts_repo_name }}"
+#    dest: "{{ autobldr_home }}/buildbot-scripts"
+#  become: yes
+#  become_user: "{{ autobldr_username }}"
+##  sudo_user: "{{ autobldr_username }}"
+#  when: bb_scripts.stat.exists == false
+
+- name: Check for buildslave dir
+  stat:
+    path: "{{ autobldr_home }}/{{ buildslave_dir }}/buildbot.tac"
+  register: buildslavedir
+
+# TODO THIS FAILS
+- name: where the hell is buildslave
+  shell: which buildslave
+  become: no
+  register: buildslave_path
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+# TODO THIS FAILS
+- name: Create buildslave dir
+  shell: "python {{ buildslave_path.stdout }} create-slave {{ autobldr_home }}/{{ buildslave_dir }} {{ buildmaster_host }}:{{ buildbot_master_port }} {{ buildslave_name }}-slave {{ buildslave_password }}"
+  become: yes
+  become_user: "{{ autobldr_username }}"
+##  when: buildslavedir.stat.exists == false
+# TEMP FOR DEBUG
+  ignore_errors: yes
+
+# TODO THIS FAILS
+- name: Check buildbot process
+  stat:
+    path: "{{ autobldr_home }}/{{ buildslave_dir }}/twistd.pid"
+  register : buildbot_pid
+
+- name: Start buildbot slave
+  shell: "python {{ buildslave_path.stdout }} start {{ autobldr_home }}/{{ buildslave_dir }}"
+  become: yes
+  become_user: "{{ autobldr_username }}"
+#  sudo_user: "{{ autobldr_username }}"
+  when: buildbot_pid.stat.exists == false
+  ignore_errors: yes

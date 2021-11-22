@@ -1,0 +1,43 @@
+# NOA-DEV VARS FILE
+
+name_tag: NOA-DEV
+service_tag: NOT
+icinga_profile: NOA
+lb: NOA-DEV
+
+app_tag: DDC
+rpm_tag: notification-service-console
+app_ami: ami-d60f6dc0
+instance_type: m3.xlarge
+spot_price: .266
+sg: SG_NOA_DEV
+elb_sg: SG_LBNOA_DEV
+elb_fqdn: noa.dev.doubledowncasino.com
+env: development
+key_name: ops-config
+profile_name: noa-dev
+
+lc: NOA-DEV-002
+
+ud_env: dev
+
+ec2_asg:
+  desired_capacity: 1
+  min_size: 1
+  max_size: 1
+  hc_type: EC2
+
+instance_port_1: 8080
+
+ec2_elb_lb:
+  connection_draining_timeout: 30
+  listeners:
+    protocol: http
+  health_check:
+    ping_protocol: http
+    ping_path_1: /healthcheck
+    response_timeout: 5
+    interval: 10
+    unhealthy_threshold: 2
+    healthy_threshold: 2
+

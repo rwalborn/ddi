@@ -1,0 +1,28 @@
+region: us-east-1
+period_length: 60
+state: present
+wait: false
+
+# SNS topics
+dynamodb_topic_arn: "arn:aws:sns:us-east-1:143177584759:dynamodb" 
+elb_topic_arn: "arn:aws:sns:us-east-1:143177584759:elb"
+ops_topic_arn: "arn:aws:sns:us-east-1:143177584759:ops"
+pagerduty_topic_arn: "arn:aws:sns:us-east-1:143177584759:PagerDuty"
+
+# ApiGateway
+apigateway_periods: 5
+apigateway_warn_pct: 0.8
+apigateway_crit_pct: 0.95
+
+# DynamoDB defaults
+dynamodb_sec_index: false
+dynamodb_periods: 5
+dynamodb_warn_pct: 0.8
+dynamodb_crit_pct: 0.95
+
+# ELB defaults
+elb_periods: 5
+elb_unhealthyhost_periods: 15
+elb_warn_latency: '0.5'
+elb_crit_latency: '1.0'
+

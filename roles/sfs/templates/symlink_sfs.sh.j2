@@ -1,0 +1,42 @@
+die ()
+{
+  echo $1
+  exit 1
+}
+
+echo "Symlinking {{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_version }} to {{ sfs_deploy_deploy_path }}/current "
+ln -nsf {{ sfs_deploy_deploy_path }}/{{ sfs_deploy_artifact_version }} {{ sfs_deploy_deploy_path }}/current || die "Symlinking to current failed, Exiting"
+
+
+echo "Cleaning {{ sfs_deploy_sfs_root }}/felix-cache"
+rm -rf "{{ sfs_deploy_sfs_root }}/felix-cache"/*
+
+echo "Building config symlinks"
+cd "{{ sfs_deploy_sfs_root }}" || die "{{ sfs_deploy_sfs_root }} does not exist, Exiting. "
+
+fileList=(
+  'conf/wrapper.conf'
+  'config.xml'
+  'felix.config'
+  'lib/com.doubledowninteractive.smartfox.osgi.jar'
+  'lib/org.apache.felix.main.jar'
+  'bundle'
+  'app.config'
+  'xDomainPolicy.xml'
+  'log4j.properties'
+  'logging.properties'
+  'roomsMap.json'
+  'webserver/cfg/jetty.xml'
+  'webserver/webapps/BlueBox.war'
+  'webserver/webapps/ddcroot'
+)
+
+for path in "${fileList[@]}"
+do
+  if [ ! -L "$path" ]; then
+    mv -v "$path" "$path.save";
+    ln -nsvf "{{ sfs_deploy_deploy_path }}/current/$path" "$path";
+  else
+    ln -nsf "{{ sfs_deploy_deploy_path }}/current/$path" "$path";
+  fi
+done

@@ -1,0 +1,31 @@
+- name: find instance
+  command: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text
+  register: id
+
+# - debug: msg="device is {{ blkdev }}"
+
+- name: find volume
+  command: aws ec2 describe-volumes --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}_{{ blkdev }}" --query "Volumes[].VolumeId" --output text
+  register: volume
+
+- name: attach volume if found
+  ec2_vol:
+    instance: "{{ id.stdout }}"
+    id: "{{ volume.stdout }}"
+    device_name: "/dev/{{ blkdev }}"
+    region: "{{ region }}"
+  when: volume.stdout|length > 0 and id.stdout is defined
+
+# See IFPRJ-515 for spec research
+- name: create volume if not found, and attach
+  ec2_vol:
+    name: "{{ name_tag }}_{{ blkdev }}"
+    instance: "{{ id.stdout }}"
+    device_name: "{{ blkdev }}"
+    volume_size: 1000
+    volume_type: gp2
+    zone: "{{ az }}" 
+    region: "{{ region }}"
+    delete_on_termination: false
+  register: created
+  when: volume.stdout|length == 0 and id.stdout is defined

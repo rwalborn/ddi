@@ -1,0 +1,18 @@
+app_ami: ami-52777c29
+instance_type: c3.large
+
+sg: SG_PHP_STG
+elb_sg: SG_LBPHP_STG
+
+env_domain: stg
+env: stg
+application_env: staging 
+deployment: STG
+dd_env: stg 
+
+ec2_asg:
+  desired_capacity: 4
+  min_size: 4 
+  max_size: 8 
+  hc_type: EC2
+

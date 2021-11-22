@@ -1,0 +1,21 @@
+app_ami: ami-5d313a26
+instance_type: c3.large
+
+sg: SG_DLR_QA
+elb_sg: SG_LBDLR_QA
+
+env_domain: qa
+rpm_tag: php-dealer
+env: qa
+application_env: qa
+deployment: QA
+dd_env: qa
+service_tag: DLR
+app_tag: DDC
+
+ec2_asg:
+  desired_capacity: 2
+  min_size: 2
+  max_size: 2 
+  hc_type: EC2
+

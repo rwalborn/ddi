@@ -1,0 +1,36 @@
+# ansible-playbook -vvvv -i 'localhost,' foo.yml
+
+# you need awscli 1.10.22 and above
+
+- name: release to prod
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../host_vars/capi
+  vars:
+    upstream: stg
+    env: prod
+  tasks:
+    - name: Is there any STAGE VARIABLE change in this release?
+      pause: prompt="If YES but you have not made the change in advance, ctrl-c to abort. Or, hit any key to continue."
+
+    - name: get the deploymentId that is validated in upstream environment
+      command: aws apigateway get-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage "{{ upstream }}" --query 'deploymentId' --output text
+      register: deploymentid
+      tags: getupstream
+      
+    - name: change to the deploymentId
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/deploymentId,value="{{ deploymentid.stdout }}"
+      tags: release
+
+    - name: turn on logging
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/logging/loglevel,value=INFO,from=OFF
+      tags: log
+
+    - name: enable metrics
+      command: aws apigateway update-stage --region "{{ region }}" --rest-api-id "{{ api_id }}" --stage-name "{{ env }}" --patch-operations op=replace,path=/*/*/metrics/enabled,value=true,from=false
+      tags: metrics
+
+    - name: cloudwatch logs retention
+      command: "aws logs put-retention-policy --region {{ region }} --log-group-name API-Gateway-Execution-Logs_{{ api_id }}/{{ env }} --retention-in-days 7"
+      tags: retention

@@ -1,0 +1,16 @@
+---
+
+- yum: name=ntp
+       state=installed
+
+- yum: name=ntpdate
+       state=installed
+
+- copy: src=centos6x.ntp.conf
+        dest=/etc/ntp.conf
+        owner=root
+        mode=644
+
+- service: name=ntpd
+           enabled=yes
+           state=restarted

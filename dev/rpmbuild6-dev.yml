@@ -1,0 +1,112 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: centos6 rpmbuild box in dev
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+  vars:
+    name_tag: 'RPMBUILD-DEV C6'
+    env: development
+    service_tag: OPS
+    app_tag: DDC
+    az: us-east-1d
+    sg: SG_LAN_DEV
+    role: repo
+    instance_type: m3.medium
+    key_name: ops-config
+  tasks:
+    - name: launch instance
+      ec2:
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ centos_68_base }}"
+        group: "{{ sg }}"
+        vpc_subnet_id: "{{ subnet_pri_1d }}"
+        zone: "{{ az }}"
+        region: "{{ region }}"
+        instance_profile_name: "{{ role }}"
+        instance_tags:
+          Name: "{{ name_tag }}"
+          env: "{{ env }}"
+          service: "{{ service_tag }}"
+          app: "{{ app_tag }}"
+        wait: yes
+      register: ec2
+    - name: add new instance to host group
+      add_host: hostname="{{ ec2.instances.0.private_ip }}" groupname=launched
+      with_items: "{{ ec2.instances }}"
+    - name: wait for ssh
+      wait_for: host="{{ ec2.instances.0.private_ip }}" port=22 delay=30 timeout=420 state=started
+      with_items: "{{ ec2.instances }}"
+    - name: allow cloud-init to execute
+      pause: seconds=30
+
+- name: Configure instances
+  hosts: launched
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  gather_facts: false
+  tasks:
+    - name: install packages
+      yum: name={{ item }} state=installed
+      with_items:
+        - gcc
+        - rpmdevtools
+        - rpmlint
+
+- name: Configure instances
+  hosts: launched
+  remote_user: centos
+  become: no
+  gather_facts: false
+  vars_files:
+    - roles/ops/vars/ddiunixteam.yml
+  tasks:
+    - name: directory for source code
+      file:
+        path=/home/centos/src/mercurial/ddi-custom-rpms
+        state=directory
+        owner=centos
+        group=centos
+        mode=0755
+    - name: ssh config
+      template:
+        src=roles/ops/templates/ssh_config.j2
+        dest=/home/centos/.ssh/config
+        owner=centos
+        group=centos
+        mode=0644
+    - name: read-only access to bitbucket project
+      copy:
+        content="{{ ddiunixteam_rsa_key }}"
+        dest=/home/centos/.ssh/hg_rsa
+        owner=centos
+        group=centos
+        mode=0600
+    - name: clone repo
+      hg:
+        repo=ssh://bitbucket/ddi/ddi-custom-rpms
+        dest=/home/centos/src/mercurial/ddi-custom-rpms
+    - name: example of .hgrc, customize it for yourself
+      lineinfile:
+        dest=/home/centos/.hgrc
+        line="[ui]\nusername = Otto Bilder <obilder@igt.com>"
+        create=yes
+        owner=centos
+        group=centos
+        mode=0644
+    - name: initialize rpmbuild
+      command: rpmdev-setuptree
+    - name: links
+      file:
+        src=/home/centos/src/mercurial/ddi-custom-rpms/{{ item }}
+        dest=/home/centos/rpmbuild/{{ item }}
+        state=link
+        force=yes
+      with_items:
+        - SOURCES
+        - SPECS

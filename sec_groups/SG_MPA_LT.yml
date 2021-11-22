@@ -1,0 +1,12 @@
+# ansible-playbook -vvvv SG_MPA_DEV.yml
+
+- name: MPA_DEV security group
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/mpa-dev
+  tasks:
+    - include: "{{ sg }}_INC.yml"
+

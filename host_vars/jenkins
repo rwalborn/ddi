@@ -1,0 +1,4 @@
+instance_type: c3.xlarge
+instance_port: 8080
+ping_path: "/login"
+svc_cert: arn:aws:iam::143177584759:server-certificate/doubledowninteractive.com-20200708

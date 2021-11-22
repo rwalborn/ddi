@@ -1,0 +1,106 @@
+- include_vars: ddiunixteam.yml
+
+- template: src=ssh_config.j2 dest=/root/.ssh/config
+
+- name: read-only access to bitbucket ops mercurial project
+  copy:
+    content="{{ ddiunixteam_rsa_key }}"
+    dest=/root/.ssh/hg_rsa
+    owner=root
+    group=root
+    mode=0600
+
+- name: /mnt/ephemeral
+  file:
+    path=/mnt/ephemeral
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: /mnt/ebs1
+  file:
+    path=/mnt/ebs1
+    state=directory
+    owner=root
+    group=root
+    mode=0755
+
+- name: /usr/local/share/DDI
+  file:
+    path=/usr/local/share/DDI
+    state=directory
+    owner=root
+    group=root
+    mode=0775
+
+- name: clone ops repo
+  hg:
+    repo=ssh://bitbucket/ddi/ops
+    dest=/usr/local/share/DDI/ops
+  when: repo == 'hg'
+
+- name: clone ops repo
+  git:
+    repo=ssh://git@bitbucket.org/doubledownops/ddi-ops.git
+    dest=/usr/local/share/DDI/ddi-ops
+    accept_hostkey=yes
+  when: repo == 'git'
+
+- name: link /root/bin for hg
+  file:
+    src=/usr/local/share/DDI/ops/scripts
+    dest=/root/bin
+    state=link
+    force=true
+  when: repo == 'hg'
+
+- name: link /root/bin for git
+  file:
+    src=/usr/local/share/DDI/ddi-ops/scripts
+    dest=/root/bin
+    state=link
+    force=true
+  when: repo == 'git'
+
+- name: insert code_deploy.sh into rc.local
+  lineinfile:
+    dest=/etc/rc.d/rc.local
+    state=present
+    line='test -x /root/bin/code_deploy.sh && /root/bin/code_deploy.sh'
+  when: code_deploy and ansible_distribution_major_version == '6'
+
+- name: systemd for code_deploy.sh
+  copy:
+    src=code_deploy.service
+    dest=/etc/systemd/system/code_deploy.service
+    owner=root
+    group=root
+    mode=0664
+  when: code_deploy and ansible_distribution_major_version == '7'
+
+- name: activate code_deploy
+  shell: 'systemctl daemon-reload && systemctl enable code_deploy'
+  when: code_deploy and ansible_distribution_major_version == '7'
+
+# only sfs init script uses this
+- name: /etc/init.d/ddifunctions from hg
+  file:
+    src=/usr/local/share/DDI/ops/scripts/ddifunctions
+    dest=/etc/init.d/ddifunctions
+    state=link
+  when: legacy and repo == 'hg'
+
+# only sfs init script uses this
+- name: /etc/init.d/ddifunctions from git
+  file:
+    src=/usr/local/share/DDI/ddi-ops/scripts/ddifunctions
+    dest=/etc/init.d/ddifunctions
+    state=link
+  when: legacy and repo == 'git'
+
+- name: touch /etc/sudoers.d/operations
+  file: path=/etc/sudoers.d/operations state=touch owner=root group=root mode=0440
+
+- name: sudo for operations
+  lineinfile: "dest=/etc/sudoers.d/operations state=present line='%operations ALL=NOPASSWD: ALL'"

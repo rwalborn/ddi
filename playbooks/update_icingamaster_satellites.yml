@@ -1,0 +1,131 @@
+# ansible-playbook -vvvv -i "localhost," --vault-password-file ~/.vaultpass foo.yml
+
+- name: icinga
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "ICINGASLAVE-DEV*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=dev
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+- name: icinga
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "ICINGASLAVE-QA*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=qa
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+- name: icinga
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "ICINGASLAVE-STG*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=stg
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+- name: icinga
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "ICINGASLAVE-PROD*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=prod
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+- name: icinga
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    - name_tag: "ICINGASLAVE-TOOLS*"
+  tasks:
+    - name: find instance ip
+      shell: aws ec2 describe-instances --region "{{ region }}" --filters "Name=tag:Name,Values={{ name_tag }}" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].PrivateIpAddress" --output text
+      register: ip
+    - name: add new instance to host group
+      add_host: hostname="{{ item }}" groupname=tools
+      with_items: "{{ ip.stdout.split('\t') }}"
+
+- name: configure dev instance
+  hosts: dev
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/dev
+    - ../host_vars/icinga
+  roles:
+    - { role: icinga, satellite: true, local_zone: "dev", agent: false, update: true }
+
+- name: configure qa instance
+  hosts: qa
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/qa
+    - ../host_vars/icinga
+  roles:
+    - { role: icinga, satellite: true, local_zone: "qa", agent: false, update: true }
+
+- name: configure stg instance
+  hosts: stg
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/stg
+    - ../host_vars/icinga
+  roles:
+    - { role: icinga, satellite: true, local_zone: "stg", agent: false, update: true }
+
+- name: configure prod instance
+  hosts: prod
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/prod
+    - ../host_vars/icinga
+  roles:
+    - { role: icinga, satellite: true, local_zone: "prod", agent: false, update: true }
+
+- name: configure tools instance
+  hosts: tools
+  remote_user: centos
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars_files:
+    - ../group_vars/tools
+    - ../host_vars/icinga
+  roles:
+    - { role: icinga, satellite: true, local_zone: "tools", agent: false, update: true }
